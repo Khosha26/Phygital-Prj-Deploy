@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Choose Your Residence</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  FLOOR UNITS v1 — assumptions + reasoning
+  ──────────────────────────────────────────────────────────────────────
+  Reached from inventory-floors.html via the VIEW FLOOR PLAN CTA. The
+  ?floor=N param sets the floor token (e.g. 26 → "L 26", A-26xx units).
+
+  Layout (1440 × 900 stage, paper bg full-bleed)
+  · Top bar 76px — identical chrome to floor-plan/gallery:
+      LEFT  diamond + EMBASSY CITADEL + WORLI MUMBAI → home.html
+      RIGHT  prev (‹) + next (›) circular chips
+  · LEFT 60% (~864 px, x=0 y=76 → bottom) — the embedded SVG floor
+    plan (assets/floor-units.svg). 9 shape elements (3 rect + 1 polygon
+    + 5 path) — each represents a unit. Note: one of the paths is a
+    degenerate Move-only path (no draw); we skip it during wiring so
+    the 8 renderable shapes map cleanly to 8 of the 9 unit records;
+    the 9th unit-row stays in the right panel as A-2609 (a "premium
+    corner" that isn't visible at this scale). The renderable count is
+    therefore 8 ≤ 9, never the other way around.
+  · RIGHT 40% (~576 px) — unit-info panel: eyebrow + headline + 9-row
+    unit list with code, BHK + carpet, facing badge, indicative price.
+
+  Hover sync
+  · Hovering an SVG unit shape highlights the matching row in the list;
+    hovering a list row highlights the matching SVG shape. Both routes
+    (click row, click shape) navigate to unit-detail.html?unit=…&floor=N
+    via a cream-veil fade.
+
+  Placeholders / to-wire-later
+  · Top-bar prev/next are visual-only on this screen (the SVG isn't a
+    stack of plans — clicking units does the navigation).
+  · The 9th unit (A-2609) doesn't have an SVG home; it sits in the
+    list as a tappable row. When/if the SVG is updated to expose 9
+    distinct shapes, the wiring index auto-extends.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --card-shadow: 0 14px 32px -10px rgba(80, 58, 28, 0.22),
+                   0 4px 12px  -4px  rgba(40, 28, 10, 0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage ─────────────────────────────────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:
+      url('assets/bg-paper.png') center/cover no-repeat,
+      radial-gradient(ellipse 80% 60% at 50% 45%, var(--paper) 0%, var(--bone-50) 55%, var(--bone-200) 100%) var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    background: var(--bone);
+  }
+
+  /* Paper bg — full bleed, slight overshoot to hide rounding seams */
+  .stage-bg {
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    z-index: 0; pointer-events: none;
+    background-color: var(--bone);
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 1;
+    opacity: 0.025;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 5px 5px;
+    background-position: 0 0, 1px 1px;
+  }
+
+  /* ── TOP BAR (seamless — paper bg shows through) ────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Unified right-side BACK button (added) */
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+    margin-left: 8px;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+  /* ── TAP RESPONSIVENESS — interactive surfaces inside the app ── */
+  button, [role="button"], a[href], .unit-row, .pill {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  svg .tap, svg [data-tap], svg [role="button"], svg .unit-shape { pointer-events: all; cursor: pointer; }
+  .brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+    /* locked at top:38 left:44 (header padding 0 44px, height 76, items centered) */
+  }
+  .brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .brand-back::after {
+    content: '← Home';
+    position: absolute; left: 100%; top: 50%;
+    transform: translate(10px, -50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0; white-space: nowrap;
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: none;
+  }
+  .brand-back:hover::after, .brand-back:focus-visible::after {
+    opacity: 0.85; transform: translate(14px, -50%);
+  }
+  .brand-diamond {
+    width: 18px; height: 18px;
+    position: relative; display: inline-block;
+    transform: rotate(45deg);
+    border: 1px solid var(--gold-500);
+    background: linear-gradient(135deg, var(--gold-200) 0%, var(--gold-500) 100%);
+    box-shadow: 0 0 6px rgba(148,111,56,0.20);
+  }
+  .brand-diamond::before {
+    content: ''; position: absolute; inset: 3px;
+    border: 0.5px solid rgba(255,255,255,0.55);
+    background: transparent;
+  }
+  .brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+  .brand-text .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500; font-size: 22px;
+    color: var(--onyx-700); letter-spacing: 0.04em;
+  }
+  .brand-text .loc {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  /* Canonical SVG wordmark (matches home.html) */
+  .brand-wordmark {
+    width: 130px; height: 36px;
+    color: var(--onyx-700);
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+
+  /* Top-right cluster: three circular chips */
+  .top-chips { display: flex; align-items: center; gap: 10px; }
+  .tc {
+    width: 44px; height: 44px;
+    min-width: 44px; min-height: 44px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.7);
+    border: 1px solid var(--hair-lo);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--gold-500);
+    cursor: pointer;
+    transition: background 220ms ease, color 220ms ease, transform 220ms ease, border-color 220ms ease;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px; line-height: 1;
+    user-select: none;
+  }
+  .tc:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair); }
+  .tc:active { transform: scale(0.96); }
+
+  /* ── FULL-WIDTH — SVG floor plan canvas ────────────────────────── */
+  .plan-canvas {
+    position: absolute;
+    left: 0; top: 76px;
+    right: 0; bottom: 0;
+    width: 100%;
+    z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .plan-canvas-inner {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* The object element fills the inner area. preserveAspectRatio
+     defaults to xMidYMid meet on most SVGs; floor-units.svg's natural
+     viewBox is 0 0 1536 1024 so it letterboxes inside the inner box.
+     We use mix-blend-mode: multiply so the cream card bg of the bitmap
+     melts gently into the paper texture beneath, while preserving all
+     the architectural detail (walls, room outlines, code index rail).
+     The linear-gradient mask feathers the rectangular card edges so
+     they don't read as a hard card-on-paper seam — the bitmap dissolves
+     into the paper bg on all four sides. */
+  .plan-obj {
+    width: 100%; height: 100%;
+    display: block;
+    mix-blend-mode: multiply;
+    overflow: visible;
+    object-fit: contain;   /* keep the static <img> fallback un-stretched */
+    filter: contrast(1.06) brightness(0.99);
+    -webkit-mask-image:
+      linear-gradient(180deg, transparent 0%, black 6%, black 94%, transparent 100%),
+      linear-gradient(90deg, transparent 0%, black 4%, black 96%, transparent 100%);
+    -webkit-mask-composite: source-in;
+            mask-image:
+      linear-gradient(180deg, transparent 0%, black 6%, black 94%, transparent 100%),
+      linear-gradient(90deg, transparent 0%, black 4%, black 96%, transparent 100%);
+            mask-composite: intersect;
+  }
+
+  /* Tiny eyebrow that floats over the plan canvas top-left */
+  .plan-eyebrow {
+    position: absolute;
+    top: 24px; left: 32px;
+    z-index: 5;
+    pointer-events: none;
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 9.5px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .plan-eyebrow::before {
+    content: ''; width: 16px; height: 1px;
+    background: var(--gold-500); opacity: 0.6;
+  }
+
+  /* Small compass at top-right of plan canvas */
+  .plan-compass {
+    position: absolute;
+    top: 22px; right: 32px;
+    z-index: 5;
+    width: 48px; height: 48px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    display: grid; place-items: center;
+    color: var(--gold-500);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic; font-size: 14px;
+    box-shadow: 0 6px 14px rgba(80, 58, 28, 0.12);
+  }
+  .plan-compass .n {
+    position: absolute; top: 4px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px; letter-spacing: 0.3em;
+    font-family: 'Inter', sans-serif; font-weight: 600;
+    text-transform: uppercase;
+  }
+  .plan-compass .needle {
+    width: 2px; height: 18px;
+    background: linear-gradient(180deg, var(--gold-500) 0%, var(--gold-500) 50%, var(--hair) 50%, var(--hair) 100%);
+    border-radius: 1px;
+  }
+
+  /* Floor label badge bottom-left of plan canvas */
+  .plan-floortag {
+    position: absolute;
+    bottom: 22px; left: 32px;
+    z-index: 5;
+    padding: 8px 14px;
+    background: rgba(252, 250, 244, 0.85);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 4px 10px rgba(80, 58, 28, 0.10);
+  }
+  .plan-floortag .lbl {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .plan-floortag .val {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500; font-size: 16px;
+    color: var(--gold-500); line-height: 1;
+  }
+
+  /* ── Floor jumper ───────────────────────────────────────────────────
+     Invisible HTML buttons overlaid on the floor-stack pixels baked
+     into the SVG bitmap. The stack itself can't change (it's pixels),
+     but clicking a number navigates to that floor and the URL-param
+     wired unit list + floor tag update accordingly. Buttons stay
+     invisible until hover; ≥44px tap target for finger reach. */
+  .floor-jumper {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 8;
+  }
+  .fj-btn {
+    position: absolute;
+    width: 56px; height: 44px;
+    margin: -22px 0 0 -28px;     /* center the box on the (left,top) point */
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    pointer-events: all;
+    border-radius: 8px;
+    padding: 0;
+    transition: background 180ms ease, outline-color 180ms ease;
+    outline: 1px solid transparent;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fj-btn:hover {
+    background: rgba(217, 185, 122, 0.15);
+    outline: 1px solid var(--gold-300);
+  }
+  .fj-btn:focus-visible {
+    outline: 2px solid var(--gold-500);
+    background: rgba(217, 185, 122, 0.10);
+  }
+  .fj-btn:active { background: rgba(217, 185, 122, 0.28); }
+
+  /* ── Cream-veil ─────────────────────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .unit-row, .unit-row:hover { transform: none !important; }
+  }
+</style>
+
+<script>
+  // ── Stage scaler — scale-to-fit (contain). Fixes iPad13 side overflow.
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+
+    // iOS hardening
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+
+<!-- Embassy Citadel wordmark — same SVG symbol as home -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+
+    <div class="stage-bg" aria-hidden="true"></div>
+    <div class="stage-grain" aria-hidden="true"></div>
+
+    <!-- ── TOP BAR ───────────────────────────────────────────── -->
+    <header class="topbar">
+      <a class="brand-back" href="home.html" id="brandBack" aria-label="Embassy Citadel">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <div class="top-chips">
+        <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to floor selection">
+          <span class="arr" aria-hidden="true">←</span>
+          <span>Back</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── LEFT 60% — SVG floor plan canvas ──────────────────── -->
+    <section class="plan-canvas" aria-label="Floor plan with selectable units">
+      <div class="plan-eyebrow">Floor Plan</div>
+      <div class="plan-floortag">
+        <span class="lbl">Floor</span>
+        <span class="val" id="floorTagVal">L 26</span>
+      </div>
+
+      <div class="plan-canvas-inner">
+        <object class="plan-obj" id="planObj"
+                type="image/svg+xml"
+                data="assets/floor-units.svg"
+                aria-label="Floor plan with 9 residence units"></object>
+        <!-- Static-plan fallback. Stays hidden unless the <object> renders
+             blank (no inner <svg> within ~1.2s, or it errors). On tablet
+             Safari / Samsung Internet a 2.5 MB <object> SVG can collapse to
+             a blank box (seen offline). We then swap to this <img> so the
+             floor plan ALWAYS shows. Same blend/mask as .plan-obj so it
+             reads identically; the static plan stays visible (units aren't
+             individually clickable in fallback, but the floor jumper +
+             list/right-panel routes still navigate). -->
+        <img class="plan-obj plan-img-fallback" id="planImg"
+             src="assets/floor-units.svg" alt="Floor plan with residence units"
+             style="display:none;" aria-hidden="true">
+      </div>
+
+      <!-- ── Floor jumper (invisible hit-zone overlay) ───────────────
+           The vertical floor stack (16,15,14,13,12,11,10) on the LEFT
+           is baked into the SVG bitmap as pixels. We overlay invisible
+           HTML buttons at those pixel positions so clicking a floor
+           number navigates. Positions tuned to ±10px of glyph centres
+           via the probe in $CLAUDE_JOB_DIR/probe-floor-stack-*.mjs.
+           Coordinates are stage-px (stage = 1440×900); the buttons sit
+           inside .plan-canvas which begins at y=76. -->
+      <div class="floor-jumper" aria-label="Jump to another floor">
+        <button class="fj-btn" type="button" data-floor="16" aria-label="View floor 16" style="left: 160px; top: 270px;"></button>
+        <button class="fj-btn" type="button" data-floor="15" aria-label="View floor 15" style="left: 160px; top: 312px;"></button>
+        <button class="fj-btn" type="button" data-floor="14" aria-label="View floor 14" style="left: 160px; top: 352px;"></button>
+        <button class="fj-btn" type="button" data-floor="13" aria-label="View floor 13" style="left: 160px; top: 394px;"></button>
+        <button class="fj-btn" type="button" data-floor="12" aria-label="View floor 12" style="left: 160px; top: 436px;"></button>
+        <button class="fj-btn" type="button" data-floor="11" aria-label="View floor 11" style="left: 160px; top: 478px;"></button>
+        <button class="fj-btn" type="button" data-floor="10" aria-label="View floor 10" style="left: 160px; top: 520px;"></button>
+      </div>
+    </section>
+
+    <div class="veil" id="veil" aria-hidden="true"></div>
+
+  </div>
+</div>
+
+<script>
+  // ── Read floor from URL — hash FIRST, query as fallback ──────────
+  // Why hash: offline, the service worker is cache-first but a request
+  // for "floor-units.html?floor=26" does NOT match the cached
+  // "floor-units.html" (query string differs), so it falls back to the
+  // navigate-offline handler and serves the WRONG page (blank). A URL
+  // fragment ("#floor=26") is never part of the request, so the cache
+  // matches and the right page loads offline. We still read ?floor for
+  // back-compat with inbound links (e.g. inventory-floors).
+  const params = new URLSearchParams(
+    (window.location.hash || '').replace(/^#/, '') || window.location.search.replace(/^\?/, '')
+  );
+  const FLOOR  = (function () {
+    const n = parseInt(params.get('floor'), 10);
+    return (isFinite(n) && n >= 1 && n <= 79) ? n : 26;
+  })();
+  const FLOOR_PAD = String(FLOOR).padStart(2, '0');
+  const UNIT_PREFIX = 'A-' + FLOOR_PAD;   // e.g. A-26
+
+  // Update floor label in the floating compass tag
+  document.getElementById('floorTagVal').textContent = 'L ' + FLOOR;
+
+  // ── Unit data — 9 residences on this floor ───────────────────────
+  // Mid Residences typology (4 BHK Classic / 5 BHK Study).
+  const UNITS = [
+    { idx: 1, no: '01', bhk: 4, type: 'Classic', area: 2135, facing: 'N', price: 11.52 },
+    { idx: 2, no: '02', bhk: 4, type: 'Classic', area: 2210, facing: 'S', price: 11.91 },
+    { idx: 3, no: '03', bhk: 5, type: 'Study',   area: 3120, facing: 'N', price: 18.02 },
+    { idx: 4, no: '04', bhk: 5, type: 'Study',   area: 3240, facing: 'S', price: 18.78 },
+    { idx: 5, no: '05', bhk: 4, type: 'Classic', area: 2135, facing: 'E', price: 11.78 },
+    { idx: 6, no: '06', bhk: 4, type: 'Classic', area: 2210, facing: 'W', price: 12.10 },
+    { idx: 7, no: '07', bhk: 5, type: 'Study',   area: 3160, facing: 'E', price: 18.45 },
+    { idx: 8, no: '08', bhk: 5, type: 'Study',   area: 3220, facing: 'W', price: 18.92 },
+    { idx: 9, no: '09', bhk: 4, type: 'Classic', area: 2280, facing: 'N', price: 12.45 },
+  ].map(u => Object.assign(u, { id: UNIT_PREFIX + u.no }));
+
+  // ── SVG injection — style each shape, label them, wire clicks ────
+  const obj = document.getElementById('planObj');
+  let svgPaths = [];   // array of {el, idx, unit}
+
+  obj.addEventListener('load', () => {
+    try {
+      const doc = obj.contentDocument;
+      if (!doc) return;
+      const svgRoot = doc.documentElement;
+      if (svgRoot && svgRoot.tagName.toLowerCase() === 'svg') {
+        svgRoot.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svgRoot.style.width = '100%';
+        svgRoot.style.height = '100%';
+      }
+
+      // Allow the radiant glow halos to extend beyond the SVG viewBox
+      svgRoot.style.overflow = 'visible';
+      svgRoot.setAttribute('overflow', 'visible');
+
+      // ── Inject a <defs> block with the radiant-glow filter only ─────
+      //   #radiant-glow — a 3-stage glow: wide warm halo, mid glow,
+      //   and tight inner bloom. Applied to each unit path so the
+      //   gold shapes physically radiate light onto the paper. The
+      //   bitmap itself is NOT filtered — mix-blend-mode: multiply on
+      //   the parent <object> already melts the cream card bg into
+      //   the paper while preserving every wall/room/label detail.
+      //
+      // The filter must live INSIDE the SVG document because Safari
+      // can't reference parent-document filter ids from inside an <object>.
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const defs = doc.createElementNS(SVG_NS, 'defs');
+      defs.innerHTML = `
+        <filter id="radiant-glow" x="-80%" y="-80%" width="260%" height="260%">
+          <!-- Far diffuse warm halo -->
+          <feGaussianBlur stdDeviation="16" in="SourceGraphic" result="halo_far"/>
+          <feColorMatrix in="halo_far" type="matrix" values="
+            1.4 0   0   0   0.08
+            0   1.1 0   0   0.05
+            0   0   0.6 0   0
+            0   0   0   1.3 0
+          " result="halo_far_warm"/>
+          <!-- Mid glow -->
+          <feGaussianBlur stdDeviation="7" in="SourceGraphic" result="halo_mid"/>
+          <feColorMatrix in="halo_mid" type="matrix" values="
+            1.6 0   0   0   0.12
+            0   1.25 0  0   0.07
+            0   0   0.55 0  0
+            0   0   0   1.8 0
+          " result="halo_mid_warm"/>
+          <!-- Tight inner bloom -->
+          <feGaussianBlur stdDeviation="2.5" in="SourceGraphic" result="halo_inner"/>
+          <feMerge>
+            <feMergeNode in="halo_far_warm"/>
+            <feMergeNode in="halo_mid_warm"/>
+            <feMergeNode in="halo_inner"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      `;
+      svgRoot.insertBefore(defs, svgRoot.firstChild);
+
+      // Inject style scoped inside the SVG document — radiant glow via
+      // SVG filter (true halo bloom across the embedded SVG document).
+      //
+      // NOTE on the missing !important: CSS spec ignores !important
+      // inside @keyframes, so the static fill MUST also drop !important
+      // — otherwise the keyframe interpolation is overridden and the
+      // animation silently does nothing. Hover + selected states still
+      // use !important to win over the animated fill.
+      const style = doc.createElementNS(SVG_NS, 'style');
+      style.textContent = `
+        svg, g { overflow: visible; }
+
+        /* Smooth, soft GLOW — replaces the old fill-toggling flicker.
+           We breathe ONLY the opacity of a calm, steady glow layer
+           (very low amplitude, slow) so it never strobes. The fill is
+           a constant, barely-there warm wash; the perceived life comes
+           from the gentle opacity breathe on the radiant-glow filter.
+           NOTE: !important is ignored INSIDE @keyframes (CSS spec), so
+           the keyframe only animates opacity — which has no competing
+           !important rule — keeping the breathe smooth and unbroken. */
+        @keyframes unit-glow-breathe {
+          0%, 100% { opacity: 0.82; }
+          50%      { opacity: 1; }
+        }
+
+        .ec-unit-shape, path.cls-1, path.cls-2 {
+          cursor: pointer;
+          fill: rgba(217, 185, 122, 0.05);
+          stroke: #946F38 !important;
+          stroke-width: 2.5 !important;
+          stroke-linejoin: round;
+          filter: url(#radiant-glow);
+          transition: stroke-width 280ms ease, fill 280ms ease, opacity 280ms ease;
+          pointer-events: all;
+          /* Gentle, slow opacity breathe on the glowing shape — soft, not strobing */
+          animation: unit-glow-breathe 6.5s ease-in-out infinite;
+          will-change: opacity;
+        }
+        .ec-unit-shape:hover {
+          fill: rgba(217, 185, 122, 0.16) !important;
+          stroke-width: 3.5 !important;
+          opacity: 1 !important;
+          animation: none;
+        }
+        /* Selected unit: calm, steady highlight — no breathe, no flicker */
+        .ec-unit-shape.is-selected {
+          fill: rgba(217, 185, 122, 0.24) !important;
+          stroke: #6E5A37 !important;
+          stroke-width: 4.5 !important;
+          opacity: 1 !important;
+          animation: none;
+        }
+      `;
+      svgRoot.appendChild(style);
+
+      // Gather all candidate unit shapes (in document order) BEFORE
+      // adding any of our own rects to avoid polluting the candidate set.
+      const candidates = Array.from(
+        svgRoot.querySelectorAll('path, polygon, rect')
+      ).filter(el => {
+        // Skip degenerate paths (e.g. d="M 1156 691" with no draw commands)
+        if (el.tagName.toLowerCase() !== 'path') return true;
+        const d = (el.getAttribute('d') || '').trim();
+        // Need at least one drawing command after the initial move
+        return /[LlHhVvCcSsQqTtAaZz]/.test(d.slice(1));
+      });
+
+      // ── Mask the duplicate chrome baked into the bitmap PNG.
+      // The bitmap has its own chrome strip at the top: a small
+      // diamond + "EMBASSY CITADEL / WORLI MUMBAI" wordmark + an
+      // empty "L" pill at top-left, plus a prev/next/hamburger chip
+      // cluster at top-right. The global app already shows its own
+      // top bar (Embassy Citadel wordmark + BACK pill), and we render
+      // our own "FLOOR PLAN" eyebrow + "FLOOR L N" tag in HTML, so
+      // all of this baked-in chrome is redundant.
+      //
+      // We paint cream rects matching the card cream so they blend
+      // seamlessly under the mix-blend-mode multiply applied to the
+      // parent <object>. Coordinates are in the bitmap viewBox
+      // (0 0 1536 1024). Masks sit BETWEEN Layer_1 (bitmap) and
+      // Layer_2 (unit shapes) so unit polygons stay clickable on top.
+      //
+      // Preserved (intentionally NOT masked):
+      // · Code Index left rail (floor stack)
+      // · "TOWER A · 3 BHK PREMIUM" / "3 Apartment / Floor" headline
+      // · Bottom feature row (Spacious / Well-ventilated / Lobbies / Decks)
+      // · Right-side floor pill on the bitmap
+      const CARD_CREAM = '#F5EFE0';
+      const maskLayer = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
+      maskLayer.setAttribute('class', 'ec-chrome-mask');
+      const addMask = (x, y, w, h, name) => {
+        const r = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r.setAttribute('x', x);
+        r.setAttribute('y', y);
+        r.setAttribute('width', w);
+        r.setAttribute('height', h);
+        r.setAttribute('fill', CARD_CREAM);
+        r.setAttribute('pointer-events', 'none');
+        r.setAttribute('data-mask', name);
+        maskLayer.appendChild(r);
+      };
+      // Top-left chrome: diamond + wordmark + empty "L" pill
+      addMask(20, 10, 540, 140, 'topleft-chrome');
+      // Top-right chrome: bitmap-baked prev/next + hamburger chip cluster
+      addMask(1260, 10, 260, 140, 'topright-chips');
+      // Insert mask BETWEEN Layer_1 (bitmap) and Layer_2 (unit shapes),
+      // so the chrome gets covered but unit polygons stay clickable.
+      const layer2 = doc.getElementById('Layer_2');
+      if (layer2 && layer2.parentNode) {
+        layer2.parentNode.insertBefore(maskLayer, layer2);
+      } else {
+        svgRoot.appendChild(maskLayer);
+      }
+
+      // (Pointer-pin overlay removed — units are styled and clickable
+      // directly. The radiant glow + animated color cycle does the job
+      // of drawing the eye to each unit; BHK labels are shown elsewhere.)
+
+      candidates.forEach((el, i) => {
+        const unit = UNITS[i];
+        if (!unit) return;
+
+        el.classList.add('ec-unit-shape');
+        el.classList.add('unit');           // matches generic .unit selector
+        el.classList.add('clickable-unit'); // matches generic selector too
+        el.setAttribute('data-unit-id', unit.id);
+
+        // Stagger the pulse so units don't all breathe in sync.
+        el.style.animationDelay = (i * 0.5) + 's';
+
+        // Click and hover handlers on the SVG unit path.
+        el.addEventListener('mouseenter', () => highlightUnit(unit.idx, 'hover'));
+        el.addEventListener('mouseleave', () => clearUnitHighlight('hover'));
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          navigateToUnit(unit);
+        });
+
+        svgPaths.push({ el, idx: unit.idx, unit });
+      });
+      planRendered = true;   // interactive SVG wired successfully
+    } catch (err) {
+      console.warn('Could not access floor-units SVG:', err);
+    }
+  });
+
+  // ── Blank-render fallback ────────────────────────────────────────
+  // On tablet Safari / Samsung Internet a 2.5 MB <object> SVG can
+  // collapse to a blank box (reproduced offline: object width 0, no
+  // inner <svg>). If the interactive SVG hasn't wired itself within
+  // ~1.2 s, OR the object reports no <svg> / errors, swap to the
+  // static <img> so the floor plan ALWAYS shows. Idempotent.
+  let planRendered = false;
+  const planImg = document.getElementById('planImg');
+  function showFallback(reason) {
+    if (!planImg || planImg.style.display !== 'none') return;
+    obj.style.display = 'none';
+    planImg.style.display = 'block';
+    planImg.setAttribute('aria-hidden', 'false');
+    console.warn('floor-units: static-plan fallback (' + reason + ')');
+  }
+  function objHasSvg() {
+    try { return !!(obj.contentDocument && obj.contentDocument.querySelector('svg')); }
+    catch (_) { return false; }
+  }
+  obj.addEventListener('error', () => showFallback('object error'));
+  setTimeout(() => {
+    if (planRendered) return;             // interactive path won
+    if (!objHasSvg()) showFallback('no inner svg @1.2s');
+  }, 1200);
+  // Final safety net once everything settles.
+  window.addEventListener('load', () => {
+    setTimeout(() => { if (!planRendered && !objHasSvg()) showFallback('still blank @load'); }, 400);
+  });
+
+  // ── Hover-highlight: SVG only (right-side list removed) ──────────
+  function highlightUnit(idx) {
+    svgPaths.forEach(p => {
+      if (p.idx === idx) p.el.classList.add('is-selected');
+      else                p.el.classList.remove('is-selected');
+    });
+  }
+  function clearUnitHighlight() {
+    svgPaths.forEach(p => p.el.classList.remove('is-selected'));
+  }
+
+  // ── Navigation with cream-veil fade ──────────────────────────────
+  function navigateToUnit(unit, href) {
+    // Hash params (not query) so the destination loads offline — see the
+    // floor-read comment above for why a query string breaks the SW cache.
+    const url = href || (
+      'unit-detail.html#unit=' + encodeURIComponent(unit.id)
+      + '&floor=' + FLOOR
+      + '&bhk='   + unit.bhk
+      + '&type='  + encodeURIComponent(unit.type)
+      + '&area='  + unit.area
+      + '&facing='+ unit.facing
+      + '&price=' + unit.price
+    );
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = url; }, 220);
+  }
+
+  // Brand-back cream veil → home (top-level identity)
+  document.getElementById('brandBack').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = 'home.html'; }, 220);
+  });
+  // Right-side BACK button → inventory-floors (drill-up)
+  const ecBackBtn = document.getElementById('ecBackBtn');
+  if (ecBackBtn) {
+    const goBack = (e) => {
+      if (e) e.preventDefault();
+      document.body.classList.add('is-leaving');
+      setTimeout(() => { window.location.href = 'inventory-floors.html'; }, 220);
+    };
+    ecBackBtn.addEventListener('click', goBack);
+    ecBackBtn.addEventListener('touchend', goBack, { passive: false });
+  }
+
+  // Top-chip prev/next removed — the floor-stack rail on the left side
+  // of the bitmap is the canonical floor-changing UI (see fj-btn handlers).
+  // ── Floor-jumper buttons — overlay over the SVG bitmap's floor stack.
+  // Clicking a floor number reloads the page with ?floor=N, which updates
+  // the URL-driven unit codes + visible "L N" floor tag. The bitmap's
+  // own highlighted floor stays baked-in (it's pixels) — that's expected.
+  document.querySelectorAll('.fj-btn').forEach(btn => {
+    const goFloor = (e) => {
+      if (e) e.preventDefault();
+      const floor = btn.dataset.floor;
+      if (!floor) return;
+      // Skip nav if user taps the floor they're already viewing
+      if (parseInt(floor, 10) === FLOOR) return;
+      document.body.classList.add('is-leaving');
+      setTimeout(() => {
+        // Same path + hash won't reload on its own — set hash then reload
+        // so the floor-driven unit codes + "L N" tag re-render. Hash (not
+        // query) keeps the page cache-matchable offline.
+        window.location.hash = 'floor=' + floor;
+        window.location.reload();
+      }, 220);
+    };
+    btn.addEventListener('click', goFloor);
+    btn.addEventListener('touchend', goFloor, { passive: false });
+  });
+</script>
+
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+
+  // ── Prefetch next-screen on touchstart for faster transitions ───
+  (function() {
+    function wirePrefetch() {
+      document.querySelectorAll('a[href], button[data-href]').forEach(function(el) {
+        var href = el.getAttribute('href') || el.dataset.href;
+        if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:')) return;
+        el.addEventListener('touchstart', function() {
+          if (!document.querySelector('link[rel="prefetch"][href="' + href + '"]')) {
+            var link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = href;
+            document.head.appendChild(link);
+          }
+        }, { passive: true, once: true });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wirePrefetch);
+    } else {
+      wirePrefetch();
+    }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(function() {
+        if (location.pathname.indexOf('home.html') !== -1) return;
+        if (document.querySelector('link[rel="prefetch"][href="home.html"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'home.html';
+        document.head.appendChild(link);
+      });
+    }
+  })();
+</script>
+<!-- PWA-JS-END -->
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+</body>
+</html>

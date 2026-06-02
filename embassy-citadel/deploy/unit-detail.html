@@ -1,0 +1,1576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Residence Detail</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  UNIT DETAIL v2 — assumptions + reasoning
+  ──────────────────────────────────────────────────────────────────────
+  Rebuilt to faithfully match the curator-card mockup (28 May).
+
+  Stage: 1440 × 900 (same scaler contract as gallery / floor-units).
+
+  Top bar (identical chrome to floor-units / floor-plan):
+    LEFT  : Embassy Citadel wordmark SVG (use href="#ec-wordmark")
+    RIGHT : ‹ › round chips + BACK pill
+            BACK → floor-units.html?floor={currentFloor} (drill-up,
+            with cream-veil fade).
+
+  Body (two paper cards inside the stage):
+    LEFT  ~68 % — FLOOR PLAN card
+            · "— FLOOR PLAN" eyebrow top-left
+            · 52 px compass rose with N/W/E/S strokes
+            · 4-arrow expand icon top-right
+            · 70 px vertical FLOOR strip on the left INSIDE the card:
+              "FLOOR" eyebrow, current (26) as filled gold pill,
+              neighbours (27, 25, 24, 23, 22, ⋮, 02, 01),
+              down chevron. Each is a tappable button that navigates
+              to unit-detail.html?floor=N&unit=A-N07 (preserves drill).
+            · Main canvas (rest of the card): an SVG stylised
+              5 BHK + Study floor plan in BLUE blueprint colours.
+              We don't have a CAD file; we build a stylised composition
+              that matches the mockup feel (rectangular footprint,
+              5 bedrooms with ensuites + dresses around the edge,
+              living/dining core, kitchen+utility cluster, master
+              suite bottom-right with bar + deck + dry area, foyer
+              bottom-centre). Room labels in dark blue uppercase
+              with dimensions like 13'0"X12'0". Furniture sketched
+              with thin strokes.
+
+    RIGHT ~32 % — SPECS + PRICE card
+            · "— RESIDENCE" eyebrow
+            · Cormorant italic "A-2607" hero (~56 px)
+            · Subtitle "MID RESIDENCE · FLOOR 26 · 5 BHK STUDY"
+            · Floating QR placeholder top-right (16×16 grid pattern)
+            · 4-icon specs row: Bedrooms / Bathrooms / Car Parks /
+              Servant (Cormorant italic numbers + caps labels +
+              inline gold SVG icons)
+            · Carpet area: Cormorant italic "3,160" + "SQ.FT. CARPET"
+            · PRICE SHEET section — rows with hair dividers, no
+              backgrounds. Basic / PLC / Other Charges / GST.
+            · TOTAL PRICE gold serif italic "₹ 18.45 Cr*"
+            · Footnote "* INDICATIVE · RERA P51900-30421"
+            · Footer pill "← BACK TO HOME" → home.html (cream-veil)
+
+  URL params:
+    ?floor=N    — sets the active floor (1..79, default 26)
+    ?unit=A-NNN — sets the unit code shown (default A-{floor}07)
+
+  Asset note · stylised blueprint SVG is inline. Future swap: drop a
+  real per-unit CAD SVG at assets/floor-plans/<unit>.svg and replace
+  the .blueprint-svg block.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --blueprint-fill: #C5DAE8;
+    --blueprint-fill-soft: #D8E5EF;
+    --blueprint-wall: #2F5A78;
+    --blueprint-deck: #A9C2D2;
+    --blueprint-text: #1F3D55;
+    --blueprint-text-soft: #5B7C95;
+
+    --card-shadow: 0 12px 36px rgba(26, 24, 20, 0.05),
+                   0 4px 10px rgba(26, 24, 20, 0.04);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage ─────────────────────────────────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:
+      url('assets/bg-paper.png') center/cover no-repeat,
+      radial-gradient(ellipse 80% 60% at 50% 45%, var(--paper) 0%, var(--bone-50) 55%, var(--bone-200) 100%) var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    background: var(--bone);
+  }
+  .stage-bg {
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    z-index: 0; pointer-events: none;
+    background-color: var(--bone);
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 1;
+    opacity: 0.025;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 5px 5px;
+    background-position: 0 0, 1px 1px;
+  }
+
+  /* ── TOP BAR (matches floor-units.html) ────────────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+    margin-left: 8px;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+  button, [role="button"], a[href], .pill {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+  }
+  .brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .brand-wordmark { width: 130px; height: 36px; color: var(--onyx-700); }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+  .top-chips { display: flex; align-items: center; gap: 10px; }
+  .tc {
+    width: 44px; height: 44px;
+    min-width: 44px; min-height: 44px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.7);
+    border: 1px solid var(--hair-lo);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--gold-500);
+    cursor: pointer;
+    transition: background 220ms ease, color 220ms ease, transform 220ms ease, border-color 220ms ease;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px; line-height: 1;
+    user-select: none;
+  }
+  .tc:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair); }
+  .tc:active { transform: scale(0.96); }
+
+  /* ── Body grid ─────────────────────────────────────────────────── */
+  .body-grid {
+    position: absolute;
+    left: 36px; right: 36px;
+    top: 92px; bottom: 36px;
+    display: grid;
+    grid-template-columns: 1fr 432px;
+    gap: 24px;
+    z-index: 4;
+  }
+
+  /* ── LEFT card: floor plan ─────────────────────────────────────── */
+  .plan-card {
+    position: relative;
+    background: rgba(252, 250, 244, 0.7);
+    border: 1px solid var(--hair);
+    border-radius: 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .plan-eyebrow {
+    position: absolute;
+    top: 22px; left: 100px;
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+    z-index: 4;
+    pointer-events: none;
+  }
+  .plan-eyebrow::before {
+    content: ''; width: 18px; height: 1px;
+    background: var(--gold-500); opacity: 0.7;
+  }
+  .plan-compass {
+    position: absolute;
+    top: 50px; left: 100px;
+    width: 52px; height: 52px;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .plan-compass svg { width: 100%; height: 100%; display: block; }
+  /* Zoom control stack — replaces single expand chip */
+  .bp-zoom-stack {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+  }
+  .bp-zoom-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.92);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 180ms, transform 180ms, border-color 180ms;
+    -webkit-appearance: none; appearance: none;
+    padding: 0;
+  }
+  .bp-zoom-btn:hover { background: var(--paper); transform: scale(1.05); border-color: var(--hair-hi); }
+  .bp-zoom-btn:active { transform: scale(0.95); }
+  .bp-zoom-btn svg { display: block; }
+
+  /* Zoom viewport + stage */
+  .bp-zoom-viewport {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: grab;
+  }
+  .bp-zoom-viewport:active { cursor: grabbing; }
+  .bp-zoom-stage {
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+    transition: transform 200ms ease;
+    will-change: transform;
+    display: grid;
+    place-items: center;
+  }
+  .bp-zoom-stage.is-dragging { transition: none; }
+
+  /* Floor selector strip — vertical, inside the card on left */
+  .floor-strip {
+    position: absolute;
+    top: 22px; bottom: 22px; left: 22px;
+    width: 64px;
+    z-index: 3;
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding: 8px 0 8px;
+    border-right: 1px solid var(--hair-lo);
+  }
+  .floor-strip .fs-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; font-size: 9px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 14px;
+  }
+  .floor-strip .fs-scroll {
+    flex: 1;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+  .floor-strip .fs-num {
+    width: 38px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500; font-size: 15px;
+    color: var(--taupe-400);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+    -webkit-appearance: none; appearance: none;
+    padding: 0;
+  }
+  .floor-strip .fs-num:hover { color: var(--gold-500); background: rgba(201, 165, 103, 0.10); }
+  .floor-strip .fs-num.is-active {
+    background: var(--gold-500);
+    color: var(--paper);
+    font-style: italic;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(148,111,56,0.25);
+  }
+  .floor-strip .fs-ellipsis {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--taupe-300);
+    letter-spacing: 0.2em;
+    line-height: 1;
+    padding: 2px 0;
+  }
+  .floor-strip .fs-chev {
+    margin-top: 8px;
+    color: var(--gold-500);
+    opacity: 0.6;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 6px;
+  }
+  .floor-strip .fs-chev:hover { opacity: 1; }
+
+  /* The blueprint canvas: fills the card minus left strip + top eyebrow */
+  .plan-canvas {
+    position: absolute;
+    left: 96px; right: 16px;
+    top: 100px; bottom: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .blueprint-svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* ── RIGHT card: specs + price ─────────────────────────────────── */
+  .specs-card {
+    position: relative;
+    background: rgba(252, 250, 244, 0.78);
+    border: 1px solid var(--hair);
+    border-radius: 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: var(--card-shadow);
+    padding: 32px 32px 28px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .spec-eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 10px;
+  }
+  .spec-eyebrow::before {
+    content: ''; width: 18px; height: 1px;
+    background: var(--gold-500); opacity: 0.7;
+  }
+  .spec-hero {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 56px;
+    line-height: 1;
+    color: var(--onyx-700);
+    margin: 2px 0 10px;
+    letter-spacing: 0.01em;
+  }
+  .spec-sub {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .spec-sub .dot { color: var(--gold-500); margin: 0 6px; opacity: 0.8; }
+
+  /* Floating QR top-right inside the right card */
+  .qr-frame {
+    position: absolute;
+    top: 28px; right: 28px;
+    width: 90px; height: 90px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 6px;
+    box-shadow: 0 4px 10px rgba(80,58,28,0.08);
+  }
+  .qr-grid {
+    width: 100%; height: 100%;
+    display: grid;
+    grid-template-columns: repeat(16, 1fr);
+    grid-template-rows: repeat(16, 1fr);
+    gap: 0;
+  }
+  .qr-grid span {
+    background: var(--onyx-700);
+    border-radius: 0;
+  }
+  .qr-grid span.off { background: transparent; }
+
+  /* Specs row — 4 columns */
+  .specs-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 0 0 18px;
+    padding: 14px 0 16px;
+    border-top: 1px solid var(--hair-lo);
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .spec-col {
+    display: flex; flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+    padding: 0 4px;
+    border-left: 1px solid var(--hair-lo);
+  }
+  .spec-col:first-child { border-left: none; }
+  .spec-col .ic {
+    width: 24px; height: 24px;
+    color: var(--gold-500);
+    margin-bottom: 2px;
+  }
+  .spec-col .ic svg { width: 100%; height: 100%; display: block; }
+  .spec-col .num {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--onyx-700);
+  }
+  .spec-col .lbl {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 8.5px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    line-height: 1.2;
+  }
+
+  /* Carpet hero */
+  .carpet {
+    display: flex; align-items: baseline;
+    gap: 14px;
+    margin: 0 0 22px;
+  }
+  .carpet .big {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 60px;
+    line-height: 1;
+    color: var(--onyx-700);
+    letter-spacing: 0.01em;
+  }
+  .carpet .lbl {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    padding-bottom: 6px;
+    line-height: 1.4;
+  }
+
+  /* Price sheet */
+  .price-sheet { margin-top: 4px; }
+  .ps-eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 12px;
+  }
+  .ps-eyebrow::before {
+    content: ''; width: 18px; height: 1px;
+    background: var(--gold-500); opacity: 0.7;
+  }
+  .ps-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--hair-lo);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+  }
+  .ps-row .k {
+    color: var(--onyx-300);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+  .ps-row .k .sub {
+    color: var(--taupe-400);
+    font-weight: 400;
+    font-size: 9.5px;
+    margin-left: 2px;
+  }
+  .ps-row .v {
+    color: var(--onyx-700);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .total-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 16px 0 4px;
+    margin-top: 4px;
+  }
+  .total-row .tot-k {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .total-row .tot-v {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--gold-500);
+    letter-spacing: 0.01em;
+  }
+  .total-foot {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    margin-top: 6px;
+  }
+
+  /* Footer pill — BACK TO HOME */
+  .back-pill {
+    margin-top: auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 46px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.85);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-appearance: none; appearance: none;
+    margin-top: 22px;
+  }
+  .back-pill:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .back-pill:active { transform: scale(0.98); }
+  .back-pill .arr { font-size: 13px; letter-spacing: 0; transform: translateY(-0.5px); }
+
+  /* ── Cream-veil ─────────────────────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+</style>
+
+<script>
+  // ── Stage scaler — scale-to-fit (contain). Fixes iPad13 side overflow.
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+
+<!-- Embassy Citadel wordmark symbol (shared with home / floor-units) -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+
+    <div class="stage-bg" aria-hidden="true"></div>
+    <div class="stage-grain" aria-hidden="true"></div>
+
+    <!-- ── TOP BAR ───────────────────────────────────────────── -->
+    <header class="topbar">
+      <a class="brand-back" href="home.html" id="brandBack" aria-label="Embassy Citadel — Home">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <div class="top-chips">
+        <button class="tc" id="prevBtn" type="button" aria-label="Previous unit">‹</button>
+        <button class="tc" id="nextBtn" type="button" aria-label="Next unit">›</button>
+        <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to floor selection">
+          <span class="arr" aria-hidden="true">←</span>
+          <span>Back</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── TWO-COLUMN BODY ───────────────────────────────────── -->
+    <div class="body-grid">
+
+      <!-- LEFT: floor plan card -->
+      <section class="plan-card" aria-label="Floor plan">
+        <div class="plan-eyebrow">Floor Plan</div>
+
+        <div class="plan-compass" aria-hidden="true">
+          <svg viewBox="0 0 52 52" fill="none">
+            <circle cx="26" cy="26" r="23" stroke="#946F38" stroke-width="1.1" fill="rgba(252,250,244,0.5)" />
+            <circle cx="26" cy="26" r="17" stroke="#946F38" stroke-width="0.6" opacity="0.4" fill="none" />
+            <line x1="26" y1="6" x2="26" y2="14" stroke="#946F38" stroke-width="1.2" />
+            <line x1="26" y1="38" x2="26" y2="46" stroke="#946F38" stroke-width="0.8" opacity="0.7" />
+            <line x1="6"  y1="26" x2="14" y2="26" stroke="#946F38" stroke-width="0.8" opacity="0.7" />
+            <line x1="38" y1="26" x2="46" y2="26" stroke="#946F38" stroke-width="0.8" opacity="0.7" />
+            <polygon points="26,4 23,11 26,9 29,11" fill="#946F38" />
+            <text x="26" y="22" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="6.5" font-weight="700"
+                  letter-spacing="0.6" fill="#946F38">N</text>
+            <text x="26" y="44" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="5" font-weight="500"
+                  letter-spacing="0.4" fill="#A89B86">S</text>
+            <text x="9" y="28" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="5" font-weight="500"
+                  letter-spacing="0.4" fill="#A89B86">W</text>
+            <text x="43" y="28" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="5" font-weight="500"
+                  letter-spacing="0.4" fill="#A89B86">E</text>
+          </svg>
+        </div>
+
+        <div class="bp-zoom-stack">
+          <button class="bp-zoom-btn" type="button" data-zoom="in" aria-label="Zoom in">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+          </button>
+          <button class="bp-zoom-btn" type="button" data-zoom="out" aria-label="Zoom out">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+          </button>
+          <button class="bp-zoom-btn" type="button" data-zoom="fit" aria-label="Fit">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 5V2h3M9 2h3v3M12 9v3H9M5 12H2V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" /></svg>
+          </button>
+        </div>
+
+        <!-- Floor selector strip (vertical, on left inside card) -->
+        <nav class="floor-strip" id="floorStrip" aria-label="Floor selector">
+          <div class="fs-eyebrow">Floor</div>
+          <div class="fs-scroll" id="floorScroll"><!-- populated by JS --></div>
+          <button class="fs-chev" id="fsChev" aria-label="Show more floors">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 5l4 4 4-4" />
+            </svg>
+          </button>
+        </nav>
+
+        <!-- Blueprint floor plan canvas -->
+        <div class="plan-canvas">
+          <div class="bp-zoom-viewport">
+            <div class="bp-zoom-stage">
+          <svg class="blueprint-svg" viewBox="0 0 880 600" preserveAspectRatio="xMidYMid meet" aria-label="Five-bedroom plus study residence floor plan">
+            <defs>
+              <pattern id="bp-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2F5A78" stroke-width="0.15" opacity="0.25"/>
+              </pattern>
+              <linearGradient id="bp-fill-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#D8E5EF" />
+                <stop offset="100%" stop-color="#C0D5E4" />
+              </linearGradient>
+            </defs>
+
+            <!-- background grid -->
+            <rect x="0" y="0" width="880" height="600" fill="url(#bp-grid)" />
+
+            <!-- ── ROOMS ────────────────────────────────────────────── -->
+            <!-- BEDROOM 5 (top-left) -->
+            <g>
+              <rect x="60"  y="50"  width="170" height="135" fill="url(#bp-fill-grad)" stroke="#2F5A78" stroke-width="2.2" />
+              <text x="145" y="105" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="10" font-weight="600"
+                    letter-spacing="0.18em" fill="#1F3D55">BEDROOM 5</text>
+              <text x="145" y="122" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.12em" fill="#5B7C95">13'0" X 12'6"</text>
+              <!-- bed sketch -->
+              <rect x="75"  y="135" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <rect x="80"  y="140" width="20" height="14" fill="none" stroke="#2F5A78" stroke-width="0.7" />
+            </g>
+
+            <!-- ENSUITE 5 -->
+            <g>
+              <rect x="230" y="50"  width="70" height="60" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="265" y="80" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7.5" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">ENSUITE</text>
+              <text x="265" y="92" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">7'X8'</text>
+            </g>
+
+            <!-- DRESS 5 -->
+            <g>
+              <rect x="230" y="110" width="70" height="50" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="265" y="135" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7.5" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">DRESS</text>
+              <text x="265" y="147" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">7'X6'</text>
+            </g>
+
+            <!-- BEDROOM 4 (top-mid) -->
+            <g>
+              <rect x="300" y="50"  width="160" height="135" fill="url(#bp-fill-grad)" stroke="#2F5A78" stroke-width="2.2" />
+              <text x="380" y="105" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="10" font-weight="600"
+                    letter-spacing="0.18em" fill="#1F3D55">BEDROOM 4</text>
+              <text x="380" y="122" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.12em" fill="#5B7C95">12'8" X 12'0"</text>
+              <rect x="315" y="135" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <rect x="320" y="140" width="20" height="14" fill="none" stroke="#2F5A78" stroke-width="0.7" />
+            </g>
+
+            <!-- STUDY (top-right of mid block) -->
+            <g>
+              <rect x="460" y="50"  width="130" height="90" fill="url(#bp-fill-grad)" stroke="#2F5A78" stroke-width="2.2" />
+              <text x="525" y="92" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="10" font-weight="600"
+                    letter-spacing="0.2em" fill="#1F3D55">STUDY</text>
+              <text x="525" y="108" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.12em" fill="#5B7C95">10'X9'</text>
+              <rect x="478" y="115" width="44" height="14" fill="none" stroke="#2F5A78" stroke-width="0.8" />
+            </g>
+
+            <!-- DRY AREA top-right -->
+            <g>
+              <rect x="460" y="140" width="60" height="45" fill="#B9CEDE" stroke="#2F5A78" stroke-width="1.6" />
+              <text x="490" y="166" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6.8" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">DRY AREA</text>
+            </g>
+
+            <!-- BAR -->
+            <g>
+              <rect x="520" y="140" width="70" height="45" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="555" y="166" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="600"
+                    letter-spacing="0.18em" fill="#1F3D55">BAR</text>
+            </g>
+
+            <!-- BEDROOM 3 (right) -->
+            <g>
+              <rect x="590" y="50"  width="170" height="135" fill="url(#bp-fill-grad)" stroke="#2F5A78" stroke-width="2.2" />
+              <text x="675" y="105" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="10" font-weight="600"
+                    letter-spacing="0.18em" fill="#1F3D55">BEDROOM 3</text>
+              <text x="675" y="122" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.12em" fill="#5B7C95">13'2" X 12'6"</text>
+              <rect x="605" y="135" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <rect x="610" y="140" width="20" height="14" fill="none" stroke="#2F5A78" stroke-width="0.7" />
+            </g>
+
+            <!-- ENSUITE 3 (top-right corner small) -->
+            <g>
+              <rect x="760" y="50"  width="60" height="80" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="790" y="85" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7.5" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">ENSUITE</text>
+              <text x="790" y="98" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">7'X8'</text>
+            </g>
+
+            <!-- STORE -->
+            <g>
+              <rect x="760" y="130" width="60" height="55" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="790" y="160" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7.5" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">STORE</text>
+            </g>
+
+            <!-- ── MIDDLE BAND ─────────────────────────────────── -->
+
+            <!-- LIVING / DINING (big central) -->
+            <g>
+              <rect x="60"  y="185" width="400" height="200" fill="#CFDEE9" stroke="#2F5A78" stroke-width="2.4" />
+              <text x="260" y="262" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="13" font-weight="600"
+                    letter-spacing="0.22em" fill="#1F3D55">LIVING / DINING</text>
+              <text x="260" y="282" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="9" font-weight="500"
+                    letter-spacing="0.14em" fill="#5B7C95">26'0" X 13'1"</text>
+              <!-- sofa cluster sketch -->
+              <rect x="80"  y="300" width="100" height="22" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <rect x="80"  y="324" width="46" height="40" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <rect x="134" y="324" width="46" height="40" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <!-- coffee table -->
+              <rect x="200" y="320" width="80" height="36" fill="none" stroke="#2F5A78" stroke-width="0.8" />
+              <!-- dining table -->
+              <rect x="320" y="305" width="120" height="58" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <line x1="332" y1="305" x2="332" y2="363" stroke="#2F5A78" stroke-width="0.5" />
+              <line x1="354" y1="305" x2="354" y2="363" stroke="#2F5A78" stroke-width="0.5" />
+              <line x1="376" y1="305" x2="376" y2="363" stroke="#2F5A78" stroke-width="0.5" />
+              <line x1="398" y1="305" x2="398" y2="363" stroke="#2F5A78" stroke-width="0.5" />
+              <line x1="420" y1="305" x2="420" y2="363" stroke="#2F5A78" stroke-width="0.5" />
+            </g>
+
+            <!-- KITCHEN -->
+            <g>
+              <rect x="460" y="185" width="130" height="120" fill="url(#bp-fill-grad)" stroke="#2F5A78" stroke-width="2.2" />
+              <text x="525" y="232" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="10" font-weight="600"
+                    letter-spacing="0.2em" fill="#1F3D55">KITCHEN</text>
+              <text x="525" y="247" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.12em" fill="#5B7C95">14'X10'</text>
+              <!-- counters -->
+              <rect x="470" y="260" width="110" height="14" fill="none" stroke="#2F5A78" stroke-width="0.8" />
+              <rect x="470" y="280" width="50"  height="14" fill="none" stroke="#2F5A78" stroke-width="0.8" />
+            </g>
+
+            <!-- UTILITY -->
+            <g>
+              <rect x="460" y="305" width="80" height="60" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="500" y="332" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">UTILITY</text>
+              <text x="500" y="346" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">8'X7'</text>
+            </g>
+
+            <!-- S. ROOM -->
+            <g>
+              <rect x="540" y="305" width="50" height="60" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="565" y="332" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7" font-weight="600"
+                    letter-spacing="0.14em" fill="#1F3D55">S. ROOM</text>
+            </g>
+
+            <!-- POR. RM (powder room) -->
+            <g>
+              <rect x="590" y="185" width="60" height="50" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="620" y="208" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7" font-weight="600"
+                    letter-spacing="0.14em" fill="#1F3D55">POR. RM</text>
+              <text x="620" y="222" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="5.8" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">6'X5'</text>
+            </g>
+
+            <!-- FOYER -->
+            <g>
+              <rect x="590" y="235" width="170" height="100" fill="#CFDEE9" stroke="#2F5A78" stroke-width="2.2" />
+              <text x="675" y="280" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="11" font-weight="600"
+                    letter-spacing="0.22em" fill="#1F3D55">FOYER</text>
+              <text x="675" y="296" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.12em" fill="#5B7C95">14'X10'</text>
+              <!-- entry mark -->
+              <line x1="675" y1="320" x2="675" y2="335" stroke="#2F5A78" stroke-width="1.4" stroke-linecap="round" />
+            </g>
+
+            <!-- DINING node (small to right of foyer) -->
+            <g>
+              <rect x="760" y="185" width="60" height="100" fill="url(#bp-fill-grad)" stroke="#2F5A78" stroke-width="2" />
+              <text x="790" y="228" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">DINING</text>
+              <text x="790" y="242" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">8'X12'</text>
+            </g>
+
+            <!-- corridor connector to master -->
+            <g>
+              <rect x="760" y="285" width="60" height="50" fill="#D8E5EF" stroke="#2F5A78" stroke-width="1.6" />
+            </g>
+
+            <!-- ── BOTTOM BAND ─────────────────────────────────── -->
+
+            <!-- BEDROOM 2 (bottom-left) -->
+            <g>
+              <rect x="60"  y="385" width="170" height="160" fill="url(#bp-fill-grad)" stroke="#2F5A78" stroke-width="2.2" />
+              <text x="145" y="445" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="10" font-weight="600"
+                    letter-spacing="0.18em" fill="#1F3D55">BEDROOM 2</text>
+              <text x="145" y="462" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.12em" fill="#5B7C95">13'4" X 12'6"</text>
+              <rect x="75"  y="478" width="65" height="42" fill="none" stroke="#2F5A78" stroke-width="0.9" />
+              <rect x="80"  y="483" width="22" height="14" fill="none" stroke="#2F5A78" stroke-width="0.7" />
+            </g>
+
+            <!-- ENSUITE 2 -->
+            <g>
+              <rect x="230" y="385" width="70" height="60" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="265" y="415" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7.5" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">ENSUITE</text>
+              <text x="265" y="428" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">7'X8'</text>
+            </g>
+
+            <!-- DRESS 2 -->
+            <g>
+              <rect x="230" y="445" width="70" height="50" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="265" y="472" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7.5" font-weight="600"
+                    letter-spacing="0.16em" fill="#1F3D55">DRESS</text>
+              <text x="265" y="484" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">7'X6'</text>
+            </g>
+
+            <!-- DECK (bottom-mid) -->
+            <g>
+              <rect x="230" y="495" width="280" height="50" fill="#A9C2D2" stroke="#2F5A78" stroke-width="1.8" />
+              <line x1="240" y1="495" x2="240" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="260" y1="495" x2="260" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="280" y1="495" x2="280" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="300" y1="495" x2="300" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="320" y1="495" x2="320" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="340" y1="495" x2="340" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="360" y1="495" x2="360" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="380" y1="495" x2="380" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="400" y1="495" x2="400" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="420" y1="495" x2="420" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="440" y1="495" x2="440" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="460" y1="495" x2="460" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="480" y1="495" x2="480" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <line x1="500" y1="495" x2="500" y2="545" stroke="#88A6B8" stroke-width="0.5" />
+              <text x="370" y="528" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="9" font-weight="600"
+                    letter-spacing="0.32em" fill="#1F3D55">DECK</text>
+            </g>
+
+            <!-- MASTER SUITE (bottom-right big) -->
+            <g>
+              <rect x="510" y="385" width="250" height="160" fill="#CFDEE9" stroke="#2F5A78" stroke-width="2.6" />
+              <text x="635" y="450" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="12" font-weight="600"
+                    letter-spacing="0.24em" fill="#1F3D55">MASTER SUITE</text>
+              <text x="635" y="468" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="8" font-weight="500"
+                    letter-spacing="0.14em" fill="#5B7C95">18'0" X 14'0"</text>
+              <!-- king bed sketch -->
+              <rect x="540" y="485" width="100" height="48" fill="none" stroke="#2F5A78" stroke-width="1" />
+              <rect x="548" y="490" width="36" height="18" fill="none" stroke="#2F5A78" stroke-width="0.7" />
+              <rect x="600" y="490" width="36" height="18" fill="none" stroke="#2F5A78" stroke-width="0.7" />
+              <!-- side tables -->
+              <rect x="525" y="495" width="12" height="14" fill="none" stroke="#2F5A78" stroke-width="0.6" />
+              <rect x="645" y="495" width="12" height="14" fill="none" stroke="#2F5A78" stroke-width="0.6" />
+              <!-- seating -->
+              <rect x="675" y="485" width="70" height="48" fill="none" stroke="#2F5A78" stroke-width="0.7" />
+            </g>
+
+            <!-- MASTER ENSUITE -->
+            <g>
+              <rect x="760" y="385" width="60" height="100" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="790" y="425" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7" font-weight="600"
+                    letter-spacing="0.14em" fill="#1F3D55">ENSUITE</text>
+              <text x="790" y="438" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">10'X8'</text>
+            </g>
+
+            <!-- MASTER DRESS -->
+            <g>
+              <rect x="760" y="485" width="60" height="60" fill="#D8E5EF" stroke="#2F5A78" stroke-width="2" />
+              <text x="790" y="514" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="7" font-weight="600"
+                    letter-spacing="0.14em" fill="#1F3D55">DRESS</text>
+              <text x="790" y="528" text-anchor="middle"
+                    font-family="Inter, sans-serif" font-size="6" font-weight="500"
+                    letter-spacing="0.1em" fill="#5B7C95">9'X6'</text>
+            </g>
+
+            <!-- ── OUTLINE — apartment perimeter ────────────────── -->
+            <rect x="58" y="48" width="764" height="500" fill="none"
+                  stroke="#2F5A78" stroke-width="3" />
+          </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: specs + price card -->
+      <aside class="specs-card" aria-label="Residence specifications">
+
+        <!-- floating QR -->
+        <div class="qr-frame" aria-hidden="true">
+          <div class="qr-grid" id="qrGrid"><!-- populated by JS --></div>
+        </div>
+
+        <div class="spec-eyebrow">Residence</div>
+        <h1 class="spec-hero" id="unitHero">A-2607</h1>
+        <div class="spec-sub" id="unitSub">
+          MID RESIDENCE <span class="dot">·</span> FLOOR 26 <span class="dot">·</span> 5 BHK STUDY
+        </div>
+
+        <!-- 4-col specs -->
+        <div class="specs-row">
+          <div class="spec-col">
+            <div class="ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4" />
+                <path d="M3 16v3" />
+                <path d="M21 16v3" />
+                <path d="M3 16h18v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2z" />
+              </svg>
+            </div>
+            <div class="num">5</div>
+            <div class="lbl">Bedrooms</div>
+          </div>
+          <div class="spec-col">
+            <div class="ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 13h18" />
+                <path d="M5 13V6a2 2 0 0 1 2-2h2v3" />
+                <path d="M5 13v3a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-3" />
+                <path d="M7 20l-1 2" />
+                <path d="M17 20l1 2" />
+              </svg>
+            </div>
+            <div class="num">5</div>
+            <div class="lbl">Bathrooms</div>
+          </div>
+          <div class="spec-col">
+            <div class="ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 15l1.5-4.5A2 2 0 0 1 8.4 9h7.2a2 2 0 0 1 1.9 1.5L19 15" />
+                <path d="M3 15h18v3a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3z" />
+                <circle cx="7.5" cy="17" r="0.8" fill="currentColor" />
+                <circle cx="16.5" cy="17" r="0.8" fill="currentColor" />
+              </svg>
+            </div>
+            <div class="num">3</div>
+            <div class="lbl">Car Parks</div>
+          </div>
+          <div class="spec-col">
+            <div class="ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="3.5" />
+                <path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6" />
+              </svg>
+            </div>
+            <div class="num">2</div>
+            <div class="lbl">Servant</div>
+          </div>
+        </div>
+
+        <!-- carpet area hero -->
+        <div class="carpet">
+          <div class="big" id="carpetVal">3,160</div>
+          <div class="lbl">SQ.FT.<br/>Carpet</div>
+        </div>
+
+        <!-- price sheet -->
+        <div class="price-sheet">
+          <div class="ps-eyebrow">Price Sheet</div>
+          <div class="ps-row">
+            <span class="k">Basic Price</span>
+            <span class="v">₹ 13.62 Cr</span>
+          </div>
+          <div class="ps-row">
+            <span class="k">PLC <span class="sub">(Preferential Location)</span></span>
+            <span class="v">₹ 1.92 Cr</span>
+          </div>
+          <div class="ps-row">
+            <span class="k">Other Charges</span>
+            <span class="v">₹ 1.27 Cr</span>
+          </div>
+          <div class="ps-row">
+            <span class="k">GST &amp; Taxes</span>
+            <span class="v">₹ 1.64 Cr</span>
+          </div>
+          <div class="total-row">
+            <span class="tot-k">Total Price</span>
+            <span class="tot-v" id="totalVal">₹ 18.45 Cr<span style="font-size:14px;vertical-align:super;">*</span></span>
+          </div>
+          <div class="total-foot">* Indicative <span style="color:var(--gold-500);">·</span> RERA P51900-30421</div>
+        </div>
+
+        <button class="back-pill" id="backHomePill" type="button">
+          <span class="arr" aria-hidden="true">←</span>
+          <span>Back to Home</span>
+        </button>
+      </aside>
+
+    </div>
+
+    <div class="veil" id="veil" aria-hidden="true"></div>
+
+  </div>
+</div>
+
+<script>
+  // ── URL params — hash FIRST, query as fallback ───────────────────
+  // Hash params survive offline (the cache-first service worker can't
+  // match a URL that carries a query string, so a queried URL falls back
+  // to the offline-navigate handler and serves the wrong page). A "#..."
+  // fragment is never part of the request, so the page loads from cache.
+  // We still accept ?unit/?floor for back-compat with inbound links.
+  const params = new URLSearchParams(
+    (window.location.hash || '').replace(/^#/, '') || window.location.search.replace(/^\?/, '')
+  );
+  const FLOOR = (function () {
+    const n = parseInt(params.get('floor'), 10);
+    return (isFinite(n) && n >= 1 && n <= 79) ? n : 26;
+  })();
+  const UNIT_DEFAULT = 'A-' + String(FLOOR).padStart(2, '0') + '07';
+  const UNIT = params.get('unit') || UNIT_DEFAULT;
+
+  // Reflect in eyebrow + sub
+  document.getElementById('unitHero').textContent = UNIT;
+  document.getElementById('unitSub').innerHTML =
+    'MID RESIDENCE <span class="dot">·</span> FLOOR ' + FLOOR +
+    ' <span class="dot">·</span> 5 BHK STUDY';
+
+  // ── Build the floor selector strip ───────────────────────────────
+  // Show: active floor + 2 above + neighbours down to 1, with an
+  // ellipsis between non-contiguous ranges so it reads as scroll-style.
+  (function buildFloorStrip() {
+    const scroll = document.getElementById('floorScroll');
+    const items = [];
+    // upper neighbours (max + 2)
+    const upper = [];
+    for (let f = Math.min(79, FLOOR + 2); f > FLOOR; f--) upper.push(f);
+    upper.forEach(f => items.push({ type: 'num', f }));
+    // active
+    items.push({ type: 'num', f: FLOOR, active: true });
+    // lower neighbours (3 floors below)
+    const lowerStart = FLOOR - 1;
+    const lowerEnd   = Math.max(1, FLOOR - 4);
+    for (let f = lowerStart; f >= lowerEnd; f--) items.push({ type: 'num', f });
+    // ellipsis if there's a gap below
+    if (lowerEnd > 2) {
+      items.push({ type: 'ellipsis' });
+      items.push({ type: 'num', f: 2 });
+      items.push({ type: 'num', f: 1 });
+    } else if (lowerEnd === 2) {
+      items.push({ type: 'num', f: 1 });
+    }
+
+    items.forEach(it => {
+      if (it.type === 'ellipsis') {
+        const e = document.createElement('div');
+        e.className = 'fs-ellipsis';
+        e.textContent = '⋮';
+        scroll.appendChild(e);
+        return;
+      }
+      const b = document.createElement('button');
+      b.className = 'fs-num' + (it.active ? ' is-active' : '');
+      b.type = 'button';
+      b.textContent = String(it.f).padStart(2, '0');
+      b.setAttribute('data-floor', it.f);
+      b.setAttribute('aria-label', 'Floor ' + it.f);
+      if (it.active) b.setAttribute('aria-current', 'true');
+      b.addEventListener('click', () => navigateToFloor(it.f));
+      scroll.appendChild(b);
+    });
+  })();
+
+  // ── Navigate to a different floor (preserves unit slot 07) ───────
+  function navigateToFloor(f) {
+    if (f === FLOOR) return;
+    const unit = 'A-' + String(f).padStart(2, '0') + '07';
+    document.body.classList.add('is-leaving');
+    setTimeout(() => {
+      // Same path → a hash change alone won't reload, so set the hash and
+      // reload. Hash (not query) keeps the page cache-matchable offline.
+      window.location.hash = 'floor=' + f + '&unit=' + encodeURIComponent(unit);
+      window.location.reload();
+    }, 220);
+  }
+
+  // ── QR placeholder grid (16×16 random-ish pattern) ──────────────
+  (function buildQR() {
+    const grid = document.getElementById('qrGrid');
+    // deterministic-ish pattern seeded by unit name so it doesn't reflow on every click
+    let seed = 0;
+    for (let i = 0; i < UNIT.length; i++) seed = (seed * 31 + UNIT.charCodeAt(i)) & 0xffff;
+    function rand() {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed / 0x7fffffff;
+    }
+    const cells = 16 * 16;
+    for (let i = 0; i < cells; i++) {
+      const s = document.createElement('span');
+      const r = i % 16, c = Math.floor(i / 16);
+      // Three position markers (top-left, top-right, bottom-left) — 7x7 frames
+      const inMarker = (
+        (r < 7 && c < 7) ||
+        (r < 7 && c > 8) ||
+        (r > 8 && c < 7)
+      );
+      let on;
+      if (inMarker) {
+        // marker frame solid outline + centre dot
+        const localR = r < 7 ? r : r - 9;
+        const localC = c < 7 ? c : c - 9;
+        const onFrame = (localR === 0 || localR === 6 || localC === 0 || localC === 6);
+        const onCore  = (localR >= 2 && localR <= 4 && localC >= 2 && localC <= 4);
+        on = onFrame || onCore;
+      } else {
+        on = rand() > 0.5;
+      }
+      if (!on) s.classList.add('off');
+      grid.appendChild(s);
+    }
+  })();
+
+  // ── Cream-veil navigations ───────────────────────────────────────
+  function leaveTo(href) {
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = href; }, 220);
+  }
+
+  document.getElementById('brandBack').addEventListener('click', (e) => {
+    e.preventDefault();
+    leaveTo('home.html');
+  });
+
+  document.getElementById('ecBackBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    leaveTo('floor-units.html#floor=' + FLOOR);
+  });
+
+  document.getElementById('backHomePill').addEventListener('click', (e) => {
+    e.preventDefault();
+    leaveTo('home.html');
+  });
+
+  // Top chips: prev / next cycle the unit slot (01..09) within this floor
+  function changeUnitSlot(delta) {
+    const m = UNIT.match(/A-(\d{2})(\d{2})/);
+    if (!m) return;
+    const f = m[1];
+    let slot = parseInt(m[2], 10);
+    slot = Math.max(1, Math.min(9, slot + delta));
+    const next = 'A-' + f + String(slot).padStart(2, '0');
+    if (next === UNIT) return;
+    // Same path → set hash + reload (hash change alone won't reload).
+    document.body.classList.add('is-leaving');
+    setTimeout(() => {
+      window.location.hash = 'floor=' + FLOOR + '&unit=' + encodeURIComponent(next);
+      window.location.reload();
+    }, 220);
+  }
+  document.getElementById('prevBtn').addEventListener('click', () => changeUnitSlot(-1));
+  document.getElementById('nextBtn').addEventListener('click', () => changeUnitSlot(+1));
+  // ── Blueprint zoom + pan + pinch ──────────────────────────────────
+  (function() {
+    const stage = document.querySelector('.bp-zoom-stage');
+    const viewport = document.querySelector('.bp-zoom-viewport');
+    if (!stage || !viewport) return;
+
+    let scale = 1, tx = 0, ty = 0;
+    const MIN = 0.7, MAX = 3;
+
+    function apply() {
+      stage.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + scale + ')';
+    }
+    function setScale(s, originX, originY) {
+      const newScale = Math.max(MIN, Math.min(MAX, s));
+      if (newScale === scale) return;
+      if (originX !== undefined && originY !== undefined) {
+        const rect = viewport.getBoundingClientRect();
+        const cx = originX - rect.left - rect.width / 2;
+        const cy = originY - rect.top - rect.height / 2;
+        tx = cx - (cx - tx) * (newScale / scale);
+        ty = cy - (cy - ty) * (newScale / scale);
+      }
+      scale = newScale;
+      apply();
+    }
+    function reset() { scale = 1; tx = 0; ty = 0; apply(); }
+
+    document.querySelectorAll('[data-zoom="in"]').forEach(b =>
+      b.addEventListener('click', () => setScale(scale + 0.25)));
+    document.querySelectorAll('[data-zoom="out"]').forEach(b =>
+      b.addEventListener('click', () => setScale(scale - 0.25)));
+    document.querySelectorAll('[data-zoom="fit"]').forEach(b =>
+      b.addEventListener('click', reset));
+
+    viewport.addEventListener('wheel', e => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setScale(scale + delta, e.clientX, e.clientY);
+    }, { passive: false });
+
+    viewport.addEventListener('dblclick', reset);
+
+    let dragging = false, sx = 0, sy = 0, startTx = 0, startTy = 0;
+    viewport.addEventListener('pointerdown', e => {
+      if (scale <= 1) return;
+      dragging = true;
+      sx = e.clientX; sy = e.clientY;
+      startTx = tx; startTy = ty;
+      stage.classList.add('is-dragging');
+      try { viewport.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    viewport.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      tx = startTx + (e.clientX - sx);
+      ty = startTy + (e.clientY - sy);
+      apply();
+    });
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      stage.classList.remove('is-dragging');
+      try { viewport.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+    viewport.addEventListener('pointerup', endDrag);
+    viewport.addEventListener('pointercancel', endDrag);
+
+    let pinchDist = 0, pinchScale = 1;
+    viewport.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinchDist = Math.hypot(dx, dy);
+        pinchScale = scale;
+      }
+    }, { passive: true });
+    viewport.addEventListener('touchmove', e => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        if (pinchDist === 0) return;
+        const newScale = pinchScale * (dist / pinchDist);
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        setScale(newScale, cx, cy);
+      }
+    }, { passive: false });
+  })();
+
+  document.getElementById('fsChev').addEventListener('click', () => {
+    // visual ack — full scroll list could be added later
+    const btn = document.getElementById('fsChev');
+    btn.style.transform = 'translateY(2px)';
+    setTimeout(() => { btn.style.transform = ''; }, 200);
+  });
+</script>
+
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+
+  // ── Prefetch next-screen on touchstart for faster transitions ───
+  (function() {
+    function wirePrefetch() {
+      document.querySelectorAll('a[href], button[data-href]').forEach(function(el) {
+        var href = el.getAttribute('href') || el.dataset.href;
+        if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:')) return;
+        el.addEventListener('touchstart', function() {
+          if (!document.querySelector('link[rel="prefetch"][href="' + href + '"]')) {
+            var link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = href;
+            document.head.appendChild(link);
+          }
+        }, { passive: true, once: true });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wirePrefetch);
+    } else {
+      wirePrefetch();
+    }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(function() {
+        if (location.pathname.indexOf('home.html') !== -1) return;
+        if (document.querySelector('link[rel="prefetch"][href="home.html"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'home.html';
+        document.head.appendChild(link);
+      });
+    }
+  })();
+</script>
+<!-- PWA-JS-END -->
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+[
+  {
+    "slug": "universe",
+    "name": "Universe",
+    "description": "Premium residences sales suite.",
+    "category": "Sales Suite",
+    "logo": "/assets/logos/universe.png",
+    "live_url": "https://the-universe-salessuite.netlify.app/",
+    "app_url": null,
+    "sort_order": 1
+  },
+  {
+    "slug": "living-tree",
+    "name": "Living Tree",
+    "description": "Interactive sales experience for Kalyani Developers.",
+    "category": "Sales Suite",
+    "logo": "/assets/logos/livingtree.png",
+    "live_url": "https://living-tree.netlify.app/",
+    "app_url": null,
+    "sort_order": 2
+  },
+  {
+    "slug": "embassy-citadel",
+    "name": "Embassy Citadel",
+    "description": "Ultra-luxury tower sales suite — a world unto itself.",
+    "category": "Sales Suite",
+    "logo": "/assets/logos/embassy.png",
+    "live_url": "https://embassy-citadel.netlify.app/intro.html",
+    "app_url": null,
+    "sort_order": 3
+  },
+  {
+    "slug": "embassy-developments",
+    "name": "Embassy Developments",
+    "description": "Explore Embassy's projects across India.",
+    "category": "Sales Suite",
+    "logo": "/assets/logos/embassy-developments.png",
+    "live_url": "https://sunny-squirrel-3f220f.netlify.app/",
+    "app_url": null,
+    "sort_order": 4
+  },
+  {
+    "slug": "embassy-ai",
+    "name": "Embassy AI",
+    "description": "AI concierge chatbot for Embassy Developments.",
+    "category": "AI Assistant",
+    "logo": "./assets/logos/embassy.png",
+    "live_url": "https://embassy-chat-concierge.netlify.app/",
+    "app_url": null,
+    "sort_order": 5
+  },
+  {
+    "slug": "embassy-citadel-gre",
+    "name": "Embassy Citadel GRE",
+    "description": "Guest relations experience for Embassy Citadel.",
+    "category": "GRE",
+    "logo": "./assets/logos/embassy.png",
+    "live_url": "https://embassy-citadel-gre.netlify.app/",
+    "app_url": null,
+    "sort_order": 6
+  }
+]

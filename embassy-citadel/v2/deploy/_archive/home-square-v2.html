@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Embassy Citadel — Index</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  HOME v13 — light theme · floating square · parallax depth
+  ──────────────────────────────────────────────────────────────────────
+  Concept
+  · Light beige paper ground (bone, warm grey, gold, little black) —
+    after the dark "Door" of intro, the user steps into the bright
+    interior of the building.
+  · A 620×620 1:1 square floats centered, lifted by a soft drop shadow
+    and a 7s levitation animation. Corner brackets (architectural
+    surveyor's marks) frame it in gold. Inside: project header,
+    chapter index (2×4), live metadata row, and a thin tower-section
+    ruler on the square's left inner edge with an elevator dot that
+    moves to the hovered chapter's altitude.
+  · Parallax depth: four background layers (large circle, faint
+    architectural section lines, an oversized Embassy mark, scattered
+    surveyor ticks) all clamped to ≤50% opacity, drifting opposite to
+    pointer position at increasing speeds with depth.
+
+  Palette (locked, light theme)
+    Paper white:   #FCFAF4
+    Bone:          #F4F2ED · #F7F5EF
+    Warm grey:     #E8E2D6 · #DAD5CD
+    Taupe:         #C2B5A3 · #A89B86
+    Gold (bronze): #E8CFA1 · #D9B97A · #C9A567 · #946F38 · #6E5A37
+    Onyx (type):   #1A1814 · #2A2620 · #3A332A
+
+  Interactions
+  · pointerenter on chapter → elevator dot translates 700ms cubic-bezier
+    to that altitude · chapter row highlights with gold tint · meta
+    sub-line in the header swaps to the chapter's live status string.
+  · pointermove anywhere → parallax layers translate inversely to
+    cursor position (depth-weighted).
+  · click on chapter → gold radial veil flashes 600ms → location.href
+    to the corresponding ../screen-XX-*.html sibling.
+
+  Nav table
+    01 Gallery     → ../screen-02-gallery.html
+    02 Masterplan  → ../screen-03-masterplan.html
+    03 Inventory   → ../screen-05-inventory.html
+    04 Floor Plans → ../screen-06-floor-plans.html
+    05 Amenities   → ../screen-04-amenities.html
+    06 Location    → ../screen-07-location.html
+    07 Tools       → ../screen-08-tools.html
+    08 About       → ../screen-01-overview.html
+
+  To wire later
+  · Inventory + price metadata hardcoded — replace with real data.
+  · Time uses local clock — kiosk may prefer operator-set IST.
+-->
+
+<link rel="manifest" href="manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Citadel" />
+<meta name="theme-color" content="#F4F2ED" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --bone-300:   #D9CFB8;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+    --gold-700:   #4A3D24;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --shadow-1:   0 40px 120px rgba(110, 90, 55, 0.13),
+                  0 18px 50px  rgba(0, 0, 0, 0.08),
+                  0 2px 6px    rgba(0, 0, 0, 0.05);
+    --shadow-1-h: 0 56px 160px rgba(110, 90, 55, 0.17),
+                  0 22px 64px  rgba(0, 0, 0, 0.10),
+                  0 3px 8px    rgba(0, 0, 0, 0.06);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--bone);
+    color: var(--onyx-700);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; pointer-events: none; }
+
+  /* ── Stage scaler: contain on landscape, cover when viewport aspect < 1.55× stage aspect ── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 45%, var(--paper) 0%, var(--bone-50) 55%, var(--bone-200) 100%);
+  }
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1440px; height: 900px;
+    transform-origin: center center;
+    transform: translate(-50%, -50%) scale(1);
+    overflow: hidden;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* Paper grain + subtle warm gradient on the stage itself */
+  .stage-ground {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 40%, rgba(255,255,255,0.55), transparent 70%),
+      radial-gradient(ellipse 90% 70% at 50% 100%, rgba(110,90,55,0.06), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .stage-grain {
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.35 0 0 0 0 0.22 0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.045;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── PARALLAX BG LAYERS (≤50% opacity, depth-weighted mouse drift) ──
+     Each .px-layer has a CSS var --depth that controls drift intensity.
+     JS sets --mx and --my (normalized -1..1) on the stage on pointermove. */
+  .px-stack {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    overflow: hidden;
+  }
+  .px-layer {
+    position: absolute; inset: 0;
+    will-change: transform;
+    transform: translate3d(calc(var(--mx, 0) * var(--depth, 0) * -1px),
+                           calc(var(--my, 0) * var(--depth, 0) * -1px), 0);
+    transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* L1 — deepest, largest, slowest. Soft gold radial in lower-right. */
+  .px-l1 { --depth: 18; opacity: 0.50; }
+  .px-l1::before {
+    content: '';
+    position: absolute;
+    right: -8%; bottom: -14%;
+    width: 70%; aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(217,185,122,0.42) 0%, rgba(217,185,122,0.08) 55%, transparent 75%);
+    filter: blur(8px);
+  }
+  .px-l1::after {
+    content: '';
+    position: absolute;
+    left: -10%; top: -12%;
+    width: 52%; aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(252,250,244,0.65) 0%, rgba(252,250,244,0.10) 55%, transparent 75%);
+    filter: blur(6px);
+  }
+
+  /* L2 — architectural section lines drifting horizontally */
+  .px-l2 { --depth: 32; opacity: 0.32; }
+  .px-l2 .line {
+    position: absolute; left: -10%; right: -10%; height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--hair-hi) 15%, var(--hair-hi) 85%, transparent 100%);
+  }
+
+  /* L3 — oversized Embassy triangle silhouette, faded */
+  .px-l3 { --depth: 50; opacity: 0.10; }
+  .px-l3 .mark {
+    position: absolute;
+    left: 4%; bottom: -6%;
+    width: 46%; aspect-ratio: 1;
+  }
+  .px-l3 svg { width: 100%; height: 100%; color: var(--gold-500); opacity: 1; }
+
+  /* L4 — surveyor ticks scattered (closest, fastest) */
+  .px-l4 { --depth: 78; opacity: 0.45; }
+  .px-l4 .tick {
+    position: absolute;
+    width: 6px; height: 6px;
+    border: 1px solid var(--gold-500);
+    transform: rotate(45deg);
+    border-right: none; border-bottom: none;
+  }
+  .px-l4 .dash {
+    position: absolute;
+    width: 14px; height: 1px;
+    background: var(--gold-500);
+  }
+  .px-l4 .ring {
+    position: absolute;
+    width: 8px; height: 8px;
+    border: 1px solid var(--gold-400);
+    border-radius: 50%;
+  }
+
+  /* ── TOP BAR ─────────────────────────────────────────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    border-bottom: 1px solid var(--hair-lo);
+    background: linear-gradient(180deg, rgba(252,250,244,0.6), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    color: var(--gold-500);
+  }
+  .brand-mark svg { width: 100%; height: 100%; display: block; }
+  .brand-word {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: 0.32em;
+    color: var(--onyx-700);
+    text-transform: uppercase;
+  }
+  .brand-word span {
+    color: var(--gold-500);
+    font-weight: 400;
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0.05em;
+    margin: 0 8px;
+  }
+  .top-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 9px;
+    letter-spacing: 0.55em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.78;
+  }
+  .top-right {
+    display: flex; align-items: center; gap: 14px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--onyx-100);
+    opacity: 0.78;
+    font-variant-numeric: tabular-nums;
+  }
+  .top-right .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--gold-300);
+    box-shadow: 0 0 8px rgba(217,185,122,0.6);
+    animation: livePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.18); }
+  }
+
+  /* ── FOOTER BAR ──────────────────────────────────────────────────── */
+  .footer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    border-top: 1px solid var(--hair-lo);
+    background: linear-gradient(0deg, rgba(252,250,244,0.6), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .footer-text {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 9px;
+    letter-spacing: 0.45em;
+    text-transform: uppercase;
+    color: var(--onyx-100);
+    opacity: 0.55;
+  }
+  .footer-dots { display: flex; gap: 10px; align-items: center; }
+  .footer-dots .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--hair);
+    transition: background 240ms ease, transform 240ms ease;
+  }
+  .footer-dots .dot.is-active {
+    background: var(--gold-400);
+    transform: scale(1.45);
+    box-shadow: 0 0 10px rgba(201,165,103,0.55);
+  }
+  .footer-back {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    text-decoration: none;
+    margin-left: 22px;
+    opacity: 0.78;
+    transition: opacity 200ms ease;
+  }
+  .footer-back:hover { opacity: 1; }
+
+  /* ── FLOATING SQUARE — the centerpiece ───────────────────────────── */
+  .float-stage {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 5;
+    perspective: 2200px;
+  }
+  .float {
+    position: relative;
+    width: 660px; height: 660px;
+    padding: 44px 48px 36px;
+    background:
+      linear-gradient(160deg, var(--paper) 0%, var(--bone-50) 55%, var(--bone) 100%);
+    border: 1px solid var(--hair);
+    box-shadow: var(--shadow-1);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    animation: floatIn 1100ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both,
+               floatBob 7s ease-in-out 1.6s infinite;
+    transform-style: preserve-3d;
+  }
+  @keyframes floatIn {
+    from { opacity: 0; transform: translateY(28px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+  }
+  @keyframes floatBob {
+    0%, 100% { transform: translateY(0)    rotateX(0deg); box-shadow: var(--shadow-1); }
+    50%      { transform: translateY(-7px) rotateX(0.4deg); box-shadow: var(--shadow-1-h); }
+  }
+  /* Inner gold sheen on the square */
+  .float::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 75% 45% at 50% 0%, rgba(217,185,122,0.08), transparent 70%),
+      radial-gradient(ellipse 65% 35% at 50% 100%, rgba(217,185,122,0.06), transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Surveyor's corner brackets */
+  .float .bracket {
+    position: absolute;
+    width: 26px; height: 26px;
+    border-color: var(--gold-500);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .float .bracket.tl { top: 10px;    left: 10px;    border-top: 1px solid; border-left:  1px solid; }
+  .float .bracket.tr { top: 10px;    right: 10px;   border-top: 1px solid; border-right: 1px solid; }
+  .float .bracket.bl { bottom: 10px; left: 10px;    border-bottom: 1px solid; border-left:  1px solid; }
+  .float .bracket.br { bottom: 10px; right: 10px;   border-bottom: 1px solid; border-right: 1px solid; }
+
+  /* ── Square: header zone ─────────────────────────────────────────── */
+  .sq-header {
+    position: relative;
+    padding-bottom: 22px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--hair-lo);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-column-gap: 24px;
+    align-items: end;
+  }
+  .sq-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.55em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sq-eyebrow .lead {
+    display: inline-block; width: 24px; height: 1px;
+    background: var(--gold-500);
+  }
+  .sq-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 44px;
+    line-height: 1;
+    letter-spacing: -0.005em;
+    color: var(--onyx-700);
+    margin: 0 0 10px 0;
+  }
+  .sq-sub {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--onyx-100);
+    opacity: 0.78;
+    max-width: 360px;
+    transition: opacity 300ms ease, transform 300ms ease;
+  }
+  .sq-sub .em {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    color: var(--gold-500);
+    opacity: 1;
+    font-size: 13px;
+  }
+  /* Live status replaces sub on hover */
+  .sq-status {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--gold-500);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 280ms ease, transform 280ms ease;
+    margin-top: 4px;
+    pointer-events: none;
+    min-height: 18px;
+  }
+  body.is-hovering .sq-sub      { opacity: 0.35; transform: translateY(-2px); }
+  body.is-hovering .sq-status   { opacity: 1;    transform: translateY(0); }
+
+  /* Header right column — small RERA / project signature */
+  .sq-sig {
+    text-align: right;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .sq-sig .num {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--onyx-700);
+    display: block;
+    margin-top: 4px;
+  }
+
+  /* ── Square: body — tower ruler + chapter index ──────────────────── */
+  .sq-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    grid-column-gap: 28px;
+    min-height: 0;
+  }
+
+  /* Tower ruler */
+  .ruler {
+    position: relative;
+    height: 100%;
+    border-left: 1px solid var(--hair);
+    padding-left: 18px;
+    display: flex; flex-direction: column;
+  }
+  .ruler-cap {
+    width: 12px; height: 14px;
+    margin-left: -6px;
+    background:
+      linear-gradient(180deg, var(--gold-300), var(--gold-500));
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    margin-bottom: 6px;
+    opacity: 0.85;
+  }
+  .ruler-track {
+    position: relative;
+    flex: 1;
+    width: 1px;
+    background: linear-gradient(180deg, var(--gold-500) 0%, var(--gold-300) 100%);
+    opacity: 0.5;
+    margin-left: -1px;
+  }
+  .ruler-track .tick {
+    position: absolute;
+    left: -4px;
+    width: 5px; height: 1px;
+    background: var(--gold-500);
+    opacity: 0.45;
+  }
+  .ruler-track .tick.major {
+    left: -7px;
+    width: 9px;
+    opacity: 0.85;
+    background: var(--gold-600);
+  }
+  .ruler-track .tick.major::after {
+    content: attr(data-label);
+    position: absolute;
+    left: -32px; top: -7px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--taupe-400);
+    width: 26px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .ruler-car {
+    position: absolute;
+    left: -5px;
+    width: 11px; height: 22px;
+    background: linear-gradient(180deg, var(--gold-200), var(--gold-500));
+    border-radius: 1px;
+    box-shadow: 0 0 16px rgba(217,185,122,0.65),
+                0 0 0 1px rgba(110,90,55,0.4);
+    transition: top 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .ruler-car::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: -200%;
+    width: 200%; height: 1px;
+    background: linear-gradient(90deg, rgba(217,185,122,0), rgba(217,185,122,0.7));
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 360ms ease;
+  }
+  body.is-hovering .ruler-car::before { opacity: 1; }
+  .ruler-base {
+    width: 18px; height: 6px;
+    margin-left: -9px;
+    background: linear-gradient(180deg, var(--gold-500), var(--gold-600));
+    margin-top: 6px;
+    opacity: 0.85;
+  }
+  .ruler-label {
+    position: absolute;
+    left: -54px;
+    top: -2px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 7.5px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  /* Chapter index — 2×4 inside the square */
+  .chapters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(4, 1fr);
+    grid-column-gap: 18px;
+    grid-row-gap: 0;
+    min-height: 0;
+  }
+  .chap {
+    position: relative;
+    padding: 12px 12px 14px;
+    border-top: 1px solid var(--hair-lo);
+    cursor: pointer;
+    transition: background 240ms ease, transform 240ms ease;
+    display: grid;
+    grid-template-columns: 38px 1fr auto;
+    grid-column-gap: 12px;
+    align-items: start;
+  }
+  .chap:nth-child(-n+2) { border-top: none; }
+  .chap:hover {
+    background: linear-gradient(90deg, rgba(217,185,122,0.07), rgba(217,185,122,0.02));
+  }
+  .chap-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-style: italic;
+    font-size: 26px;
+    color: var(--gold-500);
+    line-height: 1;
+    padding-top: 2px;
+    transition: color 240ms ease;
+  }
+  .chap:hover .chap-num { color: var(--gold-600); }
+  .chap-body {
+    min-width: 0;
+  }
+  .chap-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.1;
+    color: var(--onyx-700);
+    margin: 0 0 4px 0;
+    transition: color 240ms ease;
+  }
+  .chap:hover .chap-title { color: var(--gold-600); }
+  .chap-kicker {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 8.5px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    line-height: 1.4;
+  }
+  .chap-floor {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--gold-500);
+    opacity: 0.78;
+    font-variant-numeric: tabular-nums;
+    padding-top: 4px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .chap-floor::before {
+    content: '';
+    display: inline-block;
+    width: 4px; height: 4px;
+    background: var(--gold-500);
+    margin-right: 6px;
+    vertical-align: middle;
+    transform: rotate(45deg);
+  }
+  /* Hairline accent that grows on hover */
+  .chap::after {
+    content: '';
+    position: absolute;
+    left: 12px; right: 12px; bottom: 0;
+    height: 1px;
+    background: var(--gold-500);
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .chap:hover::after { transform: scaleX(1); }
+
+  /* ── Square: metadata footer row ─────────────────────────────────── */
+  .sq-meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--hair-lo);
+    padding-top: 18px;
+    margin-top: 16px;
+    grid-column-gap: 18px;
+  }
+  .sq-meta .col {
+    position: relative;
+    padding-right: 14px;
+  }
+  .sq-meta .col + .col {
+    border-left: 1px solid var(--hair-lo);
+    padding-left: 18px;
+  }
+  .sq-meta .label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    margin-bottom: 6px;
+  }
+  .sq-meta .value {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 19px;
+    line-height: 1.05;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+  }
+  .sq-meta .value .unit {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 10px;
+    color: var(--taupe-400);
+    letter-spacing: 0.1em;
+    margin-left: 3px;
+  }
+  .sq-meta .note {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    opacity: 0.78;
+    margin-top: 4px;
+  }
+
+  /* ── Veil flash on chapter click ─────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 50%, var(--gold-200) 0%, var(--paper) 60%, var(--bone) 100%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 600ms ease-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+
+  /* ── Floating dust motes (subtle, gold on bone) ──────────────────── */
+  .motes { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+  .mote {
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--gold-400);
+    opacity: 0.18;
+    bottom: -10px;
+    animation: moteRise linear infinite;
+    filter: blur(0.6px);
+  }
+  @keyframes moteRise {
+    0%   { transform: translate(0, 0); opacity: 0; }
+    8%   { opacity: 0.18; }
+    92%  { opacity: 0.10; }
+    100% { transform: translate(var(--mx-drift, 20px), calc(-100vh - 80px)); opacity: 0; }
+  }
+
+  /* ── Reduced motion ──────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .float { animation: floatIn 800ms ease both; }
+    .mote { display: none; }
+    .px-layer { transition: none; }
+    .ruler-car { transition: none; }
+  }
+
+</style>
+
+<script>
+  // Stage scaler — contain on landscape; cover when viewport aspect < 1.55× stage aspect
+  (function () {
+    const W = 1440, H = 900;
+    const STAGE_ASPECT = W / H;
+    const COVER_THRESHOLD = 0.97;
+    function scale() {
+      const wrap = document.getElementById('stage-wrap');
+      const stage = document.getElementById('stage');
+      if (!wrap || !stage) return;
+      let vw = wrap.clientWidth, vh = wrap.clientHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const va = vw / vh;
+      const squarish = va > 1 && va < STAGE_ASPECT * COVER_THRESHOLD;
+      const s = squarish ? Math.max(vw / W, vh / H) : Math.min(vw / W, vh / H);
+      const t = 'translate(-50%, -50%) scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+
+    // Block iOS double-tap zoom and pinch
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+</head>
+<body>
+<div id="stage-wrap">
+  <div id="stage">
+    <div class="stage-ground"></div>
+    <div class="stage-grain"></div>
+
+    <!-- ╔══ PARALLAX BACKGROUND LAYERS (≤50% opacity, depth-weighted) ══╗ -->
+    <div class="px-stack" id="pxStack">
+      <div class="px-layer px-l1"></div>
+      <div class="px-layer px-l2" id="pxL2"></div>
+      <div class="px-layer px-l3">
+        <div class="mark">
+          <svg viewBox="0 0 60 60" fill="currentColor" aria-hidden="true">
+            <polygon points="30,3 22,16 38,16" />
+            <polygon points="30,19 18,33 42,33" />
+            <polygon points="30,36 12,57 48,57" />
+          </svg>
+        </div>
+      </div>
+      <div class="px-layer px-l4" id="pxL4"></div>
+    </div>
+
+    <!-- ╔══ TOP BAR ══╗ -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-label="Embassy mark">
+          <svg viewBox="0 0 60 60" fill="currentColor"><polygon points="30,3 22,16 38,16" /><polygon points="30,19 18,33 42,33" /><polygon points="30,36 12,57 48,57" /></svg>
+        </div>
+        <div class="brand-word">Embassy <span>·</span> Citadel</div>
+      </div>
+      <div class="top-eyebrow">A&nbsp;&nbsp;World&nbsp;&nbsp;Unto&nbsp;&nbsp;Itself</div>
+      <div class="top-right">
+        <span id="locStatus">Worli&nbsp;·&nbsp;Mumbai</span>
+        <span class="live-dot"></span>
+        <span id="clock">00:00 IST</span>
+      </div>
+    </header>
+
+    <!-- ╔══ FLOATING SQUARE ══╗ -->
+    <div class="float-stage">
+      <div class="float" id="float">
+        <span class="bracket tl"></span>
+        <span class="bracket tr"></span>
+        <span class="bracket bl"></span>
+        <span class="bracket br"></span>
+
+        <!-- Header -->
+        <div class="sq-header">
+          <div>
+            <div class="sq-eyebrow"><span class="lead"></span>The Project</div>
+            <h1 class="sq-title">Embassy Citadel</h1>
+            <p class="sq-sub" id="sqSub">A single tower in Worli, Mumbai. <span class="em">A world unto itself.</span></p>
+            <p class="sq-status" id="sqStatus"></p>
+          </div>
+          <div class="sq-sig">
+            RERA · MahaRERA
+            <span class="num">P51900-30421</span>
+          </div>
+        </div>
+
+        <!-- Body: tower ruler + chapter index -->
+        <div class="sq-body">
+          <div class="ruler" aria-label="79 floor section">
+            <span class="ruler-label">East&nbsp;Elevation</span>
+            <div class="ruler-cap"></div>
+            <div class="ruler-track" id="rulerTrack">
+              <div class="ruler-car" id="rulerCar"></div>
+            </div>
+            <div class="ruler-base"></div>
+          </div>
+
+          <div class="chapters" id="chapters" role="navigation"></div>
+        </div>
+
+        <!-- Metadata footer -->
+        <div class="sq-meta">
+          <div class="col">
+            <div class="label">Elevation</div>
+            <div class="value">312<span class="unit">M</span></div>
+            <div class="note">79 Floors</div>
+          </div>
+          <div class="col">
+            <div class="label">Residences</div>
+            <div class="value">158</div>
+            <div class="note">12 Available</div>
+          </div>
+          <div class="col">
+            <div class="label">From</div>
+            <div class="value">85<span class="unit">CR</span></div>
+            <div class="note">4 · 5 · 6 BHK</div>
+          </div>
+          <div class="col">
+            <div class="label">Possession</div>
+            <div class="value">Q4 28</div>
+            <div class="note">Booking Open</div>
+          </div>
+        </div>
+
+        <div class="veil"></div>
+      </div>
+    </div>
+
+    <!-- Dust motes -->
+    <div class="motes" id="motes"></div>
+
+    <!-- ╔══ FOOTER BAR ══╗ -->
+    <footer class="footer">
+      <div class="footer-text">
+        Embassy Citadel
+        <a class="footer-back" href="intro.html">← Threshold</a>
+      </div>
+      <div class="footer-dots" id="footerDots"></div>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+  // ── Chapter data ──────────────────────────────────────────────────
+  const CHAPTERS = [
+    { n: '01', title: 'Gallery',     kicker: 'Photography · 32 Plates',     floor: 'F75 · F78', topPct: 0.10, href: '../screen-02-gallery.html',
+      status: 'Plates curated from the upper residences. Light at every hour.' },
+    { n: '02', title: 'Masterplan',  kicker: 'Site · 2.4 Acres · Worli',     floor: 'F00',       topPct: 0.92, href: '../screen-03-masterplan.html',
+      status: 'Two and a half acres along Worli sea-face. Considered down to the kerb.' },
+    { n: '03', title: 'Inventory',   kicker: '158 Residences · Live',        floor: 'F01 · F79', topPct: 0.46, href: '../screen-05-inventory.html',
+      status: '12 of 158 residences open for selection · 4 BHK from ₹85 Cr.' },
+    { n: '04', title: 'Floor Plans', kicker: 'Layouts · 4 / 5 / 6 BHK',      floor: 'F40 · F55', topPct: 0.42, href: '../screen-06-floor-plans.html',
+      status: 'Three configurations. Compare up to three plans side-by-side.' },
+    { n: '05', title: 'Amenities',   kicker: 'Sky Club · 14 Rooms',          floor: 'F30 · F38', topPct: 0.56, href: '../screen-04-amenities.html',
+      status: 'All the places to go. Without going anywhere.' },
+    { n: '06', title: 'Location',    kicker: 'Worli · Mumbai',                floor: 'F00',       topPct: 0.92, href: '../screen-07-location.html',
+      status: 'Eight minutes to the sea. Sixteen to the airport.' },
+    { n: '07', title: 'Tools',       kicker: 'EMI · FSI · Price Sheet',      floor: 'F00',       topPct: 0.92, href: '../screen-08-tools.html',
+      status: 'Calculators for the considered decision.' },
+    { n: '08', title: 'About',       kicker: 'The Project · A Frank Note',   floor: 'F01',       topPct: 0.88, href: '../screen-01-overview.html',
+      status: 'A single tower in Worli. A world unto itself.' },
+  ];
+
+  // ── Render chapters ───────────────────────────────────────────────
+  const chaptersEl = document.getElementById('chapters');
+  const dotsEl     = document.getElementById('footerDots');
+  CHAPTERS.forEach((c, i) => {
+    const el = document.createElement('button');
+    el.className = 'chap';
+    el.type = 'button';
+    el.dataset.idx = i;
+    el.style.background = 'transparent';
+    el.style.border = 'none';
+    el.style.textAlign = 'left';
+    el.innerHTML =
+      '<span class="chap-num">' + c.n + '</span>' +
+      '<span class="chap-body">' +
+        '<span class="chap-title">' + c.title + '</span>' +
+        '<span class="chap-kicker">' + c.kicker + '</span>' +
+      '</span>' +
+      '<span class="chap-floor">' + c.floor + '</span>';
+    chaptersEl.appendChild(el);
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.dataset.idx = i;
+    dotsEl.appendChild(dot);
+  });
+
+  // ── Tower ruler ticks ────────────────────────────────────────────
+  const trackEl = document.getElementById('rulerTrack');
+  const FLOOR_COUNT = 79;
+  for (let f = 1; f <= FLOOR_COUNT; f++) {
+    const t = document.createElement('span');
+    const isMajor = (f === 1 || f === FLOOR_COUNT || f % 20 === 0);
+    t.className = 'tick' + (isMajor ? ' major' : '');
+    // Top position: F79 at 0%, F01 at 100%
+    const top = (1 - (f - 1) / (FLOOR_COUNT - 1)) * 100;
+    t.style.top = top + '%';
+    if (isMajor) t.dataset.label = 'F' + String(f).padStart(2, '0');
+    trackEl.appendChild(t);
+  }
+
+  // ── Render parallax bg layers (lines on L2, ticks on L4) ─────────
+  const pxL2 = document.getElementById('pxL2');
+  // 5 horizontal section lines
+  [0.18, 0.34, 0.5, 0.66, 0.82].forEach(y => {
+    const ln = document.createElement('span');
+    ln.className = 'line';
+    ln.style.top = (y * 100) + '%';
+    pxL2.appendChild(ln);
+  });
+
+  const pxL4 = document.getElementById('pxL4');
+  const decor = [
+    { type: 'tick', l: '8%',  t: '14%' },
+    { type: 'ring', l: '12%', t: '78%' },
+    { type: 'dash', l: '90%', t: '24%' },
+    { type: 'tick', l: '78%', t: '88%' },
+    { type: 'ring', l: '6%',  t: '52%' },
+    { type: 'dash', l: '92%', t: '64%' },
+    { type: 'tick', l: '94%', t: '12%' },
+    { type: 'ring', l: '82%', t: '46%' },
+    { type: 'dash', l: '4%',  t: '88%' },
+    { type: 'tick', l: '68%', t: '8%'  },
+    { type: 'ring', l: '40%', t: '92%' },
+    { type: 'dash', l: '50%', t: '6%'  },
+  ];
+  decor.forEach(d => {
+    const el = document.createElement('span');
+    el.className = d.type;
+    el.style.left = d.l;
+    el.style.top  = d.t;
+    pxL4.appendChild(el);
+  });
+
+  // ── Dust motes ────────────────────────────────────────────────────
+  const motesEl = document.getElementById('motes');
+  for (let i = 0; i < 7; i++) {
+    const m = document.createElement('span');
+    m.className = 'mote';
+    m.style.left = (8 + Math.random() * 84) + '%';
+    const dur = (18 + Math.random() * 16) + 's';
+    const delay = (-Math.random() * 32) + 's';
+    m.style.animationDuration = dur;
+    m.style.animationDelay = delay;
+    m.style.setProperty('--mx-drift', ((Math.random() - 0.5) * 80) + 'px');
+    m.style.width = m.style.height = (2 + Math.random() * 3) + 'px';
+    m.style.opacity = (0.10 + Math.random() * 0.14);
+    motesEl.appendChild(m);
+  }
+
+  // ── Hover interaction: elevator + status + dot ───────────────────
+  const carEl    = document.getElementById('rulerCar');
+  const statusEl = document.getElementById('sqStatus');
+  const dotEls   = dotsEl.querySelectorAll('.dot');
+  const chapEls  = chaptersEl.querySelectorAll('.chap');
+
+  function setChapter(i) {
+    if (i == null) {
+      document.body.classList.remove('is-hovering');
+      // Park elevator mid
+      carEl.style.top = '50%';
+      dotEls.forEach(d => d.classList.remove('is-active'));
+      return;
+    }
+    const c = CHAPTERS[i];
+    document.body.classList.add('is-hovering');
+    carEl.style.top = (c.topPct * 100) + '%';
+    statusEl.textContent = c.status;
+    dotEls.forEach((d, j) => d.classList.toggle('is-active', j === i));
+  }
+
+  chapEls.forEach(el => {
+    el.addEventListener('pointerenter', () => setChapter(+el.dataset.idx));
+    el.addEventListener('focus',        () => setChapter(+el.dataset.idx));
+    el.addEventListener('click', e => {
+      e.preventDefault();
+      const i = +el.dataset.idx;
+      document.body.classList.add('is-leaving');
+      setTimeout(() => { window.location.href = CHAPTERS[i].href; }, 560);
+    });
+  });
+  chaptersEl.addEventListener('pointerleave', () => setChapter(null));
+
+  // ── Parallax: pointermove on stage drifts layers ─────────────────
+  const stageEl  = document.getElementById('stage');
+  const pxLayers = document.querySelectorAll('.px-layer');
+  let pmx = 0, pmy = 0;
+  let rmx = 0, rmy = 0;
+  let pmRAF;
+  function pmTick() {
+    // Smooth toward target with simple lerp
+    rmx += (pmx - rmx) * 0.08;
+    rmy += (pmy - rmy) * 0.08;
+    pxLayers.forEach(l => {
+      l.style.setProperty('--mx', rmx.toFixed(3));
+      l.style.setProperty('--my', rmy.toFixed(3));
+    });
+    if (Math.abs(pmx - rmx) > 0.001 || Math.abs(pmy - rmy) > 0.001) {
+      pmRAF = requestAnimationFrame(pmTick);
+    } else {
+      pmRAF = null;
+    }
+  }
+  function onMove(e) {
+    const rect = stageEl.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top)  / rect.height;
+    pmx = (px - 0.5) * 2;
+    pmy = (py - 0.5) * 2;
+    if (!pmRAF) pmRAF = requestAnimationFrame(pmTick);
+  }
+  window.addEventListener('pointermove', onMove, { passive: true });
+  // Subtle gyro fallback on touch devices (optional, low effort)
+  window.addEventListener('deviceorientation', e => {
+    if (e.gamma == null || e.beta == null) return;
+    pmx = Math.max(-1, Math.min(1, e.gamma / 30));
+    pmy = Math.max(-1, Math.min(1, e.beta  / 30));
+    if (!pmRAF) pmRAF = requestAnimationFrame(pmTick);
+  });
+
+  // ── Live clock ────────────────────────────────────────────────────
+  function tickClock() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    document.getElementById('clock').textContent = hh + ':' + mm + ' IST';
+  }
+  tickClock();
+  setInterval(tickClock, 1000 * 30);
+</script>
+</body>
+</html>

@@ -1,0 +1,1349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Pre-Visit</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  GRE — Guest Registration Experience · 9-step pre-visit intake
+  ──────────────────────────────────────────────────────────────────────
+  Concept
+  · A quiet, private questionnaire taken before a Citadel viewing. One
+    step on screen at a time, advancing through a hairline progress
+    rail at the top. Frank-Curator voice — direct, warm, no adjectives.
+  · Same paper/bone/onyx/bronze shell as the rest of the app: 1440×900
+    stage-scaler, topbar wordmark → home, Back button, cream veil.
+  · Self-contained. No build. No Math.random / Date.now in app logic
+    (token derived deterministically from a rolling state hash).
+
+  9 steps
+  1 Welcome   2 Phone   3 Code(1234)   4 Identity   5 Unit type
+  6 Budget    7 Purpose & timeline    8 Family + amenities    9 Done
+
+  Interactions wired
+  · Begin / Continue / Back move between steps with a soft slide-fade.
+  · Phone: country code + number; Continue disabled until non-empty.
+  · Code: 4 single boxes, auto-focus chain, auto-advance when ==1234.
+  · Identity: name + email both required (light email shape check).
+  · Unit type: 4 cards, single-select, persists.
+  · Budget: range slider 8–60 Cr, live "₹ X Cr" readout.
+  · Purpose + timeline: two single-select chip groups.
+  · Family: +/- counter clamped ≥1; amenity checkboxes multi-select.
+  · Done: derives Token A__ from state; Reset returns to step 1 clean.
+  · Brand wordmark + Back → cream veil → home.html.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --tile-shadow:   0 18px 38px rgba(20, 14, 6, 0.16),
+                     0 6px 14px  rgba(20, 14, 6, 0.10);
+    --plate-shadow:  0 30px 60px -18px rgba(80, 58, 28, 0.32),
+                     0 14px 30px -10px rgba(80, 58, 28, 0.18),
+                     0 4px 10px        rgba(40, 28, 10, 0.08);
+    --hero-shadow:   0 40px 90px -24px rgba(80, 58, 28, 0.42),
+                     0 18px 38px -14px rgba(80, 58, 28, 0.22),
+                     0 4px 14px         rgba(40, 28, 10, 0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage scaler — flex-center letterbox ─────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display: flex; align-items: center; justify-content: center;
+    isolation: isolate;
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  #stage-wrap::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    pointer-events: none; mix-blend-mode: color;
+    background-color: rgba(255, 250, 240, 0.10);
+    animation: dayCycle 120s linear infinite;
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    z-index: 1;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  .stage-bg {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.02;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 1px;
+    mix-blend-mode: multiply;
+  }
+
+  .day-tint {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: multiply;
+    animation: dayCycle 120s ease-in-out infinite;
+  }
+  @keyframes dayCycle {
+    0%   { background-color: rgba(255, 244, 220, 0.04); }
+    25%  { background-color: rgba(255, 250, 240, 0.02); }
+    50%  { background-color: rgba(255, 230, 180, 0.05); }
+    75%  { background-color: rgba(232, 207, 161, 0.06); }
+    100% { background-color: rgba(255, 244, 220, 0.04); }
+  }
+
+  /* Faint gold concentric rings — quiet backdrop, like about's hero field */
+  .concentric {
+    position: absolute;
+    left: 50%; top: 480px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .concentric .ring {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(148, 111, 56, 0.08);
+  }
+  .field-halo {
+    position: absolute;
+    left: 50%; top: 470px;
+    transform: translate(-50%, -50%);
+    width: 820px; height: 820px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(circle, rgba(255, 230, 180, 0.18) 0%, rgba(255, 230, 180, 0.06) 40%, transparent 70%);
+    mix-blend-mode: screen;
+  }
+
+  /* ── TOP BAR ────────────────────────────────────────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .ec-brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    min-height: 44px;
+  }
+  .ec-brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .ec-brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .ec-brand-back .brand-wordmark {
+    width: 130px; height: 36px;
+    color: var(--onyx-700);
+  }
+  .ec-brand-back .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+
+  .top-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; font-size: 9px;
+    letter-spacing: 0.55em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.78;
+    position: absolute; left: 50%; transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+
+  button, [role="button"], a[href] {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  /* ── PROGRESS RAIL ──────────────────────────────────────────────── */
+  .progress {
+    position: absolute;
+    top: 96px; left: 50%; transform: translateX(-50%);
+    width: 560px;
+    z-index: 7;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .progress .step-count {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 78px;
+  }
+  .progress .rail {
+    flex: 1; height: 2px;
+    border-radius: 2px;
+    background: var(--hair-lo);
+    position: relative; overflow: hidden;
+  }
+  .progress .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 0%;
+    background: linear-gradient(90deg, var(--gold-300), var(--gold-500));
+    border-radius: 2px;
+    transition: width 460ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .progress .pct {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400; font-size: 18px;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+    min-width: 40px; text-align: right;
+  }
+
+  /* ── STEP STAGE ─────────────────────────────────────────────────────
+     Fixed stage box (centred on y≈480, clear of the rail above and the
+     step-nav below). Every step is a flex column centred inside the same
+     box, so the optical centre and content-column width stay stable from
+     step to step — no jarring vertical jump. */
+  .steps {
+    position: absolute;
+    left: 50%; top: 152px;
+    transform: translateX(-50%);
+    width: 720px;
+    height: 600px;
+    z-index: 6;
+  }
+  .step {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(0);
+    transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                visibility 0s linear 420ms;
+  }
+  .step.is-current {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0);
+    transition: opacity 460ms cubic-bezier(0.22, 1, 0.36, 1) 60ms,
+                transform 460ms cubic-bezier(0.22, 1, 0.36, 1) 60ms,
+                visibility 0s linear 0s;
+  }
+  .step.exit-left  { transform: translateX(-40px); }
+  .step.enter-right{ transform: translateX(40px); }
+  .step.exit-right { transform: translateX(40px); }
+  .step.enter-left { transform: translateX(-40px); }
+  /* Consistent content column: text blocks share one max-width and centre.
+     Fixed-width controls (cards / slider / counter) keep their own width but
+     are centred by the flex parent — so the column never shifts between steps. */
+  .step .eyebrow,
+  .step .q,
+  .step .sub,
+  .step .hint,
+  .step .group-label,
+  .step .budget-sub,
+  .step .summary,
+  .step .token-eyebrow { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
+  .step .q { max-width: 620px; }
+  /* Symmetric flex centring: the last block in each step carries no trailing
+     margin, so the whole stack sits true-centre in the stage box. */
+  .step > *:last-child { margin-bottom: 0 !important; }
+
+  .step .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.85;
+    margin-bottom: 20px;
+  }
+  .step .q {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 52px;
+    line-height: 1.0;
+    letter-spacing: -0.012em;
+    color: var(--onyx-700);
+    margin: 0 0 14px 0;
+  }
+  .step .q em {
+    font-style: italic;
+    color: var(--gold-500);
+  }
+  .step .sub {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; font-size: 13px;
+    line-height: 1.65;
+    color: var(--onyx-100); opacity: 0.82;
+    margin: 0 auto 30px auto;
+    max-width: 420px;
+    text-wrap: pretty;
+  }
+  .field-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 30px; flex-wrap: wrap; }
+
+  /* Inputs */
+  .text-input, .cc-select {
+    height: 52px;
+    border-radius: 12px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    box-shadow: 0 6px 14px rgba(20,14,6,0.06);
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; font-size: 15px;
+    color: var(--onyx-700);
+    padding: 0 18px;
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease;
+  }
+  .text-input::placeholder { color: var(--taupe-400); }
+  .text-input:focus, .cc-select:focus {
+    border-color: var(--gold-400);
+    box-shadow: 0 0 0 3px rgba(148,111,56,0.12), 0 6px 14px rgba(20,14,6,0.07);
+  }
+  .text-input.phone { width: 280px; letter-spacing: 0.08em; }
+  .text-input.wide { width: 420px; }
+  .cc-select {
+    width: 116px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    -webkit-appearance: none; appearance: none;
+    background-image: none;
+  }
+  .stack { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+
+  /* Code boxes */
+  .code-row { display: flex; justify-content: center; gap: 14px; margin-bottom: 18px; }
+  .code-box {
+    width: 64px; height: 76px;
+    border-radius: 14px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    box-shadow: 0 8px 18px rgba(20,14,6,0.07);
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400; font-size: 40px;
+    text-align: center;
+    color: var(--onyx-700);
+    outline: none;
+    transition: border-color 200ms ease, box-shadow 200ms ease, transform 160ms ease;
+  }
+  .code-box:focus {
+    border-color: var(--gold-500);
+    box-shadow: 0 0 0 3px rgba(148,111,56,0.16), 0 8px 18px rgba(20,14,6,0.10);
+    transform: translateY(-2px);
+  }
+  .code-box.filled { border-color: var(--gold-400); }
+  .hint {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--taupe-400);
+    margin-bottom: 26px;
+  }
+  .hint b { color: var(--gold-500); font-weight: 600; }
+
+  /* Selectable cards (unit type) */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    width: 560px;
+    margin: 0 auto 30px auto;
+  }
+  .opt-card {
+    text-align: left;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 16px;
+    box-shadow: 0 8px 18px rgba(20,14,6,0.06);
+    padding: 20px 22px;
+    cursor: pointer;
+    position: relative;
+    transition: transform 200ms ease, box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
+  }
+  .opt-card:hover { transform: translateY(-2px); box-shadow: 0 14px 26px rgba(20,14,6,0.10); border-color: var(--gold-300); }
+  .opt-card.is-selected {
+    border-color: var(--gold-500);
+    background: linear-gradient(180deg, var(--bone-50), var(--paper));
+    box-shadow: 0 14px 30px rgba(80,58,28,0.18), inset 0 0 0 1px rgba(148,111,56,0.3);
+  }
+  .opt-card .tick {
+    position: absolute; top: 16px; right: 16px;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid var(--hair);
+    display: grid; place-items: center;
+    color: var(--paper);
+    background: transparent;
+    transition: background 220ms ease, border-color 220ms ease;
+  }
+  .opt-card .tick svg { width: 10px; height: 10px; opacity: 0; transition: opacity 200ms ease; }
+  .opt-card.is-selected .tick { background: var(--gold-500); border-color: var(--gold-500); }
+  .opt-card.is-selected .tick svg { opacity: 1; }
+  .opt-card .ttl {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500; font-size: 28px; line-height: 1;
+    color: var(--onyx-700); margin: 0 0 8px 0;
+  }
+  .opt-card .meta {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--onyx-100); opacity: 0.72;
+  }
+
+  /* Chip groups (purpose / timeline / family amenities) */
+  .group-label {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.85;
+    margin: 0 0 14px 0;
+  }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 26px; }
+  .chip {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--onyx-700);
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    padding: 11px 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(20,14,6,0.05);
+    transition: transform 180ms ease, border-color 220ms ease, background 220ms ease, color 220ms ease, box-shadow 220ms ease;
+  }
+  .chip:hover { transform: translateY(-1px); border-color: var(--gold-300); }
+  .chip.is-selected {
+    background: var(--gold-500); color: var(--paper);
+    border-color: var(--gold-500);
+    box-shadow: 0 8px 18px rgba(80,58,28,0.22);
+  }
+  .twin-col { display: flex; gap: 56px; justify-content: center; }
+  .twin-col .col-block { display: flex; flex-direction: column; align-items: center; }
+
+  /* Budget slider */
+  .budget-readout {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400; font-size: 64px; line-height: 1;
+    color: var(--onyx-700); margin: 4px 0 6px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .budget-readout .cr { font-size: 28px; color: var(--gold-500); margin-left: 6px; font-style: italic; }
+  .budget-sub {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--taupe-400); margin-bottom: 26px;
+  }
+  .slider-wrap { width: 480px; margin: 0 auto 12px auto; }
+  input[type="range"].budget {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 4px;
+    background: var(--bone-200);
+    outline: none; cursor: pointer;
+  }
+  input[type="range"].budget::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; }
+  input[type="range"].budget::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--gold-500);
+    box-shadow: 0 6px 14px rgba(80,58,28,0.26);
+    margin-top: -11px;
+    transition: transform 160ms ease;
+  }
+  input[type="range"].budget::-webkit-slider-thumb:active { transform: scale(1.12); }
+  input[type="range"].budget::-moz-range-thumb {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--paper); border: 2px solid var(--gold-500);
+    box-shadow: 0 6px 14px rgba(80,58,28,0.26);
+  }
+  input[type="range"].budget::-moz-range-track { height: 4px; border-radius: 4px; background: var(--bone-200); }
+  .slider-ends {
+    display: flex; justify-content: space-between;
+    width: 480px; margin: 0 auto 26px auto;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+
+  /* Family counter */
+  .counter {
+    display: flex; align-items: center; justify-content: center; gap: 26px;
+    margin-bottom: 30px;
+  }
+  .counter .btn {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    box-shadow: 0 8px 18px rgba(20,14,6,0.08);
+    color: var(--gold-500);
+    font-size: 28px; font-weight: 300; line-height: 1;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: transform 160ms ease, background 220ms ease, border-color 220ms ease;
+  }
+  .counter .btn:hover { background: var(--bone-50); border-color: var(--gold-300); }
+  .counter .btn:active { transform: scale(0.92); }
+  .counter .btn:disabled { opacity: 0.4; cursor: default; }
+  .counter .val {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400; font-size: 72px; line-height: 1;
+    color: var(--onyx-700);
+    min-width: 90px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Footer nav */
+  .stepnav {
+    position: absolute;
+    left: 50%; bottom: 70px;
+    transform: translateX(-50%);
+    z-index: 7;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .nav-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    min-height: 50px;
+    padding: 0 30px;
+    border-radius: 25px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background 220ms ease, transform 180ms ease, box-shadow 220ms ease, opacity 220ms ease, color 220ms ease, border-color 220ms ease;
+    -webkit-appearance: none; appearance: none;
+  }
+  .nav-btn.primary {
+    background: var(--onyx-700);
+    border: 1px solid var(--onyx-700);
+    color: var(--paper);
+    box-shadow: 0 12px 26px rgba(20,14,6,0.22);
+  }
+  .nav-btn.primary:hover { background: var(--onyx-900); transform: translateY(-1px); box-shadow: 0 16px 32px rgba(20,14,6,0.28); }
+  .nav-btn.primary:active { transform: scale(0.98); }
+  .nav-btn.primary .arr { color: var(--gold-200); font-size: 14px; letter-spacing: 0; }
+  .nav-btn.primary:disabled {
+    opacity: 0.4; cursor: default; transform: none;
+    box-shadow: none; background: var(--taupe-400); border-color: var(--taupe-400);
+  }
+  .nav-btn.ghost {
+    background: transparent;
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+  }
+  .nav-btn.ghost:hover { background: var(--paper); border-color: var(--hair-hi); color: var(--onyx-700); }
+  .nav-btn.ghost .arr { font-size: 14px; letter-spacing: 0; }
+  .nav-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+
+  /* Completion token */
+  .token-wrap { margin: 8px auto 0 auto; }
+  .token-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.85; margin-bottom: 14px;
+  }
+  .token {
+    display: inline-flex; align-items: baseline; gap: 4px;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500; font-size: 96px; line-height: 1;
+    color: var(--onyx-700);
+    padding: 18px 44px;
+    border: 1px solid var(--hair);
+    border-radius: 20px;
+    background: linear-gradient(180deg, var(--bone-50), var(--paper));
+    box-shadow: var(--plate-shadow);
+    letter-spacing: 0.02em;
+  }
+  .token .a { color: var(--gold-500); }
+  .summary {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400; font-size: 12px;
+    line-height: 1.6;
+    color: var(--onyx-100); opacity: 0.74;
+    margin: 26px auto 30px auto;
+    max-width: 460px;
+    text-wrap: pretty;
+  }
+  .summary b { color: var(--onyx-700); font-weight: 600; }
+  .done-check {
+    width: 64px; height: 64px; border-radius: 50%;
+    margin: 0 auto 22px auto;
+    background: var(--gold-500);
+    display: grid; place-items: center;
+    color: var(--paper);
+    box-shadow: 0 14px 30px rgba(80,58,28,0.30);
+  }
+  .done-check svg { width: 28px; height: 28px; }
+
+  .field-error {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.06em;
+    color: #9A3B2E;
+    min-height: 14px;
+    margin: -16px 0 18px 0;
+    opacity: 0; transition: opacity 200ms ease;
+  }
+  .field-error.show { opacity: 1; }
+
+  /* ── VEIL ───────────────────────────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--paper);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+  .veil.is-on { opacity: 1; pointer-events: auto; }
+</style>
+
+<script>
+  // Stage scaler — fit-to-viewport (letterbox on either axis as needed).
+  (function () {
+    const W = 1440, H = 900;
+    // While a text field is focused the soft keyboard shrinks visualViewport.
+    // We must NOT re-scale then, or the whole app would shrink as you type.
+    let inputFocused = false;
+    function isTypingTarget(el) {
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    }
+    function scale() {
+      // Keyboard guard: if an input is focused (flag OR live activeElement),
+      // keep the current scale untouched so the app never shrinks while typing.
+      if (inputFocused || isTypingTarget(document.activeElement)) return;
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      // Use window.innerWidth/innerHeight (which do NOT shrink when the on-screen
+      // keyboard opens) for the scale, rather than visualViewport.height. Only
+      // clamp width by visualViewport so pinch-zoom letterboxing still behaves.
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+      }
+      const s = Math.min(vw / W, vh / H);
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    // Focus flag: set on focusin to a typing target, clear on focusout.
+    // On blur, re-run scale once on the next frame so any genuine viewport
+    // change that happened while typing is reconciled to normal size.
+    document.addEventListener('focusin', function (e) {
+      if (isTypingTarget(e.target)) inputFocused = true;
+    });
+    document.addEventListener('focusout', function (e) {
+      if (isTypingTarget(e.target)) {
+        inputFocused = false;
+        requestAnimationFrame(scale);
+      }
+    });
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+
+<!-- Embassy Citadel wordmark — same SVG symbol as the rest of the app -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+    <div class="stage-bg"></div>
+    <div class="day-tint"></div>
+    <div class="stage-grain"></div>
+
+    <div class="concentric" aria-hidden="true">
+      <div class="ring" style="width: 620px; height: 620px;"></div>
+      <div class="ring" style="width: 760px; height: 760px;"></div>
+      <div class="ring" style="width: 900px; height: 900px;"></div>
+    </div>
+    <div class="field-halo" aria-hidden="true"></div>
+
+    <!-- ╔══ TOP BAR ══╗ -->
+    <header class="topbar">
+      <a class="ec-brand-back" id="brandLink" aria-label="Embassy Citadel — home">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <div class="top-eyebrow">A Private Pre-Visit</div>
+      <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to home">
+        <span class="arr" aria-hidden="true">←</span>
+        <span>Back</span>
+      </button>
+    </header>
+
+    <!-- ╔══ PROGRESS ══╗ -->
+    <div class="progress" id="progress">
+      <div class="step-count" id="stepCount">Step 1 / 9</div>
+      <div class="rail"><div class="fill" id="progFill"></div></div>
+      <div class="pct" id="progPct">11%</div>
+    </div>
+
+    <!-- ╔══ STEPS ══╗ -->
+    <div class="steps" id="steps">
+
+      <!-- 1 · Welcome -->
+      <section class="step" data-step="1">
+        <div class="eyebrow">— A Quiet Beginning</div>
+        <h1 class="q">Welcome to the <em>Citadel</em></h1>
+        <p class="sub">A private moment to share what you are imagining for home. A few short questions, then we set the floor aside for you.</p>
+      </section>
+
+      <!-- 2 · Phone -->
+      <section class="step" data-step="2">
+        <div class="eyebrow">— Step Two</div>
+        <h1 class="q">What's your phone?</h1>
+        <p class="sub">We'll send a 4-digit code to verify. Used only for this visit.</p>
+        <div class="field-row">
+          <select class="cc-select" id="ccSelect" aria-label="Country code">
+            <option value="+91">🇮🇳 +91</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+65">🇸🇬 +65</option>
+          </select>
+          <input class="text-input phone" id="phoneInput" type="tel" inputmode="numeric" maxlength="14" placeholder="98765 43210" aria-label="Phone number" autocomplete="off" />
+        </div>
+      </section>
+
+      <!-- 3 · Code -->
+      <section class="step" data-step="3">
+        <div class="eyebrow">— Verify</div>
+        <h1 class="q">Enter the 4-digit code</h1>
+        <p class="sub">Sent to <span id="maskedNum">+91 ••••• ••210</span>.</p>
+        <div class="code-row" id="codeRow">
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" data-i="0" aria-label="Code digit 1" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" data-i="1" aria-label="Code digit 2" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" data-i="2" aria-label="Code digit 3" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" data-i="3" aria-label="Code digit 4" />
+        </div>
+        <div class="hint">Use <b>1234</b> for demo</div>
+      </section>
+
+      <!-- 4 · Identity -->
+      <section class="step" data-step="4">
+        <div class="eyebrow">— Step Four</div>
+        <h1 class="q">May we have your <em>name</em>?</h1>
+        <p class="sub">So we can address you properly — and follow up only if you'd like.</p>
+        <div class="stack">
+          <input class="text-input wide" id="nameInput" type="text" placeholder="Full name" aria-label="Full name" autocomplete="off" />
+          <input class="text-input wide" id="emailInput" type="email" placeholder="Email address" aria-label="Email address" autocomplete="off" />
+        </div>
+        <div class="field-error" id="idError">Please enter your name and a valid email.</div>
+      </section>
+
+      <!-- 5 · Unit type -->
+      <section class="step" data-step="5">
+        <div class="eyebrow">— Step Five</div>
+        <h1 class="q">What home are you imagining?</h1>
+        <div class="card-grid" id="unitGrid">
+          <button class="opt-card" type="button" data-val="3 BHK">
+            <span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5l2.5 2.5L10 3"/></svg></span>
+            <div class="ttl">3 BHK</div>
+            <div class="meta">Sea-view · Generous living</div>
+          </button>
+          <button class="opt-card" type="button" data-val="4 BHK">
+            <span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5l2.5 2.5L10 3"/></svg></span>
+            <div class="ttl">4 BHK</div>
+            <div class="meta">Family · Expansive</div>
+          </button>
+          <button class="opt-card" type="button" data-val="Duplex">
+            <span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5l2.5 2.5L10 3"/></svg></span>
+            <div class="ttl">Duplex</div>
+            <div class="meta">Two levels · Private</div>
+          </button>
+          <button class="opt-card" type="button" data-val="Penthouse">
+            <span class="tick"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6.5l2.5 2.5L10 3"/></svg></span>
+            <div class="ttl">Penthouse</div>
+            <div class="meta">Signature · Crown floors</div>
+          </button>
+        </div>
+      </section>
+
+      <!-- 6 · Budget -->
+      <section class="step" data-step="6">
+        <div class="eyebrow">— Step Six</div>
+        <h1 class="q">Your budget envelope?</h1>
+        <div class="budget-readout" id="budgetReadout">₹18.00<span class="cr">Cr</span></div>
+        <div class="budget-sub">Approximate · all-inclusive</div>
+        <div class="slider-wrap">
+          <input type="range" class="budget" id="budgetSlider" min="8" max="60" step="0.5" value="18" aria-label="Budget in crores" />
+        </div>
+        <div class="slider-ends"><span>₹8 Cr</span><span>₹60 Cr</span></div>
+      </section>
+
+      <!-- 7 · Purpose & timeline -->
+      <section class="step" data-step="7">
+        <div class="eyebrow">— Step Seven</div>
+        <h1 class="q">A little about the move</h1>
+        <div class="twin-col">
+          <div class="col-block">
+            <div class="group-label">This home is primarily for…</div>
+            <div class="chip-row" id="purposeRow">
+              <button class="chip" type="button" data-val="To live in">To live in</button>
+              <button class="chip" type="button" data-val="Investment">Investment</button>
+              <button class="chip" type="button" data-val="Second home">Second home</button>
+            </div>
+          </div>
+        </div>
+        <div class="twin-col">
+          <div class="col-block">
+            <div class="group-label">You're looking to move in…</div>
+            <div class="chip-row" id="timelineRow">
+              <button class="chip" type="button" data-val="0–3 months">0–3 mo</button>
+              <button class="chip" type="button" data-val="3–6 months">3–6 mo</button>
+              <button class="chip" type="button" data-val="6–12 months">6–12 mo</button>
+              <button class="chip" type="button" data-val="1–2 years">1–2 yrs</button>
+              <button class="chip" type="button" data-val="Exploring">Exploring</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8 · Family + amenities -->
+      <section class="step" data-step="8">
+        <div class="eyebrow">— Step Eight</div>
+        <h1 class="q">Who comes home with you?</h1>
+        <div class="group-label">People in your home</div>
+        <div class="counter">
+          <button class="btn" type="button" id="famMinus" aria-label="Fewer people">−</button>
+          <div class="val" id="famVal">2</div>
+          <button class="btn" type="button" id="famPlus" aria-label="More people">+</button>
+        </div>
+        <div class="group-label">Pick what matters most</div>
+        <div class="chip-row" id="amenityRow">
+          <button class="chip" type="button" data-val="Pool">Pool</button>
+          <button class="chip" type="button" data-val="Gym">Gym</button>
+          <button class="chip" type="button" data-val="Spa">Spa</button>
+          <button class="chip" type="button" data-val="Banquet">Banquet</button>
+          <button class="chip" type="button" data-val="Kids Play">Kids Play</button>
+          <button class="chip" type="button" data-val="Padel">Padel</button>
+          <button class="chip" type="button" data-val="Sky Lounge">Sky Lounge</button>
+          <button class="chip" type="button" data-val="Concierge">Concierge</button>
+        </div>
+      </section>
+
+      <!-- 9 · Done -->
+      <section class="step" data-step="9">
+        <div class="done-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6"/></svg></div>
+        <h1 class="q">You're all set</h1>
+        <div class="token-wrap">
+          <div class="token-eyebrow">Your token</div>
+          <div class="token"><span class="a">A</span><span id="tokenNum">47</span></div>
+        </div>
+        <p class="summary" id="doneSummary">Show this token at the desk. A host will walk you through your selections shortly.</p>
+      </section>
+
+    </div>
+
+    <!-- ╔══ STEP NAV ══╗ -->
+    <nav class="stepnav" id="stepnav">
+      <button class="nav-btn ghost" id="backStep" type="button"><span class="arr" aria-hidden="true">←</span><span>Back</span></button>
+      <button class="nav-btn primary" id="nextStep" type="button"><span id="nextLabel">Begin</span><span class="arr" aria-hidden="true">→</span></button>
+    </nav>
+
+    <!-- Cream veil for page transitions -->
+    <div class="veil" id="veil"></div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────
+  var state = {
+    step: 1,
+    cc: '+91',
+    phone: '',
+    code: '',
+    name: '',
+    email: '',
+    unit: '',
+    budget: 18.0,
+    purpose: '',
+    timeline: '',
+    family: 2,
+    amenities: []
+  };
+  var TOTAL = 9;
+
+  var stepEls = Array.prototype.slice.call(document.querySelectorAll('.step'));
+  var nextBtn = document.getElementById('nextStep');
+  var backBtn = document.getElementById('backStep');
+  var nextLabel = document.getElementById('nextLabel');
+  var progFill = document.getElementById('progFill');
+  var progPct = document.getElementById('progPct');
+  var stepCount = document.getElementById('stepCount');
+
+  // ── Cream veil → home ──────────────────────────────────────────────
+  function veilTo(href) {
+    var veil = document.getElementById('veil');
+    if (veil) veil.classList.add('is-on');
+    setTimeout(function () { window.location.href = href; }, 220);
+  }
+  document.getElementById('brandLink').addEventListener('click', function (e) {
+    e.preventDefault(); veilTo('home.html');
+  });
+  var ecBackBtn = document.getElementById('ecBackBtn');
+  var goHome = function (e) { if (e) e.preventDefault(); veilTo('home.html'); };
+  ecBackBtn.addEventListener('click', goHome);
+  ecBackBtn.addEventListener('touchend', goHome, { passive: false });
+
+  // ── Step transitions ───────────────────────────────────────────────
+  function showStep(n, dir) {
+    dir = dir || 'fwd';
+    stepEls.forEach(function (el) {
+      var s = parseInt(el.getAttribute('data-step'), 10);
+      el.classList.remove('is-current', 'enter-right', 'enter-left', 'exit-left', 'exit-right');
+      if (s === n) {
+        // Position incoming off-axis, force a reflow so the browser registers
+        // the start state, then settle on the next frame. The forced reflow
+        // guarantees the slide-fade plays and the step never gets stuck hidden.
+        el.classList.add(dir === 'fwd' ? 'enter-right' : 'enter-left');
+        void el.offsetWidth; // flush start state
+        requestAnimationFrame(function () {
+          el.classList.remove('enter-right', 'enter-left');
+          el.classList.add('is-current');
+        });
+      } else if (s < n) {
+        el.classList.add('exit-left');
+      } else {
+        el.classList.add('exit-right');
+      }
+    });
+    state.step = n;
+    updateChrome();
+    focusStep(n);
+  }
+
+  function focusStep(n) {
+    setTimeout(function () {
+      if (n === 2) { document.getElementById('phoneInput').focus(); }
+      else if (n === 3) { var f = document.querySelector('.code-box[data-i="0"]'); if (f) f.focus(); }
+      else if (n === 4) { document.getElementById('nameInput').focus(); }
+    }, 240);
+  }
+
+  function updateChrome() {
+    var n = state.step;
+    stepCount.textContent = 'Step ' + n + ' / ' + TOTAL;
+    var pct = Math.round((n / TOTAL) * 100);
+    progFill.style.width = pct + '%';
+    progPct.textContent = pct + '%';
+
+    // Back availability — use display:none (not visibility:hidden) so the
+    // hidden Back button takes no width in the flex row and the primary
+    // button stays true-centred on the welcome (1) and done (9) steps.
+    backBtn.style.display = (n === 1 || n === TOTAL) ? 'none' : 'inline-flex';
+
+    // Primary label + behaviour per step
+    if (n === 1) { nextLabel.textContent = 'Begin'; }
+    else if (n === 2) { nextLabel.textContent = 'Send code'; }
+    else if (n === 3) { nextLabel.textContent = 'Verify'; }
+    else if (n === 8) { nextLabel.textContent = 'Finish'; }
+    else if (n === 9) { nextLabel.textContent = 'Reset for next visitor'; }
+    else { nextLabel.textContent = 'Continue'; }
+
+    refreshGate();
+  }
+
+  // ── Validation gate ────────────────────────────────────────────────
+  function emailOk(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  function stepValid(n) {
+    if (n === 2) return state.phone.replace(/\D/g, '').length > 0;
+    if (n === 3) return state.code === '1234';
+    if (n === 4) return state.name.trim().length > 0 && emailOk(state.email.trim());
+    if (n === 5) return state.unit !== '';
+    if (n === 7) return state.purpose !== '' && state.timeline !== '';
+    return true; // 1,6,8,9 always passable
+  }
+
+  function refreshGate() {
+    var n = state.step;
+    nextBtn.disabled = !stepValid(n);
+  }
+
+  // ── Advance / back ─────────────────────────────────────────────────
+  function advance() {
+    var n = state.step;
+    if (n === TOTAL) { resetAll(); return; }
+    if (!stepValid(n)) {
+      if (n === 4) { document.getElementById('idError').classList.add('show'); }
+      return;
+    }
+    if (n === 8) { computeToken(); fillSummary(); }
+    showStep(n + 1, 'fwd');
+  }
+  function back() {
+    if (state.step > 1) showStep(state.step - 1, 'back');
+  }
+
+  // Bind a button so it fires reliably on kiosk touch hardware. The global
+  // double-tap touchend preventer (in the scaler) can swallow the synthetic
+  // click on iPad / Tab / 65" panels, so we also handle touchend directly and
+  // guard against the click that may follow so the action never double-fires.
+  function bindTap(el, fn) {
+    if (!el) return;
+    var touched = false;
+    el.addEventListener('touchend', function (e) {
+      if (el.disabled) return;
+      touched = true;
+      e.preventDefault();
+      fn();
+      setTimeout(function () { touched = false; }, 500);
+    }, { passive: false });
+    el.addEventListener('click', function () {
+      if (touched || el.disabled) return;
+      fn();
+    });
+  }
+  bindTap(nextBtn, advance);
+  bindTap(backBtn, back);
+
+  // Enter key advances (when on a valid step)
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      if (!nextBtn.disabled) { e.preventDefault(); advance(); }
+    }
+  });
+
+  // ── Step 2 · Phone ─────────────────────────────────────────────────
+  var ccSelect = document.getElementById('ccSelect');
+  var phoneInput = document.getElementById('phoneInput');
+  ccSelect.addEventListener('change', function () { state.cc = ccSelect.value; updateMasked(); });
+  phoneInput.addEventListener('input', function () {
+    // keep digits + spaces only
+    phoneInput.value = phoneInput.value.replace(/[^\d ]/g, '');
+    state.phone = phoneInput.value;
+    updateMasked();
+    refreshGate();
+  });
+
+  function updateMasked() {
+    var digits = state.phone.replace(/\D/g, '');
+    var tail = digits.slice(-3);
+    var masked = state.cc + ' ••••• ••' + (tail || '•••');
+    document.getElementById('maskedNum').textContent = masked;
+  }
+
+  // ── Step 3 · Code ──────────────────────────────────────────────────
+  var codeBoxes = Array.prototype.slice.call(document.querySelectorAll('.code-box'));
+  codeBoxes.forEach(function (box, idx) {
+    box.addEventListener('input', function () {
+      box.value = box.value.replace(/\D/g, '').slice(0, 1);
+      box.classList.toggle('filled', box.value.length === 1);
+      if (box.value && idx < codeBoxes.length - 1) codeBoxes[idx + 1].focus();
+      collectCode();
+    });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !box.value && idx > 0) {
+        codeBoxes[idx - 1].focus();
+        codeBoxes[idx - 1].value = '';
+        codeBoxes[idx - 1].classList.remove('filled');
+        collectCode();
+      }
+    });
+    box.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var t = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4);
+      for (var i = 0; i < codeBoxes.length; i++) {
+        codeBoxes[i].value = t[i] || '';
+        codeBoxes[i].classList.toggle('filled', !!t[i]);
+      }
+      collectCode();
+      var last = Math.min(t.length, codeBoxes.length) - 1;
+      if (last >= 0) codeBoxes[Math.min(last + 1, codeBoxes.length - 1)].focus();
+    });
+  });
+
+  function collectCode() {
+    state.code = codeBoxes.map(function (b) { return b.value; }).join('');
+    refreshGate();
+    if (state.code.length === 4 && state.code === '1234' && state.step === 3) {
+      // auto-advance
+      setTimeout(function () { if (state.step === 3) showStep(4, 'fwd'); }, 320);
+    }
+  }
+
+  // ── Step 4 · Identity ──────────────────────────────────────────────
+  var nameInput = document.getElementById('nameInput');
+  var emailInput = document.getElementById('emailInput');
+  var idError = document.getElementById('idError');
+  function onIdChange() {
+    state.name = nameInput.value;
+    state.email = emailInput.value;
+    if (idError.classList.contains('show') && stepValid(4)) idError.classList.remove('show');
+    refreshGate();
+  }
+  nameInput.addEventListener('input', onIdChange);
+  emailInput.addEventListener('input', onIdChange);
+
+  // ── Step 5 · Unit type ─────────────────────────────────────────────
+  var unitGrid = document.getElementById('unitGrid');
+  unitGrid.addEventListener('click', function (e) {
+    var card = e.target.closest('.opt-card');
+    if (!card) return;
+    Array.prototype.forEach.call(unitGrid.querySelectorAll('.opt-card'), function (c) { c.classList.remove('is-selected'); });
+    card.classList.add('is-selected');
+    state.unit = card.getAttribute('data-val');
+    refreshGate();
+  });
+
+  // ── Step 6 · Budget ────────────────────────────────────────────────
+  var budgetSlider = document.getElementById('budgetSlider');
+  var budgetReadout = document.getElementById('budgetReadout');
+  function renderBudget() {
+    var v = parseFloat(budgetSlider.value);
+    state.budget = v;
+    budgetReadout.innerHTML = '₹' + v.toFixed(2) + '<span class="cr">Cr</span>';
+  }
+  budgetSlider.addEventListener('input', renderBudget);
+
+  // ── Step 7 · Purpose + timeline (single-select each) ───────────────
+  function wireSingle(rowId, key) {
+    var row = document.getElementById(rowId);
+    row.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      Array.prototype.forEach.call(row.querySelectorAll('.chip'), function (c) { c.classList.remove('is-selected'); });
+      chip.classList.add('is-selected');
+      state[key] = chip.getAttribute('data-val');
+      refreshGate();
+    });
+  }
+  wireSingle('purposeRow', 'purpose');
+  wireSingle('timelineRow', 'timeline');
+
+  // ── Step 8 · Family counter + amenities (multi-select) ─────────────
+  var famVal = document.getElementById('famVal');
+  var famMinus = document.getElementById('famMinus');
+  var famPlus = document.getElementById('famPlus');
+  function renderFamily() {
+    famVal.textContent = state.family;
+    famMinus.disabled = state.family <= 1;
+  }
+  famMinus.addEventListener('click', function () { if (state.family > 1) { state.family--; renderFamily(); } });
+  famPlus.addEventListener('click', function () { state.family++; renderFamily(); });
+
+  var amenityRow = document.getElementById('amenityRow');
+  amenityRow.addEventListener('click', function (e) {
+    var chip = e.target.closest('.chip');
+    if (!chip) return;
+    var val = chip.getAttribute('data-val');
+    var i = state.amenities.indexOf(val);
+    if (i === -1) { state.amenities.push(val); chip.classList.add('is-selected'); }
+    else { state.amenities.splice(i, 1); chip.classList.remove('is-selected'); }
+  });
+
+  // ── Step 9 · Token (deterministic, no Math.random / Date.now) ──────
+  // Roll a stable counter across resets via localStorage, blended with a
+  // hash of the visitor's inputs so it feels assigned, never random.
+  function rollingSeed() {
+    var n = 0;
+    try {
+      n = parseInt(window.localStorage.getItem('ec_gre_counter') || '0', 10) || 0;
+      window.localStorage.setItem('ec_gre_counter', String(n + 1));
+    } catch (err) { n = 0; }
+    return n;
+  }
+  function hashStr(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) { h = ((h << 5) - h + s.charCodeAt(i)) | 0; }
+    return Math.abs(h);
+  }
+  function computeToken() {
+    var base = rollingSeed();
+    var sig = hashStr(state.phone + '|' + state.name + '|' + state.unit + '|' + state.budget + '|' + state.purpose + '|' + state.family);
+    // map into a tidy 2-digit floor-token range 10–99
+    var num = 10 + ((base * 7 + sig) % 90);
+    document.getElementById('tokenNum').textContent = String(num);
+  }
+  function fillSummary() {
+    var am = state.amenities.length ? state.amenities.join(', ') : 'open to suggestions';
+    document.getElementById('doneSummary').innerHTML =
+      'A <b>' + (state.unit || 'home') + '</b> around <b>₹' + state.budget.toFixed(2) + ' Cr</b>, ' +
+      'for <b>' + state.family + '</b> ' + (state.family === 1 ? 'person' : 'people') + '. ' +
+      'Priorities: <b>' + am + '</b>. Show this token at the desk and a host will take it from here.';
+  }
+
+  // ── Reset ──────────────────────────────────────────────────────────
+  function resetAll() {
+    state.cc = '+91'; state.phone = ''; state.code = '';
+    state.name = ''; state.email = ''; state.unit = '';
+    state.budget = 18.0; state.purpose = ''; state.timeline = '';
+    state.family = 2; state.amenities = [];
+
+    ccSelect.value = '+91';
+    phoneInput.value = '';
+    codeBoxes.forEach(function (b) { b.value = ''; b.classList.remove('filled'); });
+    nameInput.value = ''; emailInput.value = '';
+    idError.classList.remove('show');
+    Array.prototype.forEach.call(unitGrid.querySelectorAll('.opt-card'), function (c) { c.classList.remove('is-selected'); });
+    budgetSlider.value = '18'; renderBudget();
+    document.querySelectorAll('#purposeRow .chip, #timelineRow .chip, #amenityRow .chip')
+      .forEach(function (c) { c.classList.remove('is-selected'); });
+    renderFamily();
+    updateMasked();
+    showStep(1, 'back');
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────
+  renderBudget();
+  renderFamily();
+  updateMasked();
+  showStep(1, 'fwd');
+
+  // Clear any leftover veil if returning via bfcache
+  window.addEventListener('pageshow', function () {
+    var v = document.getElementById('veil');
+    if (v) v.classList.remove('is-on');
+    if (window.__scale) window.__scale();
+  });
+})();
+</script>
+  <script src="assets/tools-dock.js"></script>
+</body>
+</html>

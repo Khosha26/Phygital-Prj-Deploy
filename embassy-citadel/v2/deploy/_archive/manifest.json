@@ -1,0 +1,14 @@
+{
+  "name": "Embassy Citadel — A World Unto Itself",
+  "short_name": "Citadel",
+  "description": "An on-site sales-suite experience for Embassy Citadel, Worli — a single tower in Mumbai.",
+  "start_url": "intro.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0E0C09",
+  "theme_color": "#0E0C09",
+  "icons": [
+    { "src": "../assets/embassy citadel logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

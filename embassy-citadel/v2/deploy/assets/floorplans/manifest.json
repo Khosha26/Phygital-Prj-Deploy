@@ -1,0 +1,374 @@
+{
+  "site": [
+    {
+      "name": "site-01-view-corridors",
+      "label": "View Corridors \u2014 Site Plan",
+      "file": "assets/floorplans/site/site-01-view-corridors.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "site-02-neighbourhood",
+      "label": "Neighbourhood Site Plan",
+      "file": "assets/floorplans/site/site-02-neighbourhood.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "site-03-ground-floor",
+      "label": "Ground Floor",
+      "file": "assets/floorplans/site/site-03-ground-floor.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "site-04-ground-circulation",
+      "label": "Ground Circulation",
+      "file": "assets/floorplans/site/site-04-ground-circulation.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "site-05-enlarged-ground-floor",
+      "label": "Enlarged Ground Floor",
+      "file": "assets/floorplans/site/site-05-enlarged-ground-floor.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    }
+  ],
+  "residential": [
+    {
+      "name": "service-floor",
+      "label": "Service Floor",
+      "file": "assets/floorplans/residential/service-floor.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "typical-floor-1apt",
+      "label": "Typical Floor \u2014 1 Apt/Floor",
+      "file": "assets/floorplans/residential/typical-floor-1apt.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "typical-floor-2apt",
+      "label": "Typical Floor \u2014 2 Apt/Floor",
+      "file": "assets/floorplans/residential/typical-floor-2apt.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "typical-floor-3apt-stack01",
+      "label": "Typical Floor \u2014 3 Apt/Floor (Stack 01)",
+      "file": "assets/floorplans/residential/typical-floor-3apt-stack01.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "typical-floor-3apt-stack02",
+      "label": "Typical Floor \u2014 3 Apt/Floor (Stack 02)",
+      "file": "assets/floorplans/residential/typical-floor-3apt-stack02.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "typical-refuge-floor",
+      "label": "Typical Refuge Floor",
+      "file": "assets/floorplans/residential/typical-refuge-floor.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "unit-1apt",
+      "label": "Unit \u2014 1 Apt/Floor",
+      "file": "assets/floorplans/residential/unit-1apt.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "unit-N01-stack01",
+      "label": "Unit N01 (Stack 01)",
+      "file": "assets/floorplans/residential/unit-N01-stack01.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "unit-N01-stack02",
+      "label": "Unit N01 (Stack 02)",
+      "file": "assets/floorplans/residential/unit-N01-stack02.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "unit-N02-stack01",
+      "label": "Unit N02 (Stack 01)",
+      "file": "assets/floorplans/residential/unit-N02-stack01.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "unit-N02-stack02",
+      "label": "Unit N02 (Stack 02)",
+      "file": "assets/floorplans/residential/unit-N02-stack02.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "unit-N03-stack01",
+      "label": "Unit N03 (Stack 01)",
+      "file": "assets/floorplans/residential/unit-N03-stack01.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "unit-S01-stack01",
+      "label": "Unit S01 (Stack 01)",
+      "file": "assets/floorplans/residential/unit-S01-stack01.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "unit-S01-stack02",
+      "label": "Unit S01 (Stack 02)",
+      "file": "assets/floorplans/residential/unit-S01-stack02.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "unit-S02-stack01",
+      "label": "Unit S02 (Stack 01)",
+      "file": "assets/floorplans/residential/unit-S02-stack01.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "unit-S02-stack02",
+      "label": "Unit S02 (Stack 02)",
+      "file": "assets/floorplans/residential/unit-S02-stack02.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "unit-S03-stack01",
+      "label": "Unit S03 (Stack 01)",
+      "file": "assets/floorplans/residential/unit-S03-stack01.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    }
+  ],
+  "mansion": [
+    {
+      "name": "mansion-entrance-level-79th",
+      "label": "Mansion Entrance \u2014 79th Level",
+      "file": "assets/floorplans/mansion/mansion-entrance-level-79th.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "north-tower-mansion-01",
+      "label": "North Tower Mansion I",
+      "file": "assets/floorplans/mansion/north-tower-mansion-01.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "north-tower-mansion-02",
+      "label": "North Tower Mansion II",
+      "file": "assets/floorplans/mansion/north-tower-mansion-02.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "north-tower-mansion-03",
+      "label": "North Tower Mansion III",
+      "file": "assets/floorplans/mansion/north-tower-mansion-03.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "south-tower-mansion-01",
+      "label": "South Tower Mansion I",
+      "file": "assets/floorplans/mansion/south-tower-mansion-01.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    },
+    {
+      "name": "south-tower-mansion-02",
+      "label": "South Tower Mansion II",
+      "file": "assets/floorplans/mansion/south-tower-mansion-02.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "south-tower-mansion-03",
+      "label": "South Tower Mansion III",
+      "file": "assets/floorplans/mansion/south-tower-mansion-03.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    }
+  ],
+  "amenities": [
+    {
+      "name": "amenity-level-1",
+      "label": "Amenity Level 1",
+      "file": "assets/floorplans/amenities/amenity-level-1.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "amenity-level-2",
+      "label": "Amenity Level 2",
+      "file": "assets/floorplans/amenities/amenity-level-2.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "amenity-level-3",
+      "label": "Amenity Level 3",
+      "file": "assets/floorplans/amenities/amenity-level-3.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "amenity-level-4",
+      "label": "Amenity Level 4",
+      "file": "assets/floorplans/amenities/amenity-level-4.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "amenity-level-5",
+      "label": "Amenity Level 5",
+      "file": "assets/floorplans/amenities/amenity-level-5.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "amenity-service-floor-11th",
+      "label": "Service Floor (11th)",
+      "file": "assets/floorplans/amenities/amenity-service-floor-11th.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    }
+  ],
+  "parking": [
+    {
+      "name": "basement-1",
+      "label": "Basement 1",
+      "file": "assets/floorplans/parking/basement-1.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "basement-2",
+      "label": "Basement 2",
+      "file": "assets/floorplans/parking/basement-2.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "basement-3",
+      "label": "Basement 3",
+      "file": "assets/floorplans/parking/basement-3.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "parking-level-1",
+      "label": "Parking Level 1",
+      "file": "assets/floorplans/parking/parking-level-1.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "parking-level-2",
+      "label": "Parking Level 2",
+      "file": "assets/floorplans/parking/parking-level-2.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "parking-level-3-5-7",
+      "label": "Parking Levels 3/5/7",
+      "file": "assets/floorplans/parking/parking-level-3-5-7.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "parking-level-4-6",
+      "label": "Parking Levels 4/6",
+      "file": "assets/floorplans/parking/parking-level-4-6.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "parking-level-8",
+      "label": "Parking Level 8",
+      "file": "assets/floorplans/parking/parking-level-8.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    },
+    {
+      "name": "parking-level-9",
+      "label": "Parking Level 9",
+      "file": "assets/floorplans/parking/parking-level-9.webp",
+      "w": 3600,
+      "h": 2200,
+      "orient": "landscape"
+    }
+  ],
+  "section": [
+    {
+      "name": "building-section",
+      "label": "Building Section",
+      "file": "assets/floorplans/section/building-section.webp",
+      "w": 2200,
+      "h": 2800,
+      "orient": "portrait"
+    }
+  ]
+}

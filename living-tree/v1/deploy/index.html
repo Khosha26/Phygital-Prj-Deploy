@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Living Tree · The Residence</title>
+<meta name="description" content="An interactive residential experience by Kalyani Developers — explore the master plan, towers, floor plans, amenities and location of Living Tree." />
+<meta name="theme-color" content="#0a120d" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a120d" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Living Tree" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="icon" type="image/svg+xml" href="logo.svg" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+<link rel="mask-icon" href="logo.svg" color="#d9b27a" />
+
+<!-- iOS standalone-mode launch (splash) screens — covers the common iPhone/iPad landscape sizes. -->
+<link rel="apple-touch-startup-image" href="splash/splash-iphone-l.png"
+      media="(orientation: landscape) and (max-device-width: 932px)" />
+<link rel="apple-touch-startup-image" href="splash/splash-iphone-p.png"
+      media="(orientation: portrait) and (max-device-width: 932px)" />
+<link rel="apple-touch-startup-image" href="splash/splash-ipad-l.png"
+      media="(orientation: landscape) and (min-device-width: 768px) and (max-device-width: 1366px)" />
+<link rel="apple-touch-startup-image" href="splash/splash-ipad-p.png"
+      media="(orientation: portrait) and (min-device-width: 768px) and (max-device-width: 1366px)" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<!-- Preload above-the-fold (intro + bird), so they paint immediately after CSS -->
+<link rel="preload" as="image" href="assets/intro.jpg" fetchpriority="high" />
+<link rel="preload" as="image" href="assets/bird.webp" type="image/webp" />
+<link rel="preload" as="image" href="logo.svg" type="image/svg+xml" />
+<!-- Prefetch the screens the user is most likely to enter next -->
+<link rel="prefetch" as="image" href="assets/masterplan-render.jpg" />
+<link rel="prefetch" as="image" href="assets/towers-3d.jpg" />
+<style>
+  /* ===== Safari / WebKit hardening — prevent text-zoom, long-press menus, double-tap zoom, bounce ===== */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    height: 100%;
+    height: 100dvh;
+  }
+  html, body {
+    margin: 0; padding: 0;
+    background: #050a07;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    user-select: none;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    position: fixed;
+    inset: 0;
+  }
+  * { box-sizing: border-box; }
+  img { -webkit-user-drag: none; -webkit-touch-callout: none; pointer-events: auto; }
+
+  /* Stage fits viewport with letterboxing. Safe-area insets are honored so the stage
+     never sits under the iPhone notch / Dynamic Island in landscape standalone mode. */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding-top:    env(safe-area-inset-top);
+    padding-right:  env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left:   env(safe-area-inset-left);
+    background: radial-gradient(ellipse at center, #0a120d 0%, #050a07 80%);
+  }
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1440px; height: 900px;
+    transform-origin: center center;
+    transform: translate(-50%, -50%) scale(1);
+    -webkit-transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 60px 140px rgba(0,0,0,0.6);
+    border-radius: 2px;
+    overflow: hidden;
+    touch-action: none;
+    /* Hardware-accelerate the scaled stage on Safari for smoother motion */
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  /* ====== KEYFRAMES ====== */
+  @keyframes leafFall {
+    0%   { transform: translate(0, 0) rotate(var(--rotS)); }
+    100% { transform: translate(var(--driftX), calc(100vh + 80px)) rotate(var(--rotE)); }
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1);    opacity: 0.55; }
+    50%      { transform: scale(1.04); opacity: 0.85; }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.4); opacity: 0.6; }
+  }
+  @keyframes treeDraw {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes dashIn {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes fadeInOpacity {
+    from { opacity: 0; }
+    to   { opacity: 0.85; }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleFadeIn {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes springIn {
+    0%   { transform: scale(0.5); }
+    100% { transform: scale(1); }
+  }
+  @keyframes nudge {
+    0%, 100% { transform: translateX(0); }
+    50%      { transform: translateX(4px); }
+  }
+  @keyframes kenBurns {
+    0%   { transform: scale(1.0) translate(0, 0); }
+    50%  { transform: scale(1.08) translate(-1%, -1.5%); }
+    100% { transform: scale(1.0) translate(0, 0); }
+  }
+  .canopyBg { animation: kenBurns 36s ease-in-out infinite; }
+
+  /* themed scrollbar for inner screens */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+  ::-webkit-scrollbar-thumb { background: rgba(217,178,122,0.3); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(217,178,122,0.5); background-clip: padding-box; }
+</style>
+<script>
+  // Stage scaling — uses visualViewport on Safari to handle URL-bar collapse smoothly.
+  // Aspect-aware fit:
+  //   - When the viewport aspect ratio is close to or wider than the stage (1.6 / 16:10),
+  //     use CONTAIN (Math.min). This preserves the existing behaviour on 16:10 tablets
+  //     (Galaxy Tab S7), 16:9 desktops, 16:10 MacBooks, ultrawide monitors, and phones in
+  //     landscape — exactly the devices the user said are "currently proper".
+  //   - When the viewport is significantly more square than the stage (iPad Pro 12.9 = 4:3,
+  //     iPad Pro 11 / iPad Air ≈ 1.43:1), use COVER (Math.max). The stage scales up to fill
+  //     the viewport, the top/bottom letterbox bars disappear, and any minor edge overflow
+  //     is clipped by #stage-wrap's overflow:hidden. The COVER trigger is gated on the
+  //     viewport being landscape (vw > vh) so phones/tablets in portrait keep contain.
+  (function() {
+    const W = 1440, H = 900;
+    const STAGE_ASPECT = W / H;          // 1.6 — 16:10
+    const COVER_THRESHOLD = 0.97;        // Trigger cover only when viewport aspect is <97%
+                                         // of stage aspect (≈ 1.55). 16:9 (1.78), 16:10 (1.6)
+                                         // and ultrawide stay in contain. iPad Pro 12.9
+                                         // (1.33), iPad Pro 11 (1.43), iPad Air (1.44) all
+                                         // fall under the threshold and switch to cover.
+    function scale() {
+      const wrap = document.getElementById("stage-wrap");
+      const stage = document.getElementById("stage");
+      if (!wrap || !stage) return;
+      var vw = wrap.clientWidth, vh = wrap.clientHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const viewAspect = vw / vh;
+      const isSquarishLandscape =
+        viewAspect > 1 && viewAspect < STAGE_ASPECT * COVER_THRESHOLD;
+      const s = isSquarishLandscape
+        ? Math.max(vw / W, vh / H)        // cover — fill viewport, clip side overflow
+        : Math.min(vw / W, vh / H);       // contain — letterbox, no clipping
+      const t = "translate(-50%, -50%) scale(" + s + ")";
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+    }
+    window.__ltScale = scale;
+    window.addEventListener("resize", scale);
+    window.addEventListener("orientationchange", scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", scale);
+      window.visualViewport.addEventListener("scroll", scale);
+    }
+    document.addEventListener("DOMContentLoaded", scale);
+    window.addEventListener("load", scale);
+
+    // Block iOS double-tap zoom (in case viewport meta is ignored — rare but defensive)
+    var lastTouchEnd = 0;
+    document.addEventListener("touchend", function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+
+    // Block pinch zoom on iOS Safari (viewport user-scalable=no isn't always honored)
+    document.addEventListener("gesturestart",  function(e) { e.preventDefault(); });
+    document.addEventListener("gesturechange", function(e) { e.preventDefault(); });
+    document.addEventListener("gestureend",    function(e) { e.preventDefault(); });
+  })();
+</script>
+<!-- React PRODUCTION builds — far faster renders than the dev builds (smoother
+     animation on tablets). No @babel/standalone: the JSX is pre-compiled offline
+     into app.js, so there is zero runtime transpilation. -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="stage-wrap">
+  <div id="stage"></div>
+</div>
+
+<!-- All 15 screens + the experience shell are pre-compiled into this single
+     bundle. Every screen is defined and registered the instant this runs, so
+     navigation between screens is immediate (no per-screen transpile/parse).
+     Runs at body-end, after the React scripts in <head> have executed. -->
+<!-- RealDesk Analytics — offline-first usage tracking (buffers in IndexedDB, syncs to VPS when online).
+     Loads before app.js so window.RDA exists when the router mounts and emits per-screen page_view. -->
+<script src="assets/rda.js?v=32" data-base="https://analytics.khosha.tech"
+        data-slug="living-tree" data-token="rdk_ed9ca67d92edab8542490bd59f44639d6bd3a7a7b53f7105" data-label=""></script>
+<script src="app.js?v=32"></script>
+<script>
+  /* PWA — register the service worker for installability + offline */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        /* When the app is idle, ask SW to download the secondary assets so
+           offline navigation feels instant on subsequent screens. */
+        var prefetch = function () {
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage("PREFETCH_SECONDARY");
+          } else if (reg.active) {
+            reg.active.postMessage("PREFETCH_SECONDARY");
+          }
+        };
+        if ("requestIdleCallback" in window) {
+          requestIdleCallback(prefetch, { timeout: 3500 });
+        } else {
+          setTimeout(prefetch, 2500);
+        }
+      }).catch(function () {});
+    });
+  }
+
+  /* Capture install prompt so we can use it from the UI if desired */
+  window.__ltDeferredInstall = null;
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    window.__ltDeferredInstall = e;
+  });
+</script>
+</body>
+</html>

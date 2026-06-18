@@ -1,0 +1,22 @@
+{
+  "id": "/",
+  "name": "Living Tree by Kalyani Developers",
+  "short_name": "Living Tree",
+  "description": "An interactive residential experience by Kalyani Developers — explore the master plan, towers, floor plans, amenities and location of Living Tree.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#050a07",
+  "theme_color": "#0a120d",
+  "categories": ["lifestyle", "business"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

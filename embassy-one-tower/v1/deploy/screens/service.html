@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Service · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE SERVICE — editorial composition (no lead-capture; on-site sales tool).
+  ("A home that takes care of itself…" · "KEPT, NOT MANAGED").
+  ──────────────────────────────────────────────────────────────────────
+  · Parchment bg + leaf filigree. Top: RETURN · "THE SERVICE" · "KEPT, NOT MANAGED".
+  · Left: heading + body, then a tall dusk image card with "IN THE QUIET" caption.
+  · Right: a "WHAT IS KEPT" panel — 5 facets as a refined two-column list.
+  · Bottom: a quiet service stat strip (Concierge · Housekeeping · Wellness · Security · Lifestyle).
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parch:#f1e9d8; --paper:#f6efe2; --ink:#2b2a26; --muted:#6e685b; --faint:#9a917f;
+    --gold:#b8924e; --gold-d:#8a6e45; --gold-l:#c89b61; --line:#d8ccb4; --card:#f8f1e4;
+    --ease:cubic-bezier(.2,.7,.2,1); --expo:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  .bg{position:fixed; inset:0; z-index:0; background:#efe7d6 url("../assets/bg-inner.webp") center/cover no-repeat}
+  .wrap{position:fixed; inset:0; z-index:2; display:flex; flex-direction:column; overflow:hidden;
+    padding:clamp(16px,2.2vh,28px) clamp(26px,3.4vw,62px) clamp(14px,2vh,26px)}
+
+  /* top bar */
+  .top{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; flex:0 0 auto; gap:12px}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:linear-gradient(180deg,#fdfaf3,#f2e8d4); border:1px solid #b8924e;
+    color:#8a6e45; font-weight:500; font-size:clamp(9px,1.15vh,13px); letter-spacing:.32em;
+    text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.6), 0 8px 18px -8px rgba(40,28,10,.28), 0 0 10px rgba(233,199,135,.55);
+    backdrop-filter:none; -webkit-backdrop-filter:none; transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:hover{ background:linear-gradient(180deg,#ffffff,#f6eeda); border-color:#c89b61;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.72), 0 10px 22px -8px rgba(40,28,10,.32), 0 0 14px rgba(233,199,135,.72); }
+  .back:active{ transform:scale(.97); }
+  .back svg{width:15px;height:15px;display:block; stroke:#8a6e45}
+  .title{justify-self:center; text-align:center}
+  .title .tt{font-size:clamp(11px,1.4vh,16px); letter-spacing:.5em; text-indent:.5em; text-transform:uppercase; color:var(--gold-d); font-weight:400}
+  .title .tr{display:flex; align-items:center; justify-content:center; gap:7px; margin-top:7px}
+  .title .tr i{height:1px; width:clamp(40px,5vw,86px); background:linear-gradient(90deg,transparent,var(--gold))}
+  .title .tr i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+  .title .tr b{width:5px;height:5px;background:var(--gold);transform:rotate(45deg)}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.1vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--gold-d)}
+
+  /* body grid */
+  .grid{flex:1 1 auto; min-height:0; display:grid; grid-template-columns:1.12fr 1fr; gap:clamp(28px,3.4vw,64px);
+    padding-top:clamp(14px,2.4vh,30px); align-items:stretch}
+  .left{min-width:0; display:flex; flex-direction:column; height:100%}
+  .left h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1.04; color:var(--ink); font-size:clamp(30px,5vh,58px); letter-spacing:.004em}
+  .left .rule{width:120px; height:2px; background:linear-gradient(90deg,var(--gold),transparent); margin:clamp(12px,2vh,22px) 0 clamp(10px,1.6vh,18px)}
+  .left .body{font-weight:300; color:var(--muted); line-height:1.7; font-size:clamp(12px,1.5vh,16px); max-width:54ch}
+
+  /* image card — given more presence; fills the lower-left */
+  .shot{position:relative; margin-top:clamp(16px,2.6vh,30px); flex:1 1 auto; min-height:clamp(200px,30vh,420px); border-radius:18px; overflow:hidden;
+    border:1px solid rgba(184,146,78,.6); box-shadow:0 30px 64px -28px rgba(60,42,16,.55), inset 0 0 0 4px rgba(20,15,9,.4)}
+  .shot img{width:100%; height:100%; object-fit:cover; display:block}
+  .shot .place{position:absolute; top:16px; right:20px; z-index:3; font-size:clamp(9px,1.1vh,13px); letter-spacing:.3em; text-transform:uppercase; color:#f3ead8; text-shadow:0 1px 8px rgba(0,0,0,.6)}
+  .shot .cap{position:absolute; left:0; right:0; bottom:0; z-index:3; padding:clamp(20px,3.4vh,40px) clamp(22px,2.6vw,42px) clamp(18px,2.4vh,32px);
+    background:linear-gradient(0deg, rgba(12,9,5,.82), rgba(12,9,5,.35) 55%, transparent)}
+  .shot .ck{font-size:clamp(9px,1.1vh,12px); letter-spacing:.32em; text-transform:uppercase; color:#e3c894; display:flex; align-items:center; gap:10px}
+  .shot .ck i{height:1px; width:24px; background:var(--gold-l)}
+  .shot .cs{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; color:#fff5e2; font-size:clamp(18px,2.7vh,32px); line-height:1.2; margin-top:8px; max-width:26ch}
+
+  /* what is kept — refined two-column list filling the right column */
+  .kept{height:100%; min-height:0; background:rgba(248,241,228,.55); border:1px solid rgba(184,146,78,.3); border-radius:20px;
+    padding:clamp(20px,2.8vh,38px) clamp(22px,2vw,40px); box-shadow:0 30px 64px -28px rgba(60,42,16,.4); outline:1px solid rgba(255,250,240,.55); outline-offset:-4px;
+    background-image:linear-gradient(rgba(248,241,228,.55),rgba(248,241,228,.55)), url("../assets/bg-inner.webp"); background-size:cover; background-position:right;
+    display:flex; flex-direction:column}
+  .kept .kh{display:flex; align-items:center; justify-content:center; gap:14px; font-size:clamp(9px,1.1vh,12px); letter-spacing:.4em; text-transform:uppercase; color:var(--gold-d); margin-bottom:clamp(6px,1vh,12px)}
+  .kept .kh i{height:1px; width:clamp(30px,4vw,70px); background:linear-gradient(90deg,transparent,var(--gold))}
+  .kept .kh i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+  .kept .ksub{text-align:center; font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; color:var(--muted); font-size:clamp(14px,1.9vh,20px); line-height:1.3; margin-bottom:clamp(12px,2vh,22px); max-width:34ch; margin-left:auto; margin-right:auto}
+  .facets{flex:1 1 auto; display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,1.8vh,24px) clamp(20px,2vw,40px); align-content:center}
+  .facet{display:flex; gap:14px; align-items:flex-start}
+  .facet .ic{flex:0 0 auto; width:clamp(32px,3.8vh,42px); height:clamp(32px,3.8vh,42px); display:grid; place-items:center}
+  .facet .ic svg{width:100%;height:100%;stroke:var(--gold-d);fill:none;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+  .facet .ft b{font-weight:500; font-size:clamp(13px,1.7vh,18px); color:var(--ink); letter-spacing:.01em}
+  .facet .ft p{font-weight:300; color:var(--muted); font-size:clamp(10.5px,1.3vh,14px); line-height:1.5; margin-top:4px}
+
+  /* quiet service stat strip along the bottom */
+  .strip{flex:0 0 auto; margin-top:clamp(12px,1.8vh,22px); display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+    gap:clamp(10px,1.4vw,22px); padding:clamp(11px,1.6vh,17px) clamp(16px,1.8vw,30px);
+    border:1px solid rgba(184,146,78,.32); border-radius:14px; background:rgba(248,241,228,.4); outline:1px solid rgba(255,250,240,.45); outline-offset:-3px}
+  .strip span{font-size:clamp(9px,1.15vh,13px); letter-spacing:.26em; text-transform:uppercase; color:var(--gold-d); font-weight:400}
+  .strip b{width:4px;height:4px;background:var(--gold);transform:rotate(45deg);flex:0 0 auto;opacity:.8}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .8s var(--expo) forwards} @keyframes fin{to{opacity:1;transform:none}}
+  @media (max-aspect-ratio:1/1){ .grid{grid-template-columns:1fr; overflow-y:auto; align-items:start} .shot{min-height:clamp(190px,26vh,300px); flex:0 0 auto} .kept{height:auto} .facets{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="wrap">
+    <div class="top">
+      <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+      <div class="title"><div class="tt">The Service</div><div class="tr"><i></i><b></b><i></i></div></div>
+      <div class="corner">Kept, not managed</div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: heading + dusk image -->
+      <div class="left fadein">
+        <h1>A home that takes care<br>of itself, so you can live in it.</h1>
+        <div class="rule"></div>
+        <p class="body">The finest homes are not only built well — they are kept well. Care that anticipates rather than waits, present when wanted and unseen when not, so that living here asks nothing of you. Looked after, quietly, by Embassy.</p>
+
+        <div class="shot">
+          <img src="../assets/renders/exterior/ext-2.webp" alt="Embassy ONE at dusk">
+          <div class="place">Embassy ONE · At Dusk</div>
+          <div class="cap">
+            <div class="ck"><i></i>In the quiet</div>
+            <div class="cs">The best service is the kind you never have to ask for.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: what is kept -->
+      <aside class="kept fadein" style="animation-delay:.1s">
+        <div class="kh"><i></i>What is kept<i></i></div>
+        <div class="ksub">Five quiet attentions, held so the day asks nothing of you.</div>
+        <div class="facets">
+          <div class="facet"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 6.5V4"/><path d="M5 14a7 7 0 0 1 14 0Z"/><path d="M3.5 14h17"/></svg></span><div class="ft"><b>Concierge</b><p>The arrangements of the day attended to before they are spoken.</p></div></div>
+          <div class="facet"><span class="ic"><svg viewBox="0 0 24 24"><path d="M5 21V9.5L12 4l7 5.5V21z"/><path d="M10 21v-6h4v6"/></svg></span><div class="ft"><b>Wellness</b><p>Spaces to restore, kept ready, so rest is never something to plan.</p></div></div>
+          <div class="facet"><span class="ic"><svg viewBox="0 0 24 24"><path d="M5 21V9.5L12 4l7 5.5V21z"/><path d="M9 21v-7h6v7"/><path d="M9.5 11.5h.01"/></svg></span><div class="ft"><b>Housekeeping</b><p>A home returned to order quietly, felt most in its absence.</p></div></div>
+          <div class="facet"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 4c3.5 4 6 5.5 6 9a6 6 0 0 1-12 0c0-3.5 2.5-5 6-9Z"/><path d="M12 10v8"/></svg></span><div class="ft"><b>Lifestyle</b><p>The rhythms of living here gently held, asking less and offering more.</p></div></div>
+          <div class="facet"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6Z"/></svg></span><div class="ft"><b>Security</b><p>Watchful, discreet, present at the edges so the centre stays peaceful.</p></div></div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- quiet service stat strip -->
+    <div class="strip fadein" style="animation-delay:.2s">
+      <span>Concierge</span><b></b>
+      <span>Housekeeping</span><b></b>
+      <span>Wellness</span><b></b>
+      <span>Security</span><b></b>
+      <span>Lifestyle</span>
+    </div>
+  </div>
+
+<script>
+  document.getElementById('back').addEventListener('click', function(){ try{ parent.postMessage('eo-screen-close','*'); }catch(e){} });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } } });
+</script>
+  <script src="../assets/leaf.js"></script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

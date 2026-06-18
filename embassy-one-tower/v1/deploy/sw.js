@@ -1,0 +1,100 @@
+/* The Residences at Embassy ONE — service worker (offline-first PWA kiosk).
+   On install it precaches the app shell + every key asset so the suite runs
+   fully offline after the first load. Strategy: stale-while-revalidate for
+   same-origin assets (instant + offline, refreshes in the background so new
+   builds appear on the next load). Live map tiles always hit the network. */
+const CACHE = 'eo-offline-v47';
+
+const SHELL = [
+  './', './index.html', './manifest.json', './assets/leaf.js', './assets/rda.js', './assets-manifest.json',
+  './screens/place-location.html', './screens/masterplan.html', './screens/masterplan-illustrated.html',
+  './screens/tower.html', './screens/floorplans.html', './screens/gallery.html',
+  './screens/overview.html', './screens/service.html', './screens/lanterns.html',
+  './screens/amenities.html', './screens/invitation.html',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-192.png', './icons/maskable-512.png',
+  './icons/apple-touch-icon.png', './icons/favicon.png'
+];
+
+const PLANS = [
+  './assets/masterplan/views/master-fs.webp',
+  './assets/masterplan/views/zoning.webp', './assets/masterplan/views/planting.webp',
+  './assets/masterplan/views/trees.webp'
+];
+
+const ASSETS = [
+  // home / intro
+  './assets/plate-2560.webp', './assets/bg-inner.webp', './assets/embassy-one-logo.svg',
+  './assets/leaf-cluster.webp', './assets/leaf-motif.webp', './assets/one-coin.webp', './assets/belt.webp',
+  './assets/clouds/cloud02.webp', './assets/clouds/cloud22.webp', './assets/clouds/cloud44.webp',
+  './assets/clouds/cloud54.webp', './assets/clouds/cloud65.webp',
+  // new home buttons + lantern
+  './assets/home/btn-place.webp', './assets/home/btn-grounds.webp', './assets/home/btn-tower.webp',
+  './assets/home/btn-residences.webp', './assets/home/btn-service.webp',
+  './assets/home/btn-overview.webp', './assets/home/btn-gallery.webp', './assets/home/lantern-bar.webp',
+  // masterplan bg
+  './assets/plate-parchment.webp',
+  // 3D lanterns + three.js engine + Draco decoder
+  './assets/lanterns/3d/winter.glb', './assets/lanterns/3d/spring.glb',
+  './assets/lanterns/3d/summer.glb', './assets/lanterns/3d/autumn.glb', './assets/lanterns/3d/center.glb',
+  './assets/vendor/three/three.module.js', './assets/vendor/three/GLTFLoader.js',
+  './assets/vendor/three/DRACOLoader.js', './assets/vendor/utils/BufferGeometryUtils.js',
+  './assets/vendor/draco/draco_decoder.wasm', './assets/vendor/draco/draco_wasm_wrapper.js',
+  // renders
+  './assets/renders/exterior/tower-scene.webp', './assets/renders/exterior/tower-hero.webp',
+  './assets/renders/exterior/tower-aerial.webp', './assets/renders/exterior/overview-dev.webp',
+  './assets/renders/exterior/ext-1.webp', './assets/renders/exterior/ext-2.webp', './assets/renders/exterior/ext-3.webp',
+  './assets/renders/lanterns/center.webp', './assets/renders/lanterns/twin.webp', './assets/renders/lanterns/spring.webp',
+  './assets/renders/lanterns/summer.webp', './assets/renders/lanterns/autumn.webp', './assets/renders/lanterns/lobby.webp',
+  './assets/renders/amenities/lawn.webp', './assets/renders/amenities/muga.webp',
+  './assets/renders/amenities/pets.webp', './assets/renders/amenities/yoga.webp',
+  // floorplans
+  './assets/floorplans/hi/2br-duplex.webp', './assets/floorplans/hi/3br.webp', './assets/floorplans/hi/3br-study.webp',
+  './assets/floorplans/hi/3br-study-media.webp', './assets/floorplans/hi/4br.webp', './assets/floorplans/hi/4br-study.webp',
+  './assets/floorplans/hi/4br-recessed.webp', './assets/floorplans/hi/5br-penthouse-lower.webp', './assets/floorplans/hi/5br-penthouse-upper.webp',
+  // fixed CDN libs (map engine + fonts) so they work offline too
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then(async (c) => {
+      await c.addAll(SHELL).catch(() => {});                          // shell is essential
+      await Promise.allSettled([...ASSETS, ...PLANS].map((u) => c.add(u)));  // tolerant: one 404 won't abort
+    }).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('message', (e) => { if (e.data === 'skip-waiting') self.skipWaiting(); });
+
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+
+  // Live map tiles must always hit the network (huge, dynamic, region-specific).
+  if (/tile|basemaps\.cartocdn|server\.arcgisonline/.test(url.href)) return;
+
+  const cacheable = url.origin === location.origin || /fonts\.(googleapis|gstatic)|unpkg\.com/.test(url.href);
+  if (!cacheable) return;
+
+  // Stale-while-revalidate: serve cache instantly (offline-ready), refresh in the background.
+  e.respondWith(
+    caches.open(CACHE).then((c) =>
+      c.match(req).then((hit) => {
+        const net = fetch(req).then((res) => {
+          if (res && res.status === 200 && res.type !== 'opaque') c.put(req, res.clone());
+          return res;
+        }).catch(() => null);
+        return hit || net.then((res) => res || (req.mode === 'navigate' ? c.match('./index.html') : undefined));
+      })
+    )
+  );
+});

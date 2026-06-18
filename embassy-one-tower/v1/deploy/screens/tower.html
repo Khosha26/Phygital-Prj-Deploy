@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Tower · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE TOWER — three-stage flow (single file, animated stage transitions)
+  ──────────────────────────────────────────────────────────────────────
+  STAGE 1  tower : full-bleed building scene (cream keyed to transparent over
+                   parchment) + "A vertical manor." + Four Principles; a glowing
+                   "Floor N" pointer line across the building; a vertical floor
+                   slider (scroll/swipe → line follows centred floor; tap → enter).
+  STAGE 2  floor : the chosen floor's two residences (South/North) as cards → unit.
+  STAGE 3  unit  : the unit's hi-res plan (pan/zoom) + specs + "Book a Private Viewing".
+  Floor→config mapping from the North-Tower Area Statement. No 13th floor.
+  Assets: ../assets/renders/exterior/tower-scene.webp · ../assets/floorplans/hi/*.webp
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parch:#f1e9d8; --paper:#fbf8f1; --ink:#2b2a26; --muted:#6e685b; --faint:#9a917f;
+    --gold:#b8924e; --gold-d:#8a6e45; --gold-l:#c89b61; --line:#d8ccb4; --card:#fdfaf3;
+    --leather1:#34322a; --leather2:#1d1c15;
+    --ease:cubic-bezier(.2,.7,.2,1); --expo:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  .bg{position:fixed; inset:0; z-index:0; background:#efe7d6 url("../assets/bg-inner.webp") center/cover no-repeat}
+
+  /* top bar */
+  .top{position:fixed; top:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    padding:clamp(16px,2.2vh,28px) clamp(22px,3vw,58px) 0; gap:12px}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:linear-gradient(180deg,#fdfaf3,#f2e8d4); border:1px solid #b8924e; color:#8a6e45; font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.32em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px; pointer-events:auto;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.6), 0 8px 18px -8px rgba(40,28,10,.28), 0 0 10px rgba(233,199,135,.55);
+    backdrop-filter:none; -webkit-backdrop-filter:none; transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:hover{ background:linear-gradient(180deg,#ffffff,#f6eeda); border-color:#c89b61;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.72), 0 10px 22px -8px rgba(40,28,10,.32), 0 0 14px rgba(233,199,135,.72); }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px;display:block; stroke:#8a6e45}
+  .eyebrow{justify-self:center; font-size:clamp(9px,1.3vh,15px); letter-spacing:.42em; text-transform:uppercase; color:var(--gold-d); white-space:nowrap; transition:opacity .3s}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.1vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--gold-d)}
+
+  /* stage host */
+  .stage{position:fixed; inset:0; z-index:10; opacity:0; pointer-events:none; transition:opacity .5s var(--ease), transform .55s var(--expo); transform:translateY(14px)}
+  .stage.active{opacity:1; pointer-events:auto; transform:none}
+  .pad{position:absolute; inset:0; padding:clamp(74px,10vh,112px) clamp(22px,3vw,58px) clamp(18px,2.4vh,32px); display:flex}
+
+  /* ── STAGE 1 ──────────────────────────────────────────────────── */
+  /* full-bleed building scene */
+  .scene{position:fixed; inset:0; z-index:5; pointer-events:none}
+  .scene img{width:100%; height:100%; object-fit:cover; object-position:center 58%; display:block;
+    -webkit-mask:radial-gradient(118% 96% at 50% 44%, #000 42%, rgba(0,0,0,.55) 72%, transparent 95%);
+    mask:radial-gradient(118% 96% at 50% 44%, #000 42%, rgba(0,0,0,.55) 72%, transparent 95%)}
+  .s1{position:relative; width:100%; height:100%; z-index:12}
+
+  /* left text */
+  .s1 .lead{position:absolute; left:clamp(28px,4vw,82px); top:50%; transform:translateY(-50%); width:min(31%,430px); z-index:13}
+  .s1 .lead::before{content:""; position:absolute; inset:-32px -50px; z-index:-1; pointer-events:none;
+    background:radial-gradient(78% 72% at 28% 46%, rgba(244,237,222,.78), rgba(244,237,222,.3) 60%, transparent 80%)}
+  .s1 .lead h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:.98; color:var(--ink); font-size:clamp(34px,6.4vh,76px)}
+  .s1 .lead .rule{width:64px; height:2px; background:linear-gradient(90deg,var(--gold),transparent); margin:clamp(12px,2vh,22px) 0}
+  .s1 .lead p{font-weight:300; color:var(--muted); line-height:1.65; font-size:clamp(12px,1.55vh,16px); max-width:34ch}
+  .principles{margin-top:clamp(16px,2.6vh,32px); display:flex; flex-direction:column; gap:clamp(10px,1.5vh,18px)}
+  .principle{display:flex; gap:13px; align-items:flex-start}
+  .principle .pi{flex:0 0 auto; width:22px; height:22px; margin-top:1px} .principle .pi svg{width:100%;height:100%;stroke:var(--gold-d);fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+  .principle .pt b{display:block; font-family:"Jost"; font-weight:500; font-size:clamp(10px,1.2vh,13px); letter-spacing:.2em; text-transform:uppercase; color:var(--gold-d)}
+  .principle .pt span{font-weight:300; color:var(--muted); font-size:clamp(11px,1.35vh,14px); line-height:1.4}
+
+  /* travelling floor line on the tower (lift-moving feel) */
+  .floorline{position:absolute; left:29%; right:33%; top:40%; z-index:14; pointer-events:none; height:0;
+    transition:top .9s cubic-bezier(.45,.05,.2,1)}
+  /* the travelling floor-line on the tower is RED (the gold line the client asked to recolour) */
+  .floorline .fl-glow{position:absolute; left:0; right:0; top:-1px; height:2px;
+    background:linear-gradient(90deg, transparent, rgba(190,52,48,.14) 12%, rgba(216,72,66,.96) 50%, rgba(190,52,48,.14) 88%, transparent);
+    box-shadow:0 0 14px rgba(193,52,48,.8), 0 0 36px rgba(180,46,42,.45); animation:flPulse 2.6s ease-in-out infinite}
+  @keyframes flPulse{0%,100%{opacity:.85} 50%{opacity:1}}
+  .floorline .fl-tag{position:absolute; right:calc(100% + 12px); top:50%; transform:translateY(-50%);
+    font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; font-size:clamp(13px,1.9vh,22px); color:#b5302e;
+    text-shadow:0 1px 8px rgba(249,244,234,.9)}
+
+  /* ── elevator keypad (right) — dark leather + gold ── */
+  .keypad{position:absolute; right:clamp(200px,20vw,480px); top:50%; transform:translateY(-50%); z-index:16; width:clamp(196px,17vw,248px);
+    height:min(72vh,560px); display:flex; flex-direction:column; gap:clamp(6px,.9vh,10px); padding:clamp(11px,1.7vh,18px) clamp(11px,1.2vw,16px) clamp(10px,1.4vh,15px);
+    background:linear-gradient(168deg,#2d2820 0%,#1c1810 48%,#120f09 100%); border:1.5px solid rgba(198,158,90,.85); border-radius:22px;
+    box-shadow:0 40px 72px -28px rgba(20,15,9,.7), inset 0 1px 0 rgba(255,225,165,.12); outline:1px solid rgba(176,138,74,.45); outline-offset:-5px}
+  .keypad::before{content:""; position:absolute; inset:0; border-radius:22px; pointer-events:none; opacity:.5;
+    background:radial-gradient(130% 80% at 50% 0%, rgba(255,224,150,.07), transparent 55%), repeating-linear-gradient(48deg, rgba(255,255,255,.014) 0 2px, transparent 2px 5px)}
+  .kconfig{flex:0 0 auto; text-align:center; font-size:clamp(7.5px,.95vh,10.5px); letter-spacing:.32em; text-transform:uppercase; color:#cda969;
+    padding-bottom:clamp(6px,1vh,11px); border-bottom:1px solid rgba(184,146,78,.4); transition:opacity .3s}
+  .kconfig.swap{opacity:0}
+  /* digital floor display (lift indicator) */
+  .kdisplay{position:relative; flex:0 0 auto; aspect-ratio:1.85/1; max-height:19vh; border-radius:11px; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:linear-gradient(165deg,#23201a,#100d08); border:1.4px solid rgba(200,155,97,.85);
+    box-shadow:inset 0 2px 16px rgba(0,0,0,.7), inset 0 0 0 1px rgba(0,0,0,.4), 0 4px 14px -6px rgba(20,15,9,.6)}
+  .kdisplay::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:.4; background:repeating-linear-gradient(46deg, rgba(255,255,255,.02) 0 2px, transparent 2px 5px)}
+  .kdisplay::after{content:""; position:absolute; inset:0; background:radial-gradient(80% 60% at 50% 12%, rgba(255,224,150,.1), transparent 60%); pointer-events:none}
+  .knum{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(34px,6.2vh,58px); line-height:.9; letter-spacing:.02em; font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#f3da9e 0%,#d8b274 55%,#bb8f4c 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+    filter:drop-shadow(0 0 16px rgba(233,200,140,.5)); transition:transform .09s var(--expo), opacity .09s}
+  .knum.tick{transform:translateY(-22%) scale(.94); opacity:.25}
+  .kfloor{font-family:"Jost"; font-weight:400; font-size:clamp(6.5px,.85vh,9px); letter-spacing:.4em; text-transform:uppercase; color:#a99a6e; margin-top:2px}
+  /* floor grid (scrollable window) */
+  .kgrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:min-content; gap:clamp(5px,.8vh,8px); padding:2px;
+    scrollbar-width:thin; scrollbar-color:rgba(184,146,78,.6) transparent}
+  .kgrid::-webkit-scrollbar{width:4px}.kgrid::-webkit-scrollbar-thumb{background:rgba(184,146,78,.6);border-radius:3px}
+  .kbtn{aspect-ratio:1.35/1; display:grid; place-items:center; cursor:pointer; border:1px solid rgba(184,146,78,.45); border-radius:9px;
+    background:linear-gradient(165deg,#2a261d,#15120b); color:#d9b97e;
+    font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(12px,1.7vh,17px); font-variant-numeric:tabular-nums;
+    box-shadow:inset 0 1px 0 rgba(255,225,165,.1), 0 4px 10px -6px rgba(10,8,5,.6); transition:transform .15s var(--expo), box-shadow .25s, color .25s, border-color .25s}
+  .kbtn:hover{transform:translateY(-2px); border-color:var(--gold-l); color:#f3da9e; box-shadow:0 8px 16px -8px rgba(10,8,5,.7), inset 0 0 0 1px rgba(200,155,97,.4)}
+  .kbtn:active{transform:translateY(0) scale(.96)}
+  .kbtn.sel{border-color:#e6c485; color:#f7e3ab; box-shadow:0 0 0 1px rgba(230,196,133,.7), 0 0 18px rgba(230,196,133,.5), inset 0 0 14px rgba(214,178,120,.22);
+    background:linear-gradient(165deg,#3a2e1c,#1d1610)}
+  .kenter{margin-top:clamp(2px,.5vh,5px); cursor:pointer; border:1.3px solid rgba(200,155,97,.85); border-radius:11px; padding:clamp(10px,1.5vh,14px);
+    background:linear-gradient(165deg,#2a261d,#14110b); color:#ecd49c; font-family:"Jost"; font-weight:500; font-size:clamp(9.5px,1.2vh,13px);
+    letter-spacing:.34em; text-transform:uppercase; box-shadow:0 12px 26px -12px rgba(10,8,5,.7), inset 0 1px 0 rgba(255,225,165,.14); transition:transform .2s, box-shadow .3s, filter .3s, border-color .3s}
+  .kenter:hover{filter:brightness(1.15); border-color:#e6c485; box-shadow:0 18px 34px -12px rgba(10,8,5,.8), 0 0 16px rgba(230,196,133,.25)} .kenter:active{transform:scale(.98)}
+  .khint{display:flex; align-items:center; justify-content:center; gap:10px; color:#b39c6c; font-size:9px; letter-spacing:.2em; text-transform:uppercase; text-align:left; line-height:1.4}
+  .khint .khand svg{width:26px;height:26px;stroke:#b39c6c;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── STAGE 2 ──────────────────────────────────────────────────── */
+  .s2{flex-direction:column; width:100%; height:100%; align-items:center; justify-content:center; display:flex; gap:clamp(10px,1.8vh,22px)}
+  .s2 .fhd{text-align:center; flex:0 0 auto}
+  .s2 .fhd .fk{font-size:clamp(9px,1.3vh,14px); letter-spacing:.46em; text-indent:.46em; text-transform:uppercase; color:var(--gold-d)}
+  .s2 .fhd h2{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(40px,8vh,92px); line-height:.96; color:var(--ink); margin-top:6px}
+  .ldiv{display:flex; align-items:center; justify-content:center; gap:12px}
+  .ldiv i{height:1px; width:clamp(34px,4.4vw,78px); background:linear-gradient(90deg,transparent,var(--gold))}
+  .ldiv i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+  .lf{fill:none; stroke:var(--gold-d); stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round}
+  .ldiv .lf{width:15px;height:15px}
+  .s2 .fhd .ldiv{margin:clamp(7px,1.2vh,13px) 0}
+  .s2 .fhd p{font-weight:300; color:var(--muted); font-size:clamp(12px,1.55vh,16px); line-height:1.55; margin-top:clamp(6px,1vh,12px)}
+  .units{display:flex; align-items:stretch; gap:0; width:100%; max-width:1280px; justify-content:center; flex:1 1 auto; min-height:0}
+  .unit{min-height:0}
+  .udiv{flex:0 0 auto; width:1px; align-self:stretch; margin:clamp(22px,4.5vh,64px) clamp(16px,2vw,38px); position:relative; background:linear-gradient(180deg,transparent,rgba(184,146,78,.4) 28%,rgba(184,146,78,.4) 72%,transparent)}
+  .udiv .lf{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:26px;height:26px; background:var(--paper); padding:5px; border-radius:50%; box-sizing:border-box}
+  .unit{flex:1 1 0; max-width:560px; display:flex; flex-direction:column; cursor:pointer; position:relative; background:var(--card); border:1px solid rgba(184,146,78,.4);
+    border-radius:20px; overflow:hidden; padding:clamp(14px,2vh,24px) clamp(16px,1.6vw,28px) clamp(14px,1.9vh,22px); box-shadow:0 26px 56px -26px rgba(60,42,16,.42); outline:1px solid rgba(255,250,240,.5); outline-offset:-4px;
+    transition:transform .35s var(--expo), box-shadow .35s, border-color .3s; animation:cardIn .5s var(--expo) both}
+  @keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .unit:hover{transform:translateY(-5px); border-color:var(--gold-l); box-shadow:0 34px 64px -26px rgba(60,42,16,.5)}
+  .unit .uwing{align-self:flex-start; z-index:3; font-size:9px; letter-spacing:.26em; text-transform:uppercase; color:#fff; background:rgba(22,16,11,.85); border:1px solid rgba(184,146,78,.5); border-radius:999px; padding:6px 15px}
+  .unit .compass{margin-top:10px; display:inline-flex; flex-direction:column; align-items:center; gap:3px; color:var(--gold-d); z-index:3}
+  .unit .compass b{font-size:8px; letter-spacing:.1em; font-weight:500} .unit .compass span{width:13px;height:13px;border:1px solid var(--gold-d);border-radius:50%}
+  .unit .planview{flex:1 1 auto; min-height:0; position:relative; overflow:hidden; cursor:grab; margin:clamp(6px,1.2vh,12px) 0}
+  .unit .planimg{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; transform-origin:center; will-change:transform}
+  .unit .planimg.dragging{cursor:grabbing}
+  .unit .zmini{position:absolute; top:0; right:0; z-index:4; display:flex; flex-direction:column; gap:7px}
+  .unit .zmini button{width:clamp(30px,3.6vh,38px);height:clamp(30px,3.6vh,38px); border-radius:50%; cursor:pointer; border:1px solid rgba(184,146,78,.45); background:rgba(253,250,243,.92); color:var(--gold-d); display:grid; place-items:center; box-shadow:0 4px 12px -6px rgba(60,42,16,.4); transition:background .2s,color .2s,transform .15s}
+  .unit .zmini button:hover{background:#fff;color:var(--gold)} .unit .zmini button:active{transform:scale(.92)} .unit .zmini button:disabled{opacity:.4}
+  .unit .zmini svg{width:44%;height:44%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .unit .ldiv{margin:clamp(6px,1.2vh,12px) 0 clamp(10px,1.6vh,16px)}
+  .unit .ufoot{display:flex; align-items:flex-end; justify-content:space-between; gap:14px}
+  .unit .un{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(19px,2.7vh,32px); color:var(--ink); line-height:1.05}
+  .unit .un small{display:block; font-family:"Jost"; font-weight:400; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold-d); margin-top:6px}
+  .unit .usq{text-align:center; font-size:clamp(10px,1.2vh,13px); letter-spacing:.06em; color:var(--gold-d); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .unit .usq b{display:block; font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(20px,2.8vh,34px); color:var(--ink)}
+  .unit .ugo{flex:0 0 auto; width:clamp(44px,5.4vh,58px);height:clamp(44px,5.4vh,58px);border-radius:50%; border:1px solid var(--gold); color:var(--gold-d); display:grid; place-items:center; transition:background .25s,color .25s}
+  .unit:hover .ugo{background:var(--gold); color:#fff} .unit .ugo svg{width:36%;height:36%;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .s2 .botmark{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--gold-d); font-size:9px; letter-spacing:.4em; text-transform:uppercase}
+  .s2 .botmark .lf{width:14px;height:14px}
+
+  /* ── STAGE 3 ──────────────────────────────────────────────────── */
+  .s3{width:100%; gap:clamp(20px,2.4vw,44px); display:grid; grid-template-columns:1fr clamp(290px,28vw,420px)}
+  .plancard{position:relative; display:flex; flex-direction:column; background:var(--card); border:1px solid rgba(184,146,78,.4); border-radius:20px; overflow:hidden; box-shadow:0 26px 56px -26px rgba(60,42,16,.42); outline:1px solid rgba(255,250,240,.5); outline-offset:-4px}
+  .planview{flex:1 1 auto; min-height:0; position:relative; overflow:hidden; background:var(--card); cursor:grab}
+  .planimg{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; transform-origin:center; will-change:transform; padding:clamp(10px,1.6vh,22px)}
+  .planimg.dragging{cursor:grabbing}
+  .zctrl{position:absolute; top:50%; right:clamp(12px,1.2vw,22px); transform:translateY(-50%); z-index:6; display:flex; flex-direction:column; gap:clamp(8px,1.2vh,14px)}
+  .zb{width:clamp(38px,4.6vh,50px); height:clamp(38px,4.6vh,50px); border-radius:50%; cursor:pointer; border:1px solid rgba(184,146,78,.5); background:rgba(253,250,243,.92); color:var(--gold-d); display:grid; place-items:center; box-shadow:0 6px 16px -8px rgba(60,42,16,.4); transition:background .2s,color .2s,transform .15s}
+  .zb:hover{background:#fff; color:var(--gold)} .zb:active{transform:scale(.93)} .zb:disabled{opacity:.4} .zb svg{width:44%;height:44%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  /* book button removed (reception/GRE captures leads) — content is centred in the panel */
+  .udetail{display:flex; flex-direction:column; min-height:0; justify-content:center; align-items:center; text-align:center; padding:clamp(6px,1.4vh,16px) 0}
+  .udetail .uk{font-size:clamp(9px,1.2vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--gold-d)}
+  .udetail h2{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(28px,4.8vh,52px); line-height:1.0; color:var(--ink); margin-top:8px}
+  .udetail .uwhisper{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; color:var(--gold-d); font-size:clamp(14px,1.95vh,22px); line-height:1.35; margin-top:clamp(10px,1.6vh,18px); max-width:34ch}
+  .specs{margin-top:clamp(16px,2.6vh,30px); border-top:1px solid rgba(184,146,78,.3); width:100%; max-width:340px; margin-left:auto; margin-right:auto}
+  .spec{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:clamp(11px,1.8vh,18px) 0; border-bottom:1px solid rgba(184,146,78,.24)}
+  .spec .sl{font-size:clamp(10px,1.25vh,14px); letter-spacing:.16em; text-transform:uppercase; color:var(--gold-d)}
+  .spec .sv{font-size:clamp(13px,1.7vh,19px); color:var(--ink); font-weight:500; font-variant-numeric:tabular-nums; text-align:right; font-family:"Cormorant Garamond",serif}
+  .book{margin-top:auto; padding-top:clamp(16px,2.6vh,28px)}
+  .bookbtn{width:100%; display:inline-flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; background:linear-gradient(160deg,#33402f,#18200f); color:#ecd49c; border:1.4px solid var(--gold-l); border-radius:15px; padding:clamp(15px,2.2vh,22px); font-family:"Jost"; font-weight:500; font-size:clamp(11px,1.4vh,15px); letter-spacing:.26em; text-transform:uppercase; box-shadow:0 16px 32px -12px rgba(20,28,12,.7), inset 0 1px 0 rgba(255,240,205,.18); transition:transform .2s, box-shadow .3s, filter .3s}
+  .bookbtn:hover{transform:translateY(-2px); filter:brightness(1.12); box-shadow:0 22px 40px -12px rgba(20,28,12,.8)} .bookbtn:active{transform:translateY(0)} .bookbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .booknote{text-align:center; font-size:10px; letter-spacing:.2em; color:var(--faint); text-transform:uppercase; margin-top:12px}
+
+  .modal{position:fixed; inset:0; z-index:80; background:rgba(20,15,9,.55); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); display:none; align-items:center; justify-content:center; opacity:0; transition:opacity .35s}
+  .modal.open{display:flex; opacity:1}
+  .sheet{width:min(440px,92vw); background:var(--paper); border:1px solid rgba(184,146,78,.5); border-radius:20px; padding:clamp(24px,3.4vh,40px); box-shadow:0 40px 90px -30px rgba(40,28,10,.7); transform:translateY(14px); transition:transform .4s var(--expo)}
+  .modal.open .sheet{transform:none}
+  .sheet .sk{font-size:10px; letter-spacing:.34em; text-transform:uppercase; color:var(--gold-d)}
+  .sheet h3{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(24px,3.4vh,38px); color:var(--ink); line-height:1.04; margin:5px 0 4px}
+  .sheet .ssub{font-weight:300; color:var(--muted); font-size:13px; margin-bottom:18px}
+  .field{margin-bottom:13px} .field label{display:block; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold-d); margin-bottom:6px}
+  .field input{width:100%; background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; font:inherit; font-size:14px; color:var(--ink)}
+  .field input:focus{outline:none; border-color:var(--gold)} .frow2{display:flex; gap:12px} .frow2 .field{flex:1}
+  .sheet .acts{display:flex; gap:12px; margin-top:8px}
+  .sheet .acts button{flex:1; cursor:pointer; border-radius:11px; padding:13px; font-family:"Jost"; font-weight:500; font-size:12px; letter-spacing:.18em; text-transform:uppercase}
+  .sheet .cancel{background:none; border:1px solid var(--line); color:var(--muted)} .sheet .submit{background:linear-gradient(180deg,#cda05c,#9c7639); border:0; color:#1c140d}
+  .done{text-align:center; padding:8px 0} .done .dchk{width:56px;height:56px;border-radius:50%;border:1.5px solid var(--gold);display:grid;place-items:center;margin:0 auto 14px}
+  .done .dchk svg{width:40%;height:40%;stroke:var(--gold-d);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .done h3{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:28px;color:var(--ink)} .done p{font-weight:300;color:var(--muted);font-size:13px;margin-top:8px;line-height:1.6}
+
+  @media (max-aspect-ratio:1/1){
+    .s1 .lead{position:static; transform:none; width:100%}
+    .scene img{object-position:center 40%}
+    .s3{grid-template-columns:1fr; overflow-y:auto} .units{flex-direction:column; align-items:center}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="scene" id="scene"><img src="../assets/renders/exterior/tower-scene.webp" alt="Embassy ONE North Tower"></div>
+
+  <div class="top">
+    <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="backlbl">Return</span></button>
+    <div class="eyebrow" id="eyebrow">The Tower · Architecture</div>
+    <div class="corner">Embassy ONE</div>
+  </div>
+
+  <!-- STAGE 1 -->
+  <section class="stage" id="stage1">
+    <div class="s1">
+      <div class="lead">
+        <h1>A vertical<br>manor.</h1>
+        <div class="rule"></div>
+        <p>Thirty floors that carry the quiet authority of a great estate, translated into sky. Choose a level to view its plan and the two homes upon it.</p>
+        <div class="principles">
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></span><div class="pt"><b>Light</b><span>North–south orientation. Deep-set balconies, sky courts.</span></div></div>
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.2"/></svg></span><div class="pt"><b>Privacy</b><span>Two residences per floor. A private lift lobby for each.</span></div></div>
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 9l-4.4 4 1.4 6L12 16l-5 3 1.4-6L4 9l5.8-.4z"/></svg></span><div class="pt"><b>Materiality</b><span>Natural stone, aged brass, timber — improving with time.</span></div></div>
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><path d="M6 20h12M7 20V9M17 20V9M5.5 9h13M8.5 9v11M11 9v11M13 9v11M15.5 9v11M8.5 6.5h7M9 6.5L12 4l3 2.5"/></svg></span><div class="pt"><b>Proportion</b><span>Ceilings from 10 ft, rising to 14 ft at the penthouses.</span></div></div>
+        </div>
+      </div>
+
+      <div class="floorline" id="floorline"><span class="fl-glow"></span><span class="fl-tag" id="flTag">16</span></div>
+
+      <div class="keypad">
+        <div class="kconfig" id="kconfig">3-Bed · 3-Bed</div>
+        <div class="kdisplay"><span class="knum" id="knum">16</span><span class="kfloor">Floor</span></div>
+        <div class="kgrid" id="kgrid"></div>
+        <button class="kenter" id="kenter">Enter</button>
+        <div class="khint"><span class="khand"><svg viewBox="0 0 24 24"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 11V4.5a1.5 1.5 0 0 1 3 0V11M15 11V6.5a1.5 1.5 0 0 1 3 0V13c0 4-2 7-6 7h-1.5c-1.6 0-2.4-.6-3.4-1.8l-3-3.8a1.6 1.6 0 0 1 2.4-2.1L9 14V8.5a1.5 1.5 0 0 1 3 0"/></svg></span><span>Tap a floor<br>to explore</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 2 -->
+  <section class="stage" id="stage2">
+    <div class="pad"><div class="s2">
+      <div class="fhd">
+        <div class="fk" id="s2k">The Tower</div><h2 id="s2h">Floor</h2>
+        <div class="ldiv"><i></i><svg class="lf" viewBox="0 0 24 24"><path d="M12 21V11"/><path d="M12 14c-3 0-5-2-5-5 3 0 5 2 5 5ZM12 12.5c3 0 5-2 5-5-3 0-5 2-5 5Z"/></svg><i></i></div>
+        <p>Two private residences — one to the south, one to the north. Select a home to explore.</p>
+      </div>
+      <div class="units" id="units"></div>
+      <div class="botmark"><svg class="lf" viewBox="0 0 24 24"><path d="M12 21V11"/><path d="M12 14c-3 0-5-2-5-5 3 0 5 2 5 5ZM12 12.5c3 0 5-2 5-5-3 0-5 2-5 5Z"/></svg>Embassy One</div>
+    </div></div>
+  </section>
+
+  <!-- STAGE 3 -->
+  <section class="stage" id="stage3">
+    <div class="pad"><div class="s3">
+      <div class="plancard">
+        <div class="planview"><img class="planimg" id="uPlan" src="" alt="" draggable="false"></div>
+        <div class="zctrl">
+          <button class="zb" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg></button>
+          <button class="zb" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg></button>
+          <button class="zb" id="zrst" aria-label="Reset"><svg viewBox="0 0 24 24"><path d="M3 11a8 8 0 1 1 2.3 5.6M3 21v-5h5"/></svg></button>
+        </div>
+      </div>
+      <aside class="udetail">
+        <div class="uk" id="uK">The Residence</div>
+        <h2 id="uName">Residence</h2>
+        <div class="uwhisper" id="uWhisper"></div>
+        <div class="specs" id="uSpecs"></div>
+      </aside>
+    </div></div>
+  </section>
+
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="sheet">
+      <div id="bookForm">
+        <div class="sk">A Private Invitation</div><h3>Book a Viewing</h3><div class="ssub" id="bookSub"></div>
+        <div class="field"><label>Full name</label><input id="bkName" type="text" placeholder="Your name"></div>
+        <div class="frow2"><div class="field"><label>Phone</label><input id="bkPhone" type="tel" placeholder="+91"></div><div class="field"><label>Preferred date</label><input id="bkDate" type="date"></div></div>
+        <div class="acts"><button class="cancel" id="bkCancel">Cancel</button><button class="submit" id="bkSubmit">Request Viewing</button></div>
+      </div>
+      <div class="done" id="bookDone" style="display:none"><div class="dchk"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div><h3>Thank you.</h3><p>Our residence team will be in touch to arrange your private viewing.</p><div class="acts" style="margin-top:18px"><button class="submit" id="bkClose" style="flex:1">Close</button></div></div>
+    </div>
+  </div>
+
+<script>
+  var CFG={
+    '3br':       {name:'Three Bedroom',                  plan:'3br.webp',                 sqft:'5,423',         beds:'3 Bedrooms',             ceil:'10 ft', tag:'3 Bed',           whisper:'A corner home, holding the morning on one side and the city on the other.'},
+    '3br-study': {name:'Three Bedroom + Study',          plan:'3br-study.webp',           sqft:'5,856',         beds:'3 Bedrooms + Study',     ceil:'10 ft', tag:'3 Bed + Study',   whisper:'A quiet room set apart, for the work that asks for silence.'},
+    '3br-sm':    {name:'Three Bedroom + Study + Media',  plan:'3br-study-media.webp',     sqft:'7,454',         beds:'3 Beds + Study + Media', ceil:'10 ft', tag:'3 Bed + Media',   whisper:'Room to gather and room to retreat, upon a single floor.'},
+    '4br':       {name:'Four Bedroom',                   plan:'4br.webp',                 sqft:'6,280',         beds:'4 Bedrooms',             ceil:'10 ft', tag:'4 Bed',           whisper:'Rooms that keep their distance, the way a great house should.'},
+    '4br-study': {name:'Four Bedroom + Study',           plan:'4br-study.webp',           sqft:'7,537',         beds:'4 Bedrooms + Study',     ceil:'10 ft', tag:'4 Bed + Study',   whisper:'A study to the south, the city held at arm’s length.'},
+    '4br-rec':   {name:'Four Bedroom · Recessed',        plan:'4br-recessed.webp',        sqft:'6,335',         beds:'4 Bedrooms',             ceil:'12 ft', tag:'4 Bed · Recessed',whisper:'Set back from the line of the tower, it keeps its own sky.'},
+    '2br-duplex':{name:'Two Bedroom · Duplex',           plan:'2br-duplex.webp',          sqft:'4,149',         beds:'2 Bedrooms · Duplex',    ceil:'10 ft', tag:'2 Bed · Duplex',  whisper:'Two floors of one home, joined by a private stair.'},
+    '5br-ph':    {name:'Five Bedroom · Penthouse Duplex',plan:'5br-penthouse-lower.webp', sqft:'12,977–15,124', beds:'5 Bedrooms · Duplex',    ceil:'14 ft', tag:'Penthouse',       whisper:'The crown of the manor, where the ceiling lifts and the city falls away.'}
+  };
+  var FLOORMAP={
+    1:{S:'2br-duplex',N:'3br'}, 2:{S:'3br',N:'3br'},
+    3:{S:'4br',N:'4br'}, 4:{S:'4br',N:'4br'}, 5:{S:'4br',N:'4br'}, 6:{S:'4br',N:'4br'},
+    7:{S:'3br-sm',N:'4br'}, 8:{S:'3br-study',N:'3br',W:'2br-duplex'}, 9:{S:'3br',N:'3br'},
+    10:{S:'3br',N:'3br',W:'2br-duplex'}, 11:{S:'3br',N:'3br'}, 12:{S:'3br',N:'3br',W:'2br-duplex'},
+    14:{S:'3br',N:'3br'}, 15:{S:'3br-sm',N:'4br-rec'}, 16:{S:'3br',N:'3br',W:'2br-duplex'}, 17:{S:'3br',N:'3br'},
+    18:{S:'4br-study',N:'4br'}, 19:{S:'4br-study',N:'4br'}, 20:{S:'4br-study',N:'4br'}, 21:{S:'4br-study',N:'4br'},
+    22:{S:'3br-sm',N:'4br-rec'}, 23:{S:'4br-study',N:'4br'}, 24:{S:'4br-study',N:'4br'}, 25:{S:'4br-study',N:'4br'},
+    26:{S:'4br-study',N:'4br'}, 27:{S:'4br-study',N:'4br'}, 28:{S:'4br-study',N:'4br'},
+    29:{S:'5br-ph',N:'5br-ph'}, 30:{S:'5br-ph',N:'5br-ph'}
+  };
+  function floorTag(f){ if(f>=29) return 'Penthouse'; if(f<=1) return 'Duplex Collection'; return CFG[FLOORMAP[f].S].tag; }
+  var FLOORS=[]; for(var f=1; f<=30; f++){ if(f!==13) FLOORS.push(f); }
+  var PLANBASE='../assets/floorplans/hi/';
+  var state={ floor:16, wing:null };
+
+  /* stage nav */
+  var stages={1:document.getElementById('stage1'),2:document.getElementById('stage2'),3:document.getElementById('stage3')};
+  var current=1;
+  function goStage(n){
+    for(var k in stages){ stages[k].classList.toggle('active', +k===n); }
+    document.getElementById('scene').style.opacity = (n===1?'1':'0');
+    document.getElementById('scene').style.transition='opacity .5s ease';
+    current=n;
+    var eb=document.getElementById('eyebrow'), bl=document.getElementById('backlbl');
+    if(n===1){ eb.textContent='The Tower · Architecture'; bl.textContent='Return'; }
+    else if(n===2){ eb.textContent='The Tower · Floor '+state.floor; bl.textContent='The Tower'; }
+    else { eb.textContent='Residence · '+unitCode(); bl.textContent='Floor '+state.floor; }
+  }
+  function unitCode(){ return (state.floor||'')+(state.wing==='S'?'S':'N'); }
+
+  /* STAGE 1 — elevator keypad */
+  var kgrid=document.getElementById('kgrid'), knum=document.getElementById('knum'), kconfig=document.getElementById('kconfig');
+  var floorline=document.getElementById('floorline'), flTag=document.getElementById('flTag');
+  var BTOP=12, BBOT=60; // tower body span on the scene: floor30 → floor1
+  function lineTop(f){ return BTOP + (30-f)/29*(BBOT-BTOP); }
+  function shortTag(key){ return ({'2br-duplex':'2-Bed Dx','3br':'3-Bed','3br-study':'3-Bed+S','3br-sm':'3-Bed+M','4br':'4-Bed','4br-study':'4-Bed+S','4br-rec':'4-Bed R','5br-ph':'Penthouse'})[key]||''; }
+  function floorConfig(f){ if(f>=29) return 'Penthouse Duplex'; var m=FLOORMAP[f]; return shortTag(m.S)+' · '+shortTag(m.N); }
+
+  var btnEls={};
+  // render high→low so 30 is at the top-left, descending — like a lift panel
+  FLOORS.slice().reverse().forEach(function(f){
+    var b=document.createElement('button'); b.className='kbtn'; b.setAttribute('data-floor',f); b.textContent=f;
+    b.addEventListener('click', function(){ setActive(f); });
+    kgrid.appendChild(b); btnEls[f]=b;
+  });
+
+  /* digital lift display — ticks through floors to the target, like an ascending/descending car */
+  var displayed=16, rolling=null;
+  function showNum(n){ knum.classList.add('tick'); setTimeout(function(){ knum.textContent=n; knum.classList.remove('tick'); }, 90); }
+  function rollTo(target){
+    if(rolling){ clearInterval(rolling); rolling=null; }
+    if(displayed===target){ showNum(target); return; }
+    var dir = target>displayed ? 1 : -1;
+    rolling=setInterval(function(){
+      var next=displayed+dir; if(next===13) next+=dir;     // no 13th floor
+      displayed=next; showNum(displayed);
+      if(displayed===target){ clearInterval(rolling); rolling=null; }
+    }, 55);
+  }
+  function setActive(f){
+    state.floor=f;
+    for(var k in btnEls){ btnEls[k].classList.toggle('sel', +k===f); }
+    kconfig.classList.add('swap');
+    setTimeout(function(){ kconfig.textContent=floorConfig(f); kconfig.classList.remove('swap'); }, 150);
+    floorline.style.top=lineTop(f)+'%'; flTag.textContent='Floor '+f;   // line travels up/down the tower
+    rollTo(f);
+  }
+  document.getElementById('kenter').addEventListener('click', function(){ buildFloor(state.floor); goStage(2); });
+
+  /* STAGE 2 */
+  var unitsEl=document.getElementById('units');
+  /* compact per-card pan & zoom; moved() reports if the last gesture was a drag (suppresses card-select) */
+  function makeMiniZoom(view, img, zin, zout){
+    var MIN=1, MAX=4.5, scale=1, tx=0, ty=0, drag=false, sx=0, sy=0, stx=0, sty=0, didDrag=false, pd=0, ps=1;
+    function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+    function clampPan(){ var w=view.clientWidth,h=view.clientHeight; var ex=Math.max(0,(w*scale-w)/2),ey=Math.max(0,(h*scale-h)/2); tx=clamp(tx,-ex,ex); ty=clamp(ty,-ey,ey); }
+    function apply(an){ img.style.transition=an?'transform .25s var(--ease)':'none'; img.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; view.classList.toggle('zoomed',scale>1.001); zout.disabled=scale<=MIN+.001; zin.disabled=scale>=MAX-.001; }
+    function focal(e){ var r=img.getBoundingClientRect(); return {x:e.clientX-(r.left+r.width/2), y:e.clientY-(r.top+r.height/2)}; }
+    function zoomTo(n,cx,cy,an){ n=clamp(n,MIN,MAX); if(n===scale) return; var k=n/scale; tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=n; clampPan(); apply(an); }
+    view.addEventListener('wheel', function(e){ e.preventDefault(); var f=focal(e); zoomTo(scale*(e.deltaY<0?1.12:1/1.12), f.x, f.y, false); }, {passive:false});
+    img.addEventListener('mousedown', function(e){ if(scale<=1.001) return; e.preventDefault(); drag=true; didDrag=false; img.classList.add('dragging'); sx=e.clientX; sy=e.clientY; stx=tx; sty=ty; });
+    window.addEventListener('mousemove', function(e){ if(!drag) return; if(Math.abs(e.clientX-sx)>3||Math.abs(e.clientY-sy)>3) didDrag=true; tx=stx+(e.clientX-sx); ty=sty+(e.clientY-sy); clampPan(); apply(false); });
+    window.addEventListener('mouseup', function(){ if(drag){ drag=false; img.classList.remove('dragging'); } });
+    view.addEventListener('touchstart', function(e){ if(e.touches.length===2){ pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); ps=scale; } else if(e.touches.length===1&&scale>1.001){ drag=true; didDrag=false; sx=e.touches[0].clientX; sy=e.touches[0].clientY; stx=tx; sty=ty; } }, {passive:false});
+    view.addEventListener('touchmove', function(e){ if(e.touches.length===2){ e.preventDefault(); didDrag=true; var r=img.getBoundingClientRect(); var fx=(e.touches[0].clientX+e.touches[1].clientX)/2-(r.left+r.width/2), fy=(e.touches[0].clientY+e.touches[1].clientY)/2-(r.top+r.height/2); zoomTo(ps*(Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)/pd), fx, fy, false); } else if(drag&&e.touches.length===1){ e.preventDefault(); didDrag=true; tx=stx+(e.touches[0].clientX-sx); ty=sty+(e.touches[0].clientY-sy); clampPan(); apply(false); } }, {passive:false});
+    view.addEventListener('touchend', function(e){ if(e.touches.length<2) pd=0; if(e.touches.length===0) drag=false; });
+    zin.addEventListener('click', function(e){ e.stopPropagation(); zoomTo(scale+0.6,0,0,true); });
+    zout.addEventListener('click', function(e){ e.stopPropagation(); zoomTo(scale-0.6,0,0,true); });
+    apply(false);
+    return { moved:function(){ var d=didDrag; didDrag=false; return d; } };
+  }
+  function buildFloor(f){
+    document.getElementById('s2k').textContent = f>=29?'The Penthouse':(f<=1?'The Duplexes':'The Tower');
+    document.getElementById('s2h').textContent='Floor '+f;
+    var m=FLOORMAP[f]; unitsEl.innerHTML='';
+    var LEAF='<svg class="lf" viewBox="0 0 24 24"><path d="M12 21V11"/><path d="M12 14c-3 0-5-2-5-5 3 0 5 2 5 5ZM12 12.5c3 0 5-2 5-5-3 0-5 2-5 5Z"/></svg>';
+    var ZIN='<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg>';
+    var ZOUT='<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg>';
+    [['S','South'],['N','North']].forEach(function(w, idx){
+      var wing=w[0], wname=w[1]; var key=m[wing]; if(!key) return; var c=CFG[key];
+      var u=document.createElement('div'); u.className='unit'; u.setAttribute('role','button'); u.tabIndex=0;
+      u.innerHTML='<span class="uwing">'+wname+' Wing</span>'+
+        '<span class="compass"><b>N</b><span></span></span>'+
+        '<div class="planview"><img class="planimg" src="'+PLANBASE+c.plan+'" alt="'+c.name+' plan" draggable="false">'+
+          '<div class="zmini"><button class="zi" aria-label="Zoom in">'+ZIN+'</button><button class="zo" aria-label="Zoom out">'+ZOUT+'</button></div></div>'+
+        '<div class="ldiv"><i></i>'+LEAF+'<i></i></div>'+
+        '<div class="ufoot"><span class="un">'+c.name+'<small>Unit '+f+wing+'</small></span>'+
+        '<span class="usq"><b>'+c.sqft+'</b>sq ft</span><span class="ugo"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span></div>';
+      unitsEl.appendChild(u);
+      var z=makeMiniZoom(u.querySelector('.planview'), u.querySelector('.planimg'), u.querySelector('.zi'), u.querySelector('.zo'));
+      u.querySelector('.ugo').addEventListener('click', function(e){ e.stopPropagation(); selectUnit(wing); });
+      u.addEventListener('click', function(){ if(!z.moved()) selectUnit(wing); });
+      u.addEventListener('keydown', function(e){ if(e.key==='Enter'){ selectUnit(wing); } });
+      if(idx===0){ var d=document.createElement('div'); d.className='udiv'; d.innerHTML=LEAF; unitsEl.appendChild(d); }
+    });
+  }
+
+  /* STAGE 3 */
+  var uPlan=document.getElementById('uPlan'), uName=document.getElementById('uName'), uK=document.getElementById('uK'),
+      uWhisper=document.getElementById('uWhisper'), uSpecs=document.getElementById('uSpecs'), uUnit=document.getElementById('uUnit'), uFootSq=document.getElementById('uFootSq');
+  function selectUnit(wing){
+    state.wing=wing; var c=CFG[FLOORMAP[state.floor][wing]];
+    resetZoom();
+    uPlan.src=PLANBASE+c.plan; uPlan.alt=c.name+' floor plan';
+    uK.textContent=(wing==='S'?'South Wing':'North Wing')+' · Floor '+state.floor; uName.textContent=c.name; uWhisper.textContent=c.whisper;
+    uSpecs.innerHTML=spec('Configuration',c.beds)+spec('Total area',c.sqft+' sq ft')+spec('Floor','Level '+state.floor+' of 30')+spec('Aspect',wing==='S'?'South':'North')+spec('Ceiling height',c.ceil);
+    goStage(3);
+  }
+  function spec(l,v){ return '<div class="spec"><span class="sl">'+l+'</span><span class="sv">'+v+'</span></div>'; }
+
+  document.getElementById('back').addEventListener('click', function(){ if(current===3){ goStage(2); } else if(current===2){ goStage(1); } else { try{ parent.postMessage('eo-screen-close','*'); }catch(e){} } });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ if(current>1){ goStage(current-1); } else { try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } } } });
+
+  /* zoom (stage 3) */
+  var view=document.querySelector('.planview'), zpct=document.getElementById('zpct');
+  var MIN=1, MAXZ=5, scale=1, tx=0, ty=0, drag=false, sx=0, sy=0, stx=0, sty=0, pd=0, ps=1;
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+  function clampPan(){ var w=view.clientWidth,h=view.clientHeight; var ex=Math.max(0,(w*scale-w)/2),ey=Math.max(0,(h*scale-h)/2); tx=clamp(tx,-ex,ex); ty=clamp(ty,-ey,ey); }
+  function applyZ(an){ uPlan.style.transition=an?'transform .3s var(--ease)':'none'; uPlan.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; view.classList.toggle('zoomed',scale>1.001); if(zpct) zpct.textContent=Math.round(scale*100)+'%'; document.getElementById('zout').disabled=scale<=MIN+.001; document.getElementById('zin').disabled=scale>=MAXZ-.001; }
+  function resetZoom(){ scale=1; tx=0; ty=0; drag=false; uPlan.classList.remove('dragging'); applyZ(false); }
+  function zoomTo(n,cx,cy,an){ n=clamp(n,MIN,MAXZ); if(n===scale) return; var k=n/scale; tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=n; clampPan(); applyZ(an); }
+  function focal(e){ var r=uPlan.getBoundingClientRect(); return {x:e.clientX-(r.left+r.width/2), y:e.clientY-(r.top+r.height/2)}; }
+  view.addEventListener('wheel', function(e){ e.preventDefault(); var f=focal(e); zoomTo(scale*(e.deltaY<0?1.12:1/1.12), f.x, f.y, false); }, {passive:false});
+  uPlan.addEventListener('dblclick', function(e){ e.preventDefault(); if(scale>1.001) resetZoom(); else { var f=focal(e); zoomTo(2.4,f.x,f.y,true); } });
+  uPlan.addEventListener('mousedown', function(e){ if(scale<=1.001) return; e.preventDefault(); drag=true; uPlan.classList.add('dragging'); sx=e.clientX; sy=e.clientY; stx=tx; sty=ty; });
+  window.addEventListener('mousemove', function(e){ if(!drag) return; tx=stx+(e.clientX-sx); ty=sty+(e.clientY-sy); clampPan(); applyZ(false); });
+  window.addEventListener('mouseup', function(){ if(drag){ drag=false; uPlan.classList.remove('dragging'); } });
+  view.addEventListener('touchstart', function(e){ if(e.touches.length===2){ pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); ps=scale; } else if(e.touches.length===1&&scale>1.001){ drag=true; sx=e.touches[0].clientX; sy=e.touches[0].clientY; stx=tx; sty=ty; } }, {passive:false});
+  view.addEventListener('touchmove', function(e){ if(e.touches.length===2){ e.preventDefault(); var r=uPlan.getBoundingClientRect(); var fx=(e.touches[0].clientX+e.touches[1].clientX)/2-(r.left+r.width/2), fy=(e.touches[0].clientY+e.touches[1].clientY)/2-(r.top+r.height/2); zoomTo(ps*(Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)/pd), fx, fy, false); } else if(drag&&e.touches.length===1){ e.preventDefault(); tx=stx+(e.touches[0].clientX-sx); ty=sty+(e.touches[0].clientY-sy); clampPan(); applyZ(false); } }, {passive:false});
+  view.addEventListener('touchend', function(e){ if(e.touches.length<2) pd=0; if(e.touches.length===0){ drag=false; uPlan.classList.remove('dragging'); } });
+  document.getElementById('zin').addEventListener('click', function(){ zoomTo(scale+0.6,0,0,true); });
+  document.getElementById('zout').addEventListener('click', function(){ zoomTo(scale-0.6,0,0,true); });
+  document.getElementById('zrst').addEventListener('click', resetZoom);
+
+  /* booking */
+  /* booking modal removed from the unit screen (leads are captured at reception/GRE) */
+  var modal=document.getElementById('modal');
+  function closeModal(){ if(!modal) return; modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+
+  /* init */
+  goStage(1); knum.textContent='16'; setActive(16);
+  (function(){ try{ var q=new URLSearchParams(location.search); var f=parseInt(q.get('f'),10);
+    if(f && FLOORMAP[f]){ setActive(f); buildFloor(f); goStage(2); var u=q.get('u'); if(u==='S'||u==='N'){ selectUnit(u); } } }catch(e){} })();
+</script>
+  <script src="../assets/leaf.js"></script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

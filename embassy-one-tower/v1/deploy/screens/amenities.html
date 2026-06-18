@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Grounds · Amenities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parch:#f1e9d8; --paper:#fbf8f1; --ink:#2b2a26; --muted:#6e685b; --faint:#948d7d;
+    --gold:#b8924e; --gold-d:#8a6e45; --gold-l:#c89b61; --sage:#9da585; --water:#8aa0a8; --line:#dad0bc;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; color:var(--ink); font-family:"Jost",sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden}
+  body{background:var(--parch) url("../assets/bg-inner.webp") center/cover no-repeat; }
+  .tint{position:fixed; inset:0; pointer-events:none; background:
+    radial-gradient(120% 90% at 82% 0%, rgba(241,233,216,.5), transparent 55%),
+    linear-gradient(180deg, rgba(241,233,216,.25), rgba(241,233,216,.12))}
+  .loc{position:relative; height:100%; display:flex; flex-direction:column; padding:clamp(15px,2.3vh,30px) clamp(20px,3vw,52px) clamp(14px,2vh,28px)}
+
+  .bar{display:flex; align-items:center; justify-content:space-between; flex:0 0 auto}
+  .back{display:inline-flex; align-items:center; gap:10px; cursor:pointer;
+    background:linear-gradient(180deg,#fdfaf3,#f2e8d4); border:1px solid #b8924e; color:#8a6e45; font-weight:500;
+    font-size:clamp(10px,1.2vh,15px); letter-spacing:.26em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.6), 0 8px 18px -8px rgba(40,28,10,.28), 0 0 10px rgba(233,199,135,.55);
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:hover{ background:linear-gradient(180deg,#ffffff,#f6eeda); border-color:#c89b61;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.72), 0 10px 22px -8px rgba(40,28,10,.32), 0 0 14px rgba(233,199,135,.72); }
+  .back:active{ transform:scale(.97); }
+  .back svg{width:15px;height:15px;display:block; stroke:#8a6e45}
+  .bar .eyebrow{font-size:clamp(9px,1.1vh,13px); letter-spacing:.42em; text-indent:.42em; color:var(--gold-d)}
+  .bar .coord{font-size:clamp(9px,1.05vh,13px); letter-spacing:.2em; color:var(--faint)}
+
+  .head{flex:0 0 auto; margin:clamp(6px,1.4vh,18px) 0 clamp(8px,1.5vh,16px)}
+  .head h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1.04; font-size:clamp(26px,4.4vh,56px); letter-spacing:.02em}
+  .head p{font-weight:300; color:var(--muted); line-height:1.6; font-size:clamp(12px,1.5vh,17px); max-width:62ch; margin-top:clamp(5px,.9vh,11px)}
+
+  .stage{flex:1 1 auto; min-height:0; display:flex; gap:clamp(16px,2.2vw,38px)}
+
+  /* leather + gold frame holding the feature render */
+  .heroframe{position:relative; flex:1 1 auto; min-width:0; padding:clamp(12px,1.4vw,18px); border-radius:7px;
+    background:linear-gradient(155deg,#2d2721 0%,#211c17 55%,#191510 100%);
+    box-shadow:0 26px 54px rgba(40,28,8,.4), 0 2px 0 rgba(255,235,190,.06) inset}
+  .heroframe::before{content:""; position:absolute; inset:7px; border:1px solid var(--gold); border-radius:5px; pointer-events:none; z-index:6; opacity:.92}
+  .heroframe::after{content:""; position:absolute; inset:12px; border:1px solid rgba(184,146,78,.45); border-radius:3px; pointer-events:none; z-index:6}
+  .tick{position:absolute; width:13px; height:13px; z-index:7; pointer-events:none; border:0}
+  .tick i{position:absolute; background:var(--gold-l)} .tick i.h{height:1px; width:13px} .tick i.v{width:1px; height:13px}
+  .tick.tl{top:3px;left:3px} .tick.tr{top:3px;right:3px} .tick.bl{bottom:3px;left:3px} .tick.br{bottom:3px;right:3px}
+  .tick.tr i.v,.tick.br i.v{right:0} .tick.bl i.h,.tick.br i.h{bottom:0}
+
+  /* feature image area inside the frame */
+  .feature{position:absolute; inset:clamp(15px,1.6vw,21px); border-radius:3px; overflow:hidden; background:#221d18; z-index:1}
+  .feature .shot{position:absolute; inset:0; background-size:cover; background-position:center; opacity:0; transition:opacity .85s var(--ease); transform:scale(1.02)}
+  .feature .shot.on{opacity:1; transform:scale(1)}
+  .feature .grad{position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:linear-gradient(0deg, rgba(18,13,8,.78) 0%, rgba(18,13,8,.32) 30%, rgba(18,13,8,0) 56%)}
+  .feature .cap{position:absolute; left:clamp(18px,2vw,34px); right:clamp(18px,2vw,34px); bottom:clamp(16px,2.4vh,30px); z-index:3; transition:opacity .45s}
+  .feature .cap .ck{font-size:9.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--gold-l)}
+  .feature .cap h2{font-family:"Cormorant Garamond",serif; font-weight:600; color:#fff5e2; font-size:clamp(20px,3.2vh,34px); line-height:1.05; margin-top:6px}
+  .feature .cap p{font-weight:300; color:#e7ddc9; line-height:1.6; font-size:clamp(12px,1.5vh,16px); margin-top:8px; max-width:52ch}
+  .feature.swap .cap{opacity:0}
+
+  /* side panel — amenity list */
+  .panel{flex:0 0 clamp(244px,24vw,330px); display:flex; flex-direction:column; gap:clamp(12px,1.7vh,18px); min-height:0}
+  .lh{font-size:9.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--faint); margin-bottom:4px}
+  .list{display:flex; flex-direction:column; overflow:auto; padding-right:2px}
+  .am{display:flex; align-items:baseline; gap:12px; padding:clamp(8px,1.2vh,12px) 8px; margin:0 -8px; border:0; background:none; width:calc(100% + 16px);
+    cursor:pointer; border-radius:4px; text-align:left; border-bottom:1px solid var(--line); transition:background .25s}
+  .am:hover{background:rgba(184,146,78,.09)}
+  .am.sel{background:rgba(184,146,78,.12)}
+  .am .n{font-size:9px; letter-spacing:.18em; color:var(--gold-d); flex:0 0 auto; width:18px; padding-top:3px}
+  .am .nm{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(15px,2vh,21px); line-height:1.1; color:var(--ink)}
+  .am.sel .nm{color:var(--gold-d)}
+  .more{border-top:1px solid var(--line); padding-top:clamp(12px,1.7vh,18px); flex:0 0 auto}
+  .more .lh{margin-bottom:10px}
+  .more ul{list-style:none; display:flex; flex-direction:column; gap:7px}
+  .more li{font-weight:300; color:var(--muted); font-size:clamp(11px,1.35vh,14px); letter-spacing:.01em; display:flex; align-items:center; gap:9px}
+  .more li::before{content:""; width:4px; height:4px; border-radius:50%; background:var(--gold-l); flex:0 0 auto}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .9s var(--ease) forwards}
+  @keyframes fin{to{opacity:1;transform:none}}
+  @media (max-aspect-ratio:1/1){ .stage{flex-direction:column} .panel{flex:0 0 auto} .list{flex-direction:row; gap:6px} .am{border-bottom:0; white-space:nowrap} .am .n{display:none} }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+  <div class="tint"></div>
+  <div class="loc">
+    <div class="bar">
+      <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+      <div class="eyebrow">THE GROUNDS · AMENITIES</div>
+      <div class="coord">TWO PRIVATE ACRES</div>
+    </div>
+    <div class="head">
+      <h1 class="fadein">Everything within reach. Nothing on display.</h1>
+      <p class="fadein" style="animation-delay:.1s">Curated, complete, and quietly maintained to the Embassy standard.</p>
+    </div>
+    <div class="stage">
+      <div class="heroframe fadein" style="animation-delay:.2s">
+        <span class="tick tl"><i class="h"></i><i class="v"></i></span><span class="tick tr"><i class="h"></i><i class="v"></i></span>
+        <span class="tick bl"><i class="h"></i><i class="v"></i></span><span class="tick br"><i class="h"></i><i class="v"></i></span>
+        <div class="feature" id="feature">
+          <div class="grad"></div>
+          <div class="cap">
+            <div class="ck" id="ck">THE GROUNDS</div>
+            <h2 id="ch">Pool &amp; Pool Pavilion</h2>
+            <p id="cp">Water held quiet against the green — a pavilion to gather, and a lawn that opens to the sky.</p>
+          </div>
+        </div>
+      </div>
+      <aside class="panel">
+        <div class="fadein" style="animation-delay:.35s">
+          <div class="lh">Select to explore</div>
+        </div>
+        <div class="list fadein" id="list" style="animation-delay:.4s"></div>
+        <div class="more fadein" style="animation-delay:.5s">
+          <div class="lh">And, in good measure</div>
+          <ul>
+            <li>Lap Pool — 25 &times; 9m</li>
+            <li>Children's Pool &amp; Jacuzzi</li>
+            <li>252m Jogging Loop</li>
+            <li>Children's Playground</li>
+            <li>Garden Cabanas</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+  var AMEN=[
+    {id:"pool",  nm:"Pool & Pool Pavilion", ck:"THE GROUNDS",
+      img:"../assets/renders/lanterns/center.webp",
+      line:"Water held quiet against the green — a pavilion to gather, and a lawn that opens to the sky."},
+    {id:"padel", nm:"Padel & Half-Court", ck:"SPORT",
+      img:"../assets/renders/amenities/muga.webp",
+      line:"A measured court for the evening game — close enough to come down to, set apart enough to leave the day behind."},
+    {id:"yoga",  nm:"Yoga & Meditation Deck", ck:"STILLNESS",
+      img:"../assets/renders/amenities/yoga.webp",
+      line:"A deck given over to breath and balance, framed by planting and the early light."},
+    {id:"pets",  nm:"Pet & Herb Gardens", ck:"THE GARDENS",
+      img:"../assets/renders/amenities/pets.webp",
+      line:"Beds of herb and a run for companions — small domestic pleasures, kept close."},
+    {id:"forest",nm:"Miyawaki Forest", ck:"THE GREEN",
+      img:"../assets/renders/lanterns/spring.webp",
+      line:"A dense native grove, planted to grow into shade and birdsong over the years."},
+    {id:"banq",  nm:"Banquet & Gathering", ck:"COMING TOGETHER",
+      img:"../assets/renders/lanterns/lobby.webp",
+      line:"A room held in reserve for the occasions that ask for one — warm, considered, and entirely your own."}
+  ];
+
+  var feature=document.getElementById("feature"),
+      ck=document.getElementById("ck"), ch=document.getElementById("ch"), cp=document.getElementById("cp"),
+      list=document.getElementById("list");
+
+  // build image layers + list
+  var layers={};
+  AMEN.forEach(function(a,i){
+    var d=document.createElement("div"); d.className="shot"; d.id="shot-"+a.id;
+    d.style.backgroundImage="url('"+a.img+"')";
+    if(i===0) d.classList.add("on");
+    feature.insertBefore(d, feature.firstChild);
+    layers[a.id]=d;
+
+    var b=document.createElement("button"); b.className="am"+(i===0?" sel":""); b.setAttribute("data-id",a.id);
+    b.innerHTML='<span class="n">0'+(i+1)+'</span><span class="nm">'+a.nm+'</span>';
+    b.addEventListener("click", function(){ select(a.id); });
+    list.appendChild(b);
+  });
+
+  function select(id){
+    var a=null; for(var i=0;i<AMEN.length;i++){ if(AMEN[i].id===id){ a=AMEN[i]; break; } }
+    if(!a) return;
+    document.querySelectorAll(".am").forEach(function(x){ x.classList.toggle("sel", x.getAttribute("data-id")===id); });
+    for(var k in layers){ layers[k].classList.toggle("on", k===id); }
+    feature.classList.add("swap");
+    setTimeout(function(){ ck.textContent=a.ck; ch.textContent=a.nm; cp.textContent=a.line; feature.classList.remove("swap"); },220);
+  }
+
+  document.getElementById("back").addEventListener("click", function(){ try{ parent.postMessage("eo-screen-close","*"); }catch(e){} });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"){ try{ parent.postMessage("eo-screen-close","*"); }catch(_){}}});
+</script>
+  <script src="../assets/leaf.js"></script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

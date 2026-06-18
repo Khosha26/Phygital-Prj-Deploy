@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="refresh" content="0; url=intro.html" />
+<link rel="canonical" href="intro.html" />
+<title>Embassy Citadel</title>
+<style>html,body{margin:0;background:#0E0C09;color:#F4F2ED;font-family: 'Lato',system-ui,sans-serif;height:100%;display:grid;place-items:center;}</style>
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+<noscript><a href="intro.html" style="color:#D9B97A">Enter Embassy Citadel</a></noscript>
+<script>window.location.replace('intro.html');</script>
+</body>
+</html>

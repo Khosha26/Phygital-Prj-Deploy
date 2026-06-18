@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Invitation · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE INVITATION (Enquire / EOI) — rebuilt to match the approved reference.
+  ──────────────────────────────────────────────────────────────────────
+  · Parchment bg + leaf filigree. Top: RETURN (green pill) · "THE INVITATION" · "PRIVATE · BY APPOINTMENT".
+  · "Arrive." heading + intro. Split card: approach image (left) + Expression
+    of Interest form (right): name/phone/email/preferred-time → "Request a
+    Private Viewing" → graceful confirmation.
+  · image: ../assets/renders/lanterns/center.webp
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parch:#f1e9d8; --paper:#f6efe2; --ink:#2b2a26; --muted:#6e685b; --faint:#9a917f;
+    --gold:#b8924e; --gold-d:#8a6e45; --gold-l:#c89b61; --line:#d8ccb4; --card:#f8f1e4; --green:#1f2c1c;
+    --ease:cubic-bezier(.2,.7,.2,1); --expo:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  .bg{position:fixed; inset:0; z-index:0; background:#efe7d6 url("../assets/bg-inner.webp") center/cover no-repeat}
+  .wrap{position:fixed; inset:0; z-index:2; display:flex; flex-direction:column; padding:clamp(16px,2.2vh,28px) clamp(26px,3.4vw,62px) clamp(16px,2.4vh,30px)}
+
+  /* top bar */
+  .top{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; flex:0 0 auto; gap:12px}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:linear-gradient(180deg,#fdfaf3,#f2e8d4); border:1px solid #b8924e; color:#8a6e45; font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.32em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.6), 0 8px 18px -8px rgba(40,28,10,.28), 0 0 10px rgba(233,199,135,.55);
+    backdrop-filter:none; -webkit-backdrop-filter:none; transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:hover{ background:linear-gradient(180deg,#ffffff,#f6eeda); border-color:#c89b61;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.72), 0 10px 22px -8px rgba(40,28,10,.32), 0 0 14px rgba(233,199,135,.72); }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px;display:block; stroke:#8a6e45}
+  .title{justify-self:center; text-align:center}
+  .title .tt{font-size:clamp(11px,1.4vh,16px); letter-spacing:.5em; text-indent:.5em; text-transform:uppercase; color:var(--gold-d); font-weight:400}
+  .title .tr{display:flex; align-items:center; justify-content:center; gap:7px; margin-top:7px}
+  .title .tr i{height:1px; width:clamp(36px,4.6vw,80px); background:linear-gradient(90deg,transparent,var(--gold))} .title .tr i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+  .title .tr b{width:5px;height:5px;background:var(--gold);transform:rotate(45deg)}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.1vh,13px); letter-spacing:.32em; text-transform:uppercase; color:var(--gold-d)}
+
+  /* heading */
+  .head{flex:0 0 auto; margin-top:clamp(10px,2vh,26px)}
+  .head h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1; color:var(--ink); font-size:clamp(40px,7vh,82px)}
+  .head h1 .dot{color:var(--gold)}
+  .head p{font-weight:300; color:var(--muted); line-height:1.65; font-size:clamp(12px,1.6vh,17px); max-width:46ch; margin-top:clamp(8px,1.4vh,16px)}
+
+  /* split card */
+  .card{flex:1 1 auto; min-height:0; margin-top:clamp(14px,2.4vh,30px); display:grid; grid-template-columns:1fr 1.04fr;
+    background:var(--card); border:1px solid rgba(184,146,78,.45); border-radius:22px; overflow:hidden;
+    box-shadow:0 34px 70px -28px rgba(60,42,16,.5); outline:1px solid rgba(255,250,240,.55); outline-offset:-4px}
+  .photo{position:relative; overflow:hidden}
+  .photo img{width:100%; height:100%; object-fit:cover; display:block}
+  .photo figcaption{position:absolute; left:clamp(18px,2vw,30px); bottom:clamp(16px,2.2vh,28px); z-index:2;
+    font-size:clamp(9px,1.1vh,13px); letter-spacing:.3em; text-transform:uppercase; color:#f3ead8; text-shadow:0 1px 10px rgba(0,0,0,.7)}
+  .photo::after{content:""; position:absolute; inset:0; background:linear-gradient(0deg, rgba(12,16,9,.45), transparent 35%); pointer-events:none}
+
+  /* form panel */
+  .form{padding:clamp(20px,3vh,44px) clamp(22px,2.6vw,52px); display:flex; flex-direction:column; min-height:0; overflow-y:auto;
+    scrollbar-width:thin; scrollbar-color:var(--gold-l) transparent}
+  .form::-webkit-scrollbar{width:5px}.form::-webkit-scrollbar-thumb{background:var(--gold-l);border-radius:3px}
+  .form .fk{font-size:clamp(9px,1.15vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--gold-d)}
+  .form h2{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(24px,3.8vh,42px); line-height:1.02; color:var(--ink); margin:9px 0 0}
+  .form .lede{font-weight:300; color:var(--muted); line-height:1.6; font-size:clamp(12px,1.5vh,16px); margin-top:clamp(8px,1.3vh,14px)}
+  .fields{margin-top:clamp(16px,2.6vh,30px); display:flex; flex-direction:column; gap:clamp(14px,2.2vh,24px)}
+  .frow{display:flex; gap:clamp(18px,2.4vw,44px)} .frow .field{flex:1}
+  .field label{display:block; font-size:clamp(9px,1.1vh,12px); letter-spacing:.24em; text-transform:uppercase; color:var(--gold-d); margin-bottom:9px}
+  .field input{width:100%; background:none; border:0; border-bottom:1px solid rgba(184,146,78,.45); padding:6px 2px 9px; font:inherit;
+    font-size:clamp(13px,1.6vh,16px); color:var(--ink); transition:border-color .25s}
+  .field input::placeholder{color:var(--faint); font-weight:300} .field input:focus{outline:none; border-bottom-color:var(--gold)}
+  .reqbtn{margin-top:clamp(18px,2.8vh,30px); width:100%; cursor:pointer; background:linear-gradient(165deg,#27331f,#141d10); color:#ecd49c;
+    border:1.4px solid rgba(200,155,97,.85); border-radius:14px; padding:clamp(15px,2.2vh,22px); font-family:"Jost"; font-weight:500;
+    font-size:clamp(11px,1.4vh,15px); letter-spacing:.28em; text-transform:uppercase; box-shadow:0 16px 32px -14px rgba(10,18,8,.7), inset 0 1px 0 rgba(255,225,165,.16); transition:transform .2s, filter .3s, box-shadow .3s, border-color .3s}
+  .reqbtn:hover{transform:translateY(-2px); filter:brightness(1.14); border-color:#e6c485} .reqbtn:active{transform:translateY(0)}
+  .note{font-size:clamp(9.5px,1.2vh,13px); color:var(--faint); margin-top:clamp(12px,1.8vh,18px); padding-bottom:clamp(12px,1.8vh,18px); border-bottom:1px solid rgba(184,146,78,.3)}
+  .sign{margin-top:clamp(12px,1.8vh,18px)}
+  .sign .si{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; color:var(--ink); font-size:clamp(13px,1.7vh,19px)}
+  .sign .sc{margin-top:7px; font-size:clamp(9px,1.1vh,12.5px); letter-spacing:.22em; text-transform:uppercase; color:var(--gold-d)}
+
+  /* confirmation */
+  .done{display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; flex:1 1 auto; gap:10px; padding:clamp(20px,4vh,50px)}
+  .done.on{display:flex} .form.sent .fk,.form.sent h2,.form.sent .lede,.form.sent .fields,.form.sent .reqbtn,.form.sent .note,.form.sent .sign{display:none}
+  .done .dchk{width:64px;height:64px;border-radius:50%;border:1.5px solid var(--gold);display:grid;place-items:center;margin-bottom:8px}
+  .done .dchk svg{width:42%;height:42%;stroke:var(--gold-d);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .done h2{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:clamp(28px,4.4vh,46px);color:var(--ink)}
+  .done p{font-weight:300;color:var(--muted);font-size:clamp(13px,1.6vh,16px);line-height:1.65;max-width:34ch}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .8s var(--expo) forwards} @keyframes fin{to{opacity:1;transform:none}}
+  @media (max-aspect-ratio:1/1){ .card{grid-template-columns:1fr; overflow-y:auto} .photo{min-height:34vh} .frow{flex-direction:column} }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="wrap">
+    <div class="top">
+      <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+      <div class="title"><div class="tt">The Invitation</div><div class="tr"><i></i><b></b><i></i></div></div>
+      <div class="corner">Private · By Appointment</div>
+    </div>
+
+    <div class="head fadein">
+      <h1>Arrive<span class="dot">.</span></h1>
+      <p>Viewings are private and by appointment. We would be glad to walk you through the residence in person.</p>
+    </div>
+
+    <div class="card fadein" style="animation-delay:.1s">
+      <figure class="photo">
+        <img src="../assets/renders/lanterns/center.webp" alt="Embassy ONE — the approach">
+        <figcaption>Embassy ONE · The Approach</figcaption>
+      </figure>
+      <div class="form" id="form">
+        <div class="fk">Expression of Interest</div>
+        <h2>A conversation, at your convenience.</h2>
+        <p class="lede">Leave a few details and a relationship lead will reach out to arrange a private viewing, in person and unhurried.</p>
+        <div class="fields">
+          <div class="frow">
+            <div class="field"><label>Name</label><input id="iName" type="text" placeholder="Your name"></div>
+            <div class="field"><label>Phone</label><input id="iPhone" type="tel" placeholder="Your number"></div>
+          </div>
+          <div class="field"><label>Email</label><input id="iEmail" type="email" placeholder="Your email"></div>
+          <div class="field"><label>How may we reach you</label><input id="iWhen" type="text" placeholder="A preferred time, if any — optional"></div>
+        </div>
+        <button class="reqbtn" id="reqBtn">Request a Private Viewing</button>
+        <div class="note">Private. We will only reach out to arrange your viewing.</div>
+        <div class="sign"><div class="si">The Residences at Embassy ONE · A private invitation.</div><div class="sc">[ Relationship Lead · Direct Line · Email ]</div></div>
+        <div class="done" id="done">
+          <div class="dchk"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+          <h2>With pleasure.</h2>
+          <p>Your interest is received. A relationship lead will reach out personally to arrange your private viewing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  document.getElementById('back').addEventListener('click', function(){ try{ parent.postMessage('eo-screen-close','*'); }catch(e){} });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } } });
+  document.getElementById('reqBtn').addEventListener('click', function(){
+    document.getElementById('form').classList.add('sent');
+    document.getElementById('done').classList.add('on');
+  });
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

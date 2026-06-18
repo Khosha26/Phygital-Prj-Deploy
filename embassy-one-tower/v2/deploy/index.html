@@ -1,0 +1,912 @@
+<!doctype html>
+<!--
+  EMBASSY ONE · THE RESIDENCES — Sales Suite · HOME  (v11 · "The Cards")
+  bg  = assets/plate-2560.webp (parchment + tower + gold leaf filigree, no UI baked)
+  nav = assets/cards/*.png (rendered dark/gold leather cards cropped from buttons.png)
+  Live text overlaid (wordmark, sub-copy, location pills). Dev: ?view=home skips intro.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Embassy ONE · The Residences</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1610">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Embassy ONE">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<script>/* PWA: register the offline service worker (precaches the whole suite on first load). */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(r){r.addEventListener&&r.addEventListener('updatefound',function(){var n=r.installing;n&&n.addEventListener('statechange',function(){if(n.state==='installed'&&navigator.serviceWorker.controller)n.postMessage&&0;});});}).catch(function(){});});}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2c2920; --gold:#b8924e; --gold-d:#9c7437; --gold-lt:#d8b877;
+    --parch:#f1e9d8; --muted:#6e6149;
+    --ease-expo:cubic-bezier(.16,1,.3,1); --ease-inout:cubic-bezier(.83,0,.17,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{font-family:"Jost",sans-serif; color:var(--ink); background:var(--parch);
+    overflow:hidden; -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent; user-select:none}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+
+  #stage{position:fixed; inset:0; overflow:hidden; background:var(--parch)}
+  /* object-position must match the SVG overlays' xMid (50%) crop, or the tower outline drifts off
+     the building at non-16:9 ratios (e.g. Tab S7 16:10). Plate is 16:9, so 50% = no change at 16:9. */
+  .bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 50%;
+    transform:scale(1.06); transition:transform 18s var(--ease-expo)}
+  body.home-in .bg{transform:scale(1.0)}
+  .bg-veil{position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(to right, rgba(241,233,216,.42) 0%, rgba(241,233,216,.12) 34%, rgba(241,233,216,0) 56%)}
+
+  /* ---------- PREMIUM SHIMMER — slow warm specular sweep + breathing sheen ---------- */
+  .shimmer{position:fixed; inset:0; z-index:2; pointer-events:none; overflow:hidden}
+  .shimmer::before{content:""; position:absolute; top:-60%; left:-60%; width:220%; height:220%;
+    mix-blend-mode:soft-light; will-change:transform; opacity:.16;
+    background:linear-gradient(115deg,
+      rgba(241,233,216,0) 38%,
+      rgba(216,184,119,.55) 48%,
+      rgba(255,250,240,.85) 50%,
+      rgba(216,184,119,.55) 52%,
+      rgba(241,233,216,0) 62%);
+    transform:translate3d(-22%,-22%,0);
+    animation:shimmerSweep 10s var(--ease-inout) infinite}
+  .shimmer::after{content:""; position:absolute; inset:-20%;
+    mix-blend-mode:soft-light; will-change:transform, opacity; opacity:.06;
+    background:radial-gradient(60% 50% at 50% 42%, rgba(255,248,233,.9) 0%, rgba(184,146,78,.18) 45%, rgba(241,233,216,0) 75%);
+    animation:shimmerBreathe 24s var(--ease-inout) infinite}
+  @keyframes shimmerSweep{
+    0%{transform:translate3d(-22%,-22%,0)}
+    50%{transform:translate3d(22%,22%,0)}
+    100%{transform:translate3d(-22%,-22%,0)} }
+  @keyframes shimmerBreathe{
+    0%,100%{transform:scale(1); opacity:.05}
+    50%{transform:scale(1.08); opacity:.10} }
+  @media (prefers-reduced-motion:reduce){
+    .shimmer::before, .shimmer::after{animation:none}
+    .skylife{display:none} }
+
+  /* ---------- SKY LIFE — drifting haze-clouds + distant birds (blended, subtle) ---------- */
+  .skylife{position:fixed; top:0; left:0; right:0; height:50%; z-index:2; pointer-events:none; overflow:hidden}
+  .cloud{position:absolute; border-radius:50%; filter:blur(11px); mix-blend-mode:screen;
+    background:radial-gradient(closest-side, rgba(255,252,243,.6), rgba(255,252,243,0) 72%)}
+  .cloud.c1{width:42vw; height:18vh; top:6%;  left:-46%; opacity:.5;  animation:drift 84s linear infinite}
+  .cloud.c2{width:30vw; height:13vh; top:22%; left:-40%; opacity:.4;  animation:drift 112s linear infinite -34s}
+  .cloud.c3{width:52vw; height:21vh; top:-3%; left:-56%; opacity:.42; animation:drift 98s linear infinite -64s}
+  @keyframes drift{to{transform:translateX(172vw)}}
+  /* real clouds (individual puffs from clouds.svg) drifting continuously across the top —
+     bigger toward the top, all looping back-to-back, softly transparent */
+  .scloud{position:absolute; left:-34vw; height:auto; pointer-events:none; will-change:transform;
+    user-select:none; -webkit-user-drag:none; filter:drop-shadow(0 4px 7px rgba(86,80,62,.16))}
+  .scloud.sc1{top:-1%;  width:clamp(300px,34vw,680px); opacity:.82; animation:cloudDrift 88s  linear infinite}
+  .scloud.sc2{top:8%;   width:clamp(190px,22vw,440px); opacity:.6;  animation:cloudDrift 116s linear infinite -34s}
+  .scloud.sc3{top:-4%;  width:clamp(260px,30vw,600px); opacity:.5;  animation:cloudDrift 74s  linear infinite -55s}
+  .scloud.sc4{top:14%;  width:clamp(150px,17vw,340px); opacity:.46; animation:cloudDrift 128s linear infinite -18s}
+  .scloud.sc5{top:4%;   width:clamp(180px,21vw,420px); opacity:.4;  animation:cloudDrift 100s linear infinite -72s}
+  @keyframes cloudDrift{from{transform:translateX(0)} to{transform:translateX(252vw)}}
+  .bird{position:absolute; width:clamp(15px,1.7vw,30px); height:auto; opacity:.62; will-change:transform}
+  .bird path{stroke:#6e5e3e; stroke-width:1.4; fill:none; stroke-linecap:round}
+  .bird.b1{top:15%; animation:fly1 44s linear infinite}
+  .bird.b2{top:19%; animation:fly2 52s linear infinite -9s}
+  .bird.b3{top:11%; animation:fly3 47s linear infinite -22s}
+  @keyframes fly1{from{transform:translate(-8vw,0)} to{transform:translate(114vw,4vh)}}
+  @keyframes fly2{from{transform:translate(-12vw,2vh)} to{transform:translate(112vw,-2vh)}}
+  @keyframes fly3{from{transform:translate(-6vw,1vh)} to{transform:translate(116vw,5vh)}}
+
+  /* ---------- FIREFLIES — subtle wandering glow, blink, rest on cards ---------- */
+  .firefly{position:fixed; left:0; top:0; z-index:4; pointer-events:none; will-change:transform}
+  body:not(.home-in) .firefly{display:none}   /* fireflies are a home concept (rest on cards) — not during intro */
+  .firefly .ff-glow{display:block; width:var(--s,12px); height:var(--s,12px); border-radius:50%;
+    background:radial-gradient(circle, #fffae6 0%, #ffe78f 26%, rgba(255,201,96,.72) 50%, rgba(255,184,74,0) 76%);
+    box-shadow:0 0 calc(var(--s,12px)*1.5) calc(var(--s,12px)*0.45) rgba(255,208,112,.55),
+               0 0 calc(var(--s,12px)*3.2) calc(var(--s,12px)*1.1) rgba(255,190,80,.26);
+    filter:blur(.4px); animation:ffFlash var(--fl,3s) ease-in-out infinite var(--fd,0s)}
+  @keyframes ffFlash{0%{opacity:.04; transform:scale(.66)} 9%{opacity:1; transform:scale(1.12)}
+    24%{opacity:.78; transform:scale(.98)} 48%{opacity:.1; transform:scale(.78)} 100%{opacity:.04; transform:scale(.66)}}
+  @media (prefers-reduced-motion:reduce){ .firefly{display:none} }
+
+  /* ---------- TOWER LIGHTS — windows flicker on/off (building comes to life) ---------- */
+  .tower-lights{position:fixed; top:7%; left:74.5%; width:13.5%; height:50%; z-index:2;
+    pointer-events:none; transform:rotate(.6deg)}
+  .win{position:absolute; width:13%; height:2%; border-radius:1px; opacity:0; mix-blend-mode:screen;
+    background:radial-gradient(ellipse at center, rgba(255,240,205,.95), rgba(255,214,140,0) 78%);
+    animation:winFlick var(--wd,6s) ease-in-out infinite var(--wdl,0s)}
+  @keyframes winFlick{0%,100%{opacity:0} 6%{opacity:var(--o,.6)} 33%{opacity:var(--o,.6)} 41%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){ .tower-lights{display:none} }
+
+  /* ---------- SEASONAL BLOSSOM PETALS — fall + sway + tumble (Five Lanterns) ---------- */
+  .petals{position:fixed; inset:0; z-index:2; pointer-events:none; overflow:hidden}
+  .petal{position:absolute; top:-9vh; left:var(--x); will-change:transform;
+    animation:petalFall var(--dur,13s) linear var(--delay,0s) infinite}
+  .petal .sway{display:block; animation:petalSway var(--swd,4s) ease-in-out var(--delay,0s) infinite}
+  .petal .tum{display:block; width:var(--size,16px); height:auto; opacity:var(--op,.7);
+    filter:blur(var(--bl,0px)); animation:petalTumble var(--tud,6s) ease-in-out var(--delay,0s) infinite}
+  .petal .tum svg{display:block; width:100%; height:auto}
+  @keyframes petalFall{from{transform:translate(0,-9vh)} to{transform:translate(var(--drift,8vw),116vh)}}
+  @keyframes petalSway{0%,100%{transform:translateX(calc(var(--sway,2vw) * -1))} 50%{transform:translateX(var(--sway,2vw))}}
+  @keyframes petalTumble{0%{transform:rotate(0deg) scaleX(1)} 50%{transform:rotate(180deg) scaleX(.26)} 100%{transform:rotate(360deg) scaleX(1)}}
+  @media (prefers-reduced-motion:reduce){ .petals{display:none} }
+
+  /* ---------- TOWER LINES — soft shine travelling along the building's lines ---------- */
+  /* track the bg's scale (1.06 during intro → 1.0 on home) so the lines stay aligned to the tower */
+  #towerLines{position:fixed; inset:0; z-index:2; pointer-events:none; width:100%; height:100%;
+    transform:scale(1.06); transition:transform 18s var(--ease-expo)}
+  body.home-in #towerLines{transform:scale(1.0)}
+
+  /* ---------- OUTER LINE — the building's outline traced every 10s on the HOME screen ---------- */
+  #outerLine{position:fixed; inset:0; z-index:2; pointer-events:none; width:100%; height:100%;
+    transform:scale(1.06); transition:transform 18s var(--ease-expo); opacity:1}
+  body.home-in #outerLine{transform:scale(1.0); opacity:1}
+  /* thin black outline, traced continuously — now visible during the intro too so the building isn't plain */
+  #outerLine .ol{fill:none; vector-effect:non-scaling-stroke; stroke:#14110a; stroke-width:1.4;
+    stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:1000 1000; stroke-dashoffset:1000;
+    opacity:0; filter:drop-shadow(0 1px 2px rgba(20,15,9,.4)); animation:outerDraw 10s ease-in-out 1s infinite}
+  @keyframes outerDraw{
+    0%{stroke-dashoffset:1000; opacity:0}
+    3%{opacity:1}
+    38%{stroke-dashoffset:0; opacity:1}   /* line has drawn all the way around the building (~3.5s) */
+    50%{stroke-dashoffset:0; opacity:1}    /* hold the full outline */
+    62%{stroke-dashoffset:0; opacity:0}    /* reaches the end and disappears */
+    100%{stroke-dashoffset:0; opacity:0}}  /* rest until the next 10s cycle */
+  @media (prefers-reduced-motion:reduce){ #outerLine{display:none} }
+  #towerLines .ln{fill:none; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-linejoin:round}
+  #towerLines .tl-base .ln{stroke:rgba(205,168,98,.26); stroke-width:1.1}
+  /* group squiggly lines: soft warm shine travels along them (restored) — plays in the intro + on home */
+  #towerLines .tl-shine .ln{stroke:#fff1c6; stroke-width:3.6; stroke-dasharray:17 83; stroke-dashoffset:100;
+    pathLength:100; opacity:0; animation:tlShine var(--sd,5s) linear var(--sdl,0s) infinite}
+  @keyframes tlShine{
+    0%{stroke-dashoffset:100; opacity:0}
+    12%{opacity:1}
+    80%{opacity:1}
+    100%{stroke-dashoffset:0; opacity:0}}
+  @media (prefers-reduced-motion:reduce){ #towerLines .tl-shine{display:none} }
+
+  #home{position:fixed; inset:0; z-index:3}
+  .hour-dial{position:absolute; top:clamp(20px,3vh,58px); right:clamp(24px,3.4vw,92px); z-index:6;
+    width:clamp(40px,4.4vh,82px); height:clamp(40px,4.4vh,82px); border-radius:50%; color:var(--gold);
+    border:1px solid rgba(184,146,78,.5); display:grid; place-items:center;
+    background:rgba(250,245,235,.5); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); transition:transform .7s var(--ease-expo), box-shadow .6s}
+  .hour-dial:hover{box-shadow:0 0 24px rgba(184,146,78,.35); transform:rotate(20deg)}
+  .hour-dial svg{width:56%; height:56%}
+
+  .hero{position:absolute; left:clamp(24px,4vw,86px); top:54%; transform:translateY(-50%);
+    width:min(60%,1080px); display:flex; flex-direction:column}
+
+  /* original Embassy ONE logo — quiet corner mark, top-left of the home */
+  .corner-logo{position:absolute; top:clamp(20px,3.2vh,48px); left:clamp(20px,3vw,54px); z-index:7; cursor:pointer;
+    width:clamp(92px,9vw,156px); height:auto; opacity:0; transition:opacity 1s var(--ease-expo) .55s, transform .5s var(--ease-expo)}
+  body.home-in .corner-logo{opacity:.9}
+  body.home-in .corner-logo:hover{opacity:1; transform:scale(1.04)}
+
+  /* mini launcher buttons (Overview · Gallery) — real cropped leather/gold plaques from client art */
+  .minirow{display:flex; justify-content:center; gap:clamp(12px,1.4vw,26px); margin-top:clamp(8px,1.4vh,18px)}
+  .minibtn{display:block; position:relative; padding:0; border:0; background:none; cursor:pointer; line-height:0;
+    width:clamp(96px,9.83vw,133px); filter:drop-shadow(0 10px 18px rgba(40,28,10,.30)) drop-shadow(0 0 9px rgba(233,199,135,.55));
+    transition:transform .45s var(--ease-expo), filter .45s}
+  .minibtn img{width:100%; height:auto; display:block; pointer-events:none}
+  .minibtn:hover{transform:translateY(-4px); filter:drop-shadow(0 16px 26px rgba(40,28,10,.44)) brightness(1.06)}
+  .minibtn:active{transform:translateY(-1px) scale(.99)}
+
+  /* The Lanterns — a real jali lantern glowing in the bottom-right corner; the doorway to the seasons */
+  /* The Lanterns — a real jali lantern at the bottom-RIGHT. A strong soft-white tint lifts it off the
+     tower photo; a warm light flickers within it like a real lit lantern. Label sits well above. */
+  .lantern-btn{position:fixed; right:clamp(16px,2.8vw,66px); bottom:-2vh; z-index:6;
+    border:0; background:none; padding:0; cursor:pointer; line-height:0;
+    opacity:0; transform:translateY(22px); transition:opacity 1.4s var(--ease-expo) 1s, transform 1.4s var(--ease-expo) 1s}
+  body.home-in .lantern-btn{opacity:1; transform:none}
+  /* STRONG soft-white backdrop so the lantern reads clearly over the photographic tower */
+  .lantern-tint{position:absolute; z-index:0; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:188%; height:108%; pointer-events:none; border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(255,255,253,.94) 0%, rgba(255,253,247,.66) 32%, rgba(255,251,242,.26) 56%, rgba(255,251,242,0) 76%);
+    filter:blur(13px)}
+  .lantern-btn img{position:relative; z-index:2; height:clamp(252px,48vh,544px); width:auto; display:block;
+    animation:lanternFlame 3.2s ease-in-out infinite}
+  /* warm glow flickering like a flame within the lantern (alive, never fully extinguished) */
+  .lantern-glow{position:absolute; z-index:1; left:50%; top:45%; transform:translate(-50%,-50%);
+    width:152%; height:74%; pointer-events:none; border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(255,206,120,.92) 0%, rgba(255,180,86,.48) 34%, rgba(255,168,76,0) 68%);
+    filter:blur(12px); animation:lanternGlow 3.2s ease-in-out infinite}
+  /* label — a quiet pill set well above the lantern, always legible */
+  /* label sits to the LEFT of the lantern, broken across two lines, right-aligned toward it */
+  .lantern-cap{position:absolute; z-index:3; right:calc(100% + 18px); top:48%; transform:translateY(-50%); text-align:right;
+    font-family:"Jost",sans-serif; font-weight:500; font-size:clamp(11px,1.5vh,18px); line-height:1.32;
+    letter-spacing:.24em; text-transform:uppercase; color:#f3e3bf;
+    text-shadow:0 1px 9px rgba(20,14,6,.92), 0 0 3px rgba(20,14,6,.75); opacity:.95; transition:opacity .4s, transform .4s}
+  .lantern-btn:hover .lantern-cap{opacity:1; transform:translateY(-50%) translateX(-3px)}
+  .lantern-btn:active img{transform:scale(.99)}
+  /* ── lantern relocated INTO the card row, immediately right of the 5 cards (per reference) ── */
+  .cardrow .lantern-btn{position:relative; right:auto; bottom:auto; left:auto; top:auto; z-index:1;
+    margin-left:clamp(26px,3.6vw,72px);   /* pushed further right of the 5 cards */
+    filter:drop-shadow(0 0 13px rgba(255,201,120,.5));   /* warm outer shine */
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    opacity:0; transform:translateY(8px); transition:none}
+  body.home-in .cardrow .lantern-btn{opacity:1; transform:none;
+    transition:opacity .64s var(--ease-expo) 1.0s, transform .64s var(--ease-expo) 1.0s}
+  .cardrow .lantern-btn img{position:relative; z-index:2; width:auto; display:block;
+    height:clamp(141px,29.2vh,339px);                 /* +10% bigger than the cards */
+    animation:lanternFlame 3.2s ease-in-out infinite}
+  .cardrow .lantern-glow{left:50%; top:44%; width:120%; height:58%}
+  .cardrow .lantern-cap{position:absolute; left:50%; top:calc(100% + 6px); right:auto; transform:translateX(-50%);
+    text-align:center; color:#8a6e45; text-shadow:none; opacity:.9;
+    font-size:clamp(8.5px,1.1vh,12px); letter-spacing:.24em; white-space:nowrap}
+  .cardrow .lantern-btn:hover .lantern-cap{opacity:1; transform:translateX(-50%)}
+  .cardrow .lantern-btn:hover img{filter:brightness(1.08)}
+  /* candle-like flicker — irregular warm wavers, never off */
+  @keyframes lanternGlow{
+    0%{opacity:.82} 6%{opacity:1} 12%{opacity:.7} 19%{opacity:.97} 25%{opacity:.78}
+    33%{opacity:1} 40%{opacity:.66} 48%{opacity:.9} 55%{opacity:.74} 63%{opacity:1}
+    70%{opacity:.8} 78%{opacity:.62} 85%{opacity:.95} 92%{opacity:.76} 100%{opacity:.84}}
+  @keyframes lanternFlame{
+    0%{filter:drop-shadow(0 18px 30px rgba(30,20,8,.4)) brightness(1.03) saturate(1.06)}
+    12%{filter:drop-shadow(0 20px 40px rgba(255,184,92,.45)) brightness(1.13) saturate(1.16)}
+    24%{filter:drop-shadow(0 16px 28px rgba(30,20,8,.4)) brightness(.99) saturate(1.04)}
+    40%{filter:drop-shadow(0 20px 38px rgba(255,184,92,.42)) brightness(1.11) saturate(1.14)}
+    55%{filter:drop-shadow(0 16px 28px rgba(30,20,8,.4)) brightness(.98) saturate(1.03)}
+    70%{filter:drop-shadow(0 20px 40px rgba(255,184,92,.4)) brightness(1.1) saturate(1.12)}
+    85%{filter:drop-shadow(0 17px 30px rgba(255,180,90,.34)) brightness(1.04) saturate(1.07)}
+    100%{filter:drop-shadow(0 18px 30px rgba(30,20,8,.4)) brightness(1.03) saturate(1.06)}}
+
+  /* project metadata — focused stat line */
+  .metaline{text-align:center; font-family:"Jost",sans-serif; font-weight:400; font-size:clamp(12px,1.7vh,21px);
+    letter-spacing:.2em; color:#6e5f42; text-transform:uppercase; margin-top:clamp(12px,2vh,26px)}
+  .metaline b{font-weight:500; color:#8a6e45}
+  .metaline .sep{color:var(--gold); margin:0 .55em; font-weight:400}
+
+  .bb-mono{width:clamp(34px,4.8vh,86px); height:clamp(40px,5.6vh,104px); color:var(--gold); margin:0 auto clamp(2px,.6vh,12px)}
+  .bb-word{font-family:"Cormorant Garamond",serif; font-weight:600; text-align:center; line-height:1;
+    font-size:clamp(34px,7vh,126px); letter-spacing:.26em; text-indent:.26em;
+    background:linear-gradient(176deg,#e3c88e 0%,#bd934c 52%,#9c7437 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent}
+  .bb-script{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:600; text-align:center; line-height:1;
+    font-size:clamp(40px,9vh,150px); letter-spacing:.06em; text-indent:.06em; margin:0;
+    /* gold/brass base with a bright sheen band that sweeps through the letters periodically */
+    background:linear-gradient(100deg,#b3853f 0%,#cd9f54 24%,#f4e3ad 45%,#fff7dc 50%,#f4e3ad 55%,#cd9f54 76%,#9c7437 100%);
+    background-size:260% 100%; background-position:175% 0;
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+    animation:bbSheen 5.6s ease-in-out 1.4s infinite}
+  @keyframes bbSheen{0%{background-position:175% 0} 46%{background-position:-75% 0} 100%{background-position:-75% 0}}
+  .bb-dia{width:7px; height:7px; background:var(--gold); transform:rotate(45deg); margin:clamp(8px,1.8vh,26px) auto}
+  .bb-copy{text-align:center; font-weight:300; color:#5c5238; line-height:1.85; letter-spacing:.02em;
+    font-size:clamp(12px,1.65vh,30px); max-width:62%; margin:0 auto}
+
+  .cardrow{display:flex; justify-content:center; align-items:flex-end; gap:clamp(8px,1.1vw,24px);
+    margin-top:clamp(18px,3.2vh,56px)}
+  .card{position:relative; flex:0 0 auto; line-height:0; transform:translateY(0);
+    transition:transform .6s var(--ease-expo), filter .6s var(--ease-expo);
+    filter:drop-shadow(0 20px 26px rgba(40,30,10,.30)) drop-shadow(0 0 11px rgba(233,199,135,.55))}  /* lift + gold outer shine */
+  .card img{width:clamp(84px,8.55vw,161px); height:auto; display:block; pointer-events:none; opacity:0}
+  .card.tower img{width:clamp(92px,9.4vw,176px)}
+  /* Plan B - "Lanterns coming up the drive": warm dim->bright, blur->focus, L->R */
+  @keyframes lanternWarm{from{opacity:0; transform:translateY(8px) scale(.98); filter:blur(8px) brightness(.55)}
+    to{opacity:1; transform:none; filter:blur(0) brightness(1)}}
+  @keyframes towerWarm{0%{opacity:0; transform:translateY(8px) scale(.98); filter:blur(8px) brightness(.55)}
+    70%{opacity:1; filter:blur(0) brightness(1.14)} 100%{opacity:1; transform:none; filter:blur(0) brightness(1)}}
+  /* recurring "pop" wave — each card lifts + warms briefly, one by one, looping every 6s */
+  @keyframes cardPop{
+    0%{transform:none; filter:none}
+    3%{transform:translateY(-7px) scale(1.055); filter:brightness(1.13) drop-shadow(0 12px 18px rgba(40,30,10,.42)) drop-shadow(0 0 16px rgba(255,206,120,.62))}
+    9%{transform:none; filter:none}
+    100%{transform:none; filter:none}}
+  /* entrance (lanternWarm) + ongoing pop wave; per-card delays: [entrance, pop-start] */
+  body.home-in .card img{animation:lanternWarm .64s var(--ease-expo) both, cardPop 6s ease-in-out infinite}
+  body.home-in .card:nth-child(1) img{animation-delay:.45s, 2s}
+  body.home-in .card:nth-child(2) img{animation-delay:.56s, 2.5s}
+  body.home-in .card:nth-child(3) img{animation-delay:.67s, 3s}
+  body.home-in .card:nth-child(4) img{animation-delay:.78s, 3.5s}
+  body.home-in .card:nth-child(5) img{animation-delay:.89s, 4s}
+  body.home-in .card.tower img{animation:towerWarm .72s var(--ease-expo) .67s both, cardPop 6s ease-in-out 3s infinite}
+  @media (prefers-reduced-motion:reduce){
+    body.home-in .card img, body.home-in .card.tower img{animation:none; opacity:1; transform:none; filter:none} }
+  .card.tower{filter:drop-shadow(0 26px 32px rgba(40,30,10,.34)) drop-shadow(0 0 22px rgba(232,184,120,.5));
+    animation:towerBreath 5s ease-in-out infinite 1.6s}
+  @keyframes towerBreath{0%,100%{filter:drop-shadow(0 26px 32px rgba(40,30,10,.34)) drop-shadow(0 0 18px rgba(232,184,120,.42))}
+    50%{filter:drop-shadow(0 26px 32px rgba(40,30,10,.34)) drop-shadow(0 0 30px rgba(255,200,120,.66))}}
+  /* hover lift removed per request — cards stay calm; tap still gives subtle feedback */
+  .card:active{transform:translateY(-5px) scale(.99)}
+  .card.flare{transform:translateY(-14px) scale(1.03); animation:none;
+    filter:drop-shadow(0 44px 52px rgba(40,30,10,.45)) drop-shadow(0 0 50px rgba(255,206,120,.95)) brightness(1.12)}
+
+  .pills{display:flex; gap:clamp(12px,1.6vw,30px); margin-top:clamp(20px,3.4vh,58px); justify-content:center}
+  .pill{display:flex; align-items:center; gap:clamp(8px,1vw,16px); min-height:clamp(40px,4.6vh,84px);
+    padding:0 clamp(16px,1.8vw,38px); border-radius:999px; color:var(--gold-d);
+    background:rgba(250,245,235,.62); border:1px solid rgba(184,146,78,.38); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    font-size:clamp(10px,1.4vh,26px); letter-spacing:.06em; white-space:nowrap}
+  .pill svg{width:clamp(14px,1.8vh,32px); height:auto; flex:0 0 auto}
+
+  #shell{position:fixed; inset:0; z-index:8; display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; background:linear-gradient(165deg,#f4eddd,#ece2cc); opacity:0; transition:opacity .6s var(--ease-expo)}
+  #shell.show{display:flex} #shell.vis{opacity:1}
+  /* built inner-screen overlay (iframe) */
+  #screenOverlay{position:fixed; inset:0; z-index:20; background:var(--parch,#f1e9d8); opacity:0; visibility:hidden;
+    transition:opacity .55s var(--ease-expo)}
+  #screenOverlay.show{opacity:1; visibility:visible}
+  #screenFrame{width:100%; height:100%; border:0; display:block; background:var(--parch,#f1e9d8)}
+  #shell .eyebrow{font-size:clamp(10px,1.3vh,26px); letter-spacing:.4em; text-indent:.4em; color:var(--gold-d)}
+  #shell .ttl{font-family:"Cormorant Garamond",serif; font-weight:600; letter-spacing:.18em; text-indent:.18em;
+    font-size:clamp(34px,7vh,140px); margin:clamp(12px,1.6vh,30px) 0 clamp(8px,1.2vh,22px); color:var(--ink)}
+  #shell .hr{width:54px; height:1px; background:rgba(184,146,78,.5); margin:0 auto}
+  #shell .note{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--muted);
+    font-size:clamp(15px,2.4vh,44px); margin-top:clamp(12px,1.6vh,28px); max-width:60%}
+  #shell .back{margin-top:clamp(28px,4vh,72px); display:inline-flex; align-items:center; gap:12px;
+    min-height:clamp(44px,4.6vh,90px); padding:0 clamp(22px,2.6vh,50px); border-radius:999px;
+    border:1px solid rgba(184,146,78,.5); font-size:clamp(9px,1.1vh,22px); letter-spacing:.3em; color:var(--gold-d)}
+
+  /* ---------- INTRO — "Glide into ONE" slide-to-enter ---------- */
+  #intro{position:fixed; inset:0; z-index:9; overflow:hidden; transition:opacity 1s var(--ease-expo)}
+  #intro.leave{opacity:0; pointer-events:none}
+  .in-bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:54% 50%}
+  .in-veil{position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(to right, rgba(243,236,220,.66) 0%, rgba(243,236,220,.2) 34%, rgba(243,236,220,0) 56%)}
+
+  /* one centred cluster: brand + coins + swipe */
+  .intro-cluster{position:absolute; left:0; top:50%; transform:translateY(-50%); width:min(76%,1500px); z-index:3;
+    display:flex; flex-direction:column; align-items:center; text-align:center}
+  .intro-cluster .ia{opacity:0; animation:iaIn .85s var(--ease-expo) var(--d,0s) both}
+  @keyframes iaIn{from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none}}
+  .ib-mono{width:clamp(44px,5.4vh,92px); height:clamp(50px,6.2vh,108px); color:var(--gold); margin:0 auto clamp(4px,1vh,16px)}
+  .ib-mono svg, .bb-mono svg{width:100%; height:100%; display:block}
+  .ib-word{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1; font-size:clamp(34px,5.6vh,72px); white-space:nowrap;
+    letter-spacing:.18em; text-indent:.18em; background:linear-gradient(176deg,#e3c88e,#bd934c 52%,#9c7437);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent}
+  .ib-script{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; font-size:clamp(20px,3.4vh,42px);
+    letter-spacing:.34em; text-indent:.34em; color:var(--gold-d); margin-top:clamp(2px,.7vh,12px)}
+  .ib-dia{width:7px; height:7px; background:var(--gold); transform:rotate(45deg); margin:clamp(9px,1.8vh,26px) auto}
+  .ib-copy{font-weight:300; color:#5c5238; line-height:1.85; font-size:clamp(15px,2vh,29px); max-width:44ch; margin:0 auto}
+  .eo-logo{display:block; width:clamp(250px,29vw,500px); height:auto; margin:0 auto}
+
+  .coins{position:relative; margin-top:clamp(24px,4.6vh,62px);
+    --coin:clamp(124px,13.2vw,236px); width:clamp(370px,37vw,690px); height:var(--coin)}
+  /* leather belt track behind the coins: spans gold-coin centre -> ghost-coin centre,
+     vertically centred, thinner than the coins (aspect 6.26:1, never distorted) */
+  .intro-belt{position:absolute; z-index:1; pointer-events:none; -webkit-user-drag:none; user-select:none;
+    left:calc(var(--coin)/2); width:calc(100% - var(--coin));
+    aspect-ratio:6.26 / 1; height:auto; max-height:calc(var(--coin) * .66);
+    top:50%; transform:translateY(-50%); object-fit:contain; display:block}
+  .coin-ghost{position:absolute; z-index:2; top:0; right:0; width:var(--coin); height:var(--coin);
+    opacity:.4; filter:grayscale(.4) brightness(1.16); transition:opacity .4s ease; -webkit-user-drag:none}
+  .coin-gold{position:absolute; z-index:3; top:calc(var(--coin)*.05); left:0;
+    width:calc(var(--coin)*.9); height:calc(var(--coin)*.9);   /* ONE button reduced 10% */
+    cursor:grab; touch-action:none; will-change:transform; -webkit-user-drag:none;
+    transition:transform .55s var(--ease-expo); filter:drop-shadow(0 12px 22px rgba(40,30,10,.5))}
+  .coin-gold.drag{cursor:grabbing; transition:none}
+  .coin-gold.arrived{filter:drop-shadow(0 12px 22px rgba(40,30,10,.5)) drop-shadow(0 0 32px rgba(255,206,120,.95))}
+  /* idle hint: the ONE coin drifts gently right and settles back — "swipe me right" — until grabbed */
+  .coin-gold.hint{animation:coinHint 2.7s ease-in-out .9s infinite}
+  @keyframes coinHint{0%,56%,100%{transform:translateX(0)} 70%{transform:translateX(16px)} 84%{transform:translateX(0)}}
+  .chev{position:absolute; z-index:2; left:56%; top:50%; transform:translate(-50%,-50%); pointer-events:none;
+    color:#ead9b5; font-family:"Jost",sans-serif; font-weight:400; font-size:clamp(10px,1.4vh,18px);
+    letter-spacing:.32em; text-indent:.32em; text-transform:uppercase; white-space:nowrap; line-height:1;
+    opacity:.85; transition:opacity .4s}
+  .swipe-cap{font-family:"Cormorant Garamond",serif; color:var(--gold-d); font-size:clamp(17px,2.6vh,35px);
+    letter-spacing:.06em; margin-top:clamp(16px,2.8vh,38px)}
+
+  @keyframes fadeup{to{opacity:1; transform:none; filter:none}}
+  @media (max-aspect-ratio:1/1){
+    .intro-cluster{width:auto; left:0; right:0; padding:0 7vw}
+    .ib-word{font-size:clamp(28px,7vw,64px)}
+    .coins{--coin:clamp(88px,22vw,168px); width:clamp(260px,62vw,480px)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .intro-cluster .ia{animation:none; opacity:1} }
+
+  /* ===== INTRO CINEMATIC LEAF-REVEAL (~5s) =====
+     pile of 4-season leaves in centre -> wind scatters them aside -> logo revealed (+gold motes)
+     -> scattered leaves vanish while the logo flies to its place & the whole scene appears at once */
+  body.seq .ia{animation:none}
+  /* whole scene hidden until the reveal releases it */
+  body.seq .bg, body.seq #towerLines, body.seq .skylife, body.seq .petals, body.seq .shimmer{
+    opacity:0; transition:opacity 1.5s var(--ease-expo)}
+  body.seq .ib-script, body.seq .ib-dia, body.seq .ib-copy, body.seq .coins, body.seq .swipe-cap{
+    opacity:0; transform:translateY(12px); transition:opacity 1s var(--ease-expo), transform 1s var(--ease-expo)}
+  body.seq .eo-logo-wrap{opacity:0}   /* cluster's own logo stays hidden — the reveal-logo stands in for it */
+  body.revealed .bg, body.revealed #towerLines, body.revealed .skylife, body.revealed .petals, body.revealed .shimmer{opacity:1}
+  body.revealed .ib-script, body.revealed .ib-dia, body.revealed .ib-copy,
+  body.revealed .coins, body.revealed .swipe-cap{opacity:1; transform:none}
+
+  /* reveal stage */
+  .reveal-stage{position:fixed; inset:0; z-index:13; pointer-events:none; overflow:hidden}
+
+  /* hero brand foliage (rasterised leaf cluster) — present at the very first, alive with momentum */
+  /* single foliage cluster — falls & fades smoothly on exit (no clip, no cut edge) */
+  .foliage{position:fixed; left:50%; bottom:-3vh; width:min(116vw,1720px); height:auto; z-index:13;
+    transform-origin:50% 100%; opacity:0; transform:translateX(-50%) translateY(5vh);
+    /* blend into the cream parchment: multiply melds the leaves into the theme, whites vanish into cream */
+    mix-blend-mode:multiply; filter:sepia(.5) saturate(1.18) hue-rotate(10deg) brightness(.99);
+    /* fade the asset's hard top/bottom edges to transparent so there's never a horizontal cut */
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 7%, #000 80%, transparent 100%);
+    mask-image:linear-gradient(to bottom, transparent 0%, #000 7%, #000 80%, transparent 100%);
+    transition:opacity 1.2s ease, transform 1.6s var(--ease-expo)}
+  body.rv .foliage{opacity:.34; transform:translateX(-50%) translateY(0); animation:foliageSway 8.5s ease-in-out .6s infinite}
+  /* momentum sway — accelerate/decelerate + follow-through, weighty & alive */
+  @keyframes foliageSway{
+    0%{transform:translateX(-50%) rotate(-1deg) skewX(1.3deg) scale(1.015)}
+    27%{transform:translateX(-49.4%) rotate(.7deg) skewX(-.8deg) scale(1.02)}
+    53%{transform:translateX(-50.7%) rotate(1.2deg) skewX(-1.4deg) scale(1.028)}
+    79%{transform:translateX(-50.1%) rotate(-.4deg) skewX(.7deg) scale(1.02)}
+    100%{transform:translateX(-50%) rotate(-1deg) skewX(1.3deg) scale(1.015)}}
+  /* when the text appears: the whole foliage gently FALLS away while fading very smoothly (no split, no cut) */
+  body.rv-part .foliage{animation:none; opacity:0;
+    transform:translateX(-50%) translateY(42vh) scale(.97);
+    transition:opacity 3.2s ease, transform 3.4s cubic-bezier(.3,.5,.4,1)}
+  /* cream gradient pinned to the screen bottom — dissolves the foliage/leaves into the parchment
+     so the leaves never show a hard cut at the viewport's bottom edge (viewport-anchored, any size) */
+  .foliage-fade{position:fixed; left:0; right:0; bottom:0; height:32vh; z-index:14; pointer-events:none;
+    background:linear-gradient(to top, #f1e9d8 14%, rgba(241,233,216,0) 100%); transition:opacity .6s ease}
+  .foliage-fade-top{position:fixed; left:0; right:0; top:0; height:24vh; z-index:14; pointer-events:none;
+    background:linear-gradient(to bottom, #f1e9d8 6%, rgba(241,233,216,0) 100%); transition:opacity .6s ease}
+  /* once the scene/cluster appears, fade BOTH cream layers so they never overlap the coins, text or caption */
+  body.revealed .foliage-fade, body.revealed .foliage-fade-top{opacity:0}
+
+  /* subtle falling leaves drift in as the foliage glides out */
+  .fleaf{position:fixed; top:-9vh; left:var(--fx,50%); width:var(--fw,22px); z-index:14; opacity:0;
+    will-change:transform; pointer-events:none; mix-blend-mode:multiply}
+  .fleaf svg{width:100%; height:auto; display:block}
+  body.rv-part .fleaf{animation:fleafFall var(--fdur,5.5s) linear var(--fdl,0s) forwards}
+  @keyframes fleafFall{
+    0%{opacity:0; transform:translateY(0) rotate(0)}
+    14%{opacity:var(--fo,.3)}
+    80%{opacity:var(--fo,.3)}
+    100%{opacity:0; transform:translateY(120vh) translateX(var(--fdx,4vw)) rotate(var(--frz,240deg))}}
+
+  /* reveal logo = the REAL logo split: [ONE] drops in, then [pyramid+EMBASSY] blend in → complete */
+  .reveal-logo{position:fixed; left:50%; top:50%; z-index:15; width:clamp(300px,34vw,660px); aspect-ratio:1000/500;
+    transform:translate(-50%,-50%); transition:transform 1.15s var(--ease-expo); will-change:transform}
+  .reveal-logo .lg-rest-svg, .reveal-logo .lg-one-svg{position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible}
+  .reveal-logo .lg-rest-svg{opacity:0; transition:opacity .95s var(--ease-expo) .12s; filter:drop-shadow(0 12px 26px rgba(40,32,20,.18))}
+  .reveal-logo .lg-one-svg{opacity:0; transform:translateY(-13%); transition:transform .82s cubic-bezier(.34,1.3,.5,1), opacity .5s ease}
+  body.rv-drop .reveal-logo .lg-one-svg{opacity:1; transform:translateY(0)}     /* ONE drops into place */
+  body.rv-show .reveal-logo .lg-one-svg{opacity:1; transform:translateY(0)}
+  body.rv-show .reveal-logo .lg-rest-svg{opacity:1}                              /* EMBASSY + pyramid blend in */
+  body.rv-settle .reveal-logo{transform:translate(calc(-50% + var(--sx,0px)), calc(-50% + var(--sy,0px))) scale(var(--ss,.5))}
+
+  .reveal-particles{position:fixed; left:50%; top:50%; z-index:14; pointer-events:none}
+  .mote{position:absolute; left:0; top:0; width:var(--ms,5px); height:var(--ms,5px); border-radius:50%; opacity:0;
+    background:radial-gradient(circle,#fff4d2,#ffd98a 42%,rgba(255,200,110,0) 72%);
+    transform:translate(var(--mx,0),var(--my,0)) scale(.4)}
+  body.rv-show .mote{animation:moteRise var(--mdur,2.6s) ease-out var(--mdl,0s) forwards}
+  @keyframes moteRise{0%{opacity:0; transform:translate(var(--mx,0),var(--my,0)) scale(.35)}
+    18%{opacity:.95} 100%{opacity:0; transform:translate(var(--mx2,0),var(--my2,0)) scale(1.05)}}
+  @media (prefers-reduced-motion:reduce){ .reveal-stage{display:none} }
+
+  .rise{opacity:0; transform:translateY(24px)}
+  body.home-in .rise{opacity:1; transform:none; transition:opacity .9s var(--ease-expo), transform .9s var(--ease-expo)}
+  body.home-in .rise.d1{transition-delay:.1s} body.home-in .rise.d2{transition-delay:.2s}
+  body.home-in .rise.d3{transition-delay:.3s} body.home-in .rise.d4{transition-delay:.95s}
+
+  body.dusk .bg{filter:saturate(1.05) sepia(.12) brightness(.94) hue-rotate(-6deg)}
+
+  @media (max-aspect-ratio:29/20) and (orientation:landscape){
+    /* iPad-class 4:3 — centre the whole group + tighten the mini→cards gap */
+    .hero{width:min(94%,1200px); left:50%; transform:translate(-50%,-50%); align-items:center}
+    .bb-copy{max-width:80%}
+    .minirow{margin-top:clamp(6px,1vh,14px)}
+    .cardrow{margin-top:clamp(6px,1vh,18px)}
+    .pills{margin-top:clamp(12px,2vh,34px)}
+  }
+  @media (orientation:portrait){
+    .bg{object-position:60% 28%}
+    .bg-veil{background:linear-gradient(to bottom, rgba(241,233,216,.6) 0%, rgba(241,233,216,.1) 30%, rgba(241,233,216,0) 50%)}
+    .hero{position:static; transform:none; width:100%; height:100%; justify-content:center; padding:clamp(24px,5vh,80px) clamp(18px,5vw,70px)}
+    .bb-script{font-size:clamp(40px,11vw,108px)}
+    .bb-copy{max-width:92%; font-size:clamp(11px,2vw,22px)}
+    .cardrow{gap:clamp(5px,1vw,12px); flex-wrap:nowrap}
+    .card img{width:clamp(40px,10.2vw,104px)} .card.tower img{width:clamp(44px,11vw,114px)}
+    .cardrow .lantern-btn img{height:clamp(110px,22vh,260px)}
+    .minirow{margin-top:clamp(6px,1.4vh,16px)} .cardrow{margin-top:clamp(8px,1.6vh,22px)}
+    .pill{font-size:clamp(9px,1.7vw,18px)}
+    .hour-dial{top:clamp(16px,2.6vh,40px)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important; transition-duration:.001s !important}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ── PACKAGE LOADER: downloads the entire suite to the device on first open (then fully offline) ── -->
+  <style>
+    #pkg{position:fixed;inset:0;z-index:99999;background:#f1e9d8;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:22px;transition:opacity .6s ease;font-family:"Jost",sans-serif}
+    #pkg.done{opacity:0;pointer-events:none}
+    #pkg img{width:78px;height:78px;opacity:.92}
+    #pkg .ttl{font-family:"Cormorant Garamond",serif;font-style:italic;color:#8a6e45;font-size:clamp(20px,3.2vh,30px);letter-spacing:.02em}
+    #pkg .bar{width:min(62vw,360px);height:3px;background:rgba(138,110,69,.16);border-radius:3px;overflow:hidden}
+    #pkg .fill{height:100%;width:0;background:linear-gradient(90deg,#b8924e,#c89b61);transition:width .25s ease}
+    #pkg .pct{font-size:clamp(9px,1.3vh,12px);letter-spacing:.34em;text-transform:uppercase;color:#9a917f}
+  </style>
+  <div id="pkg">
+    <img src="icons/icon-512.png" alt="Embassy ONE">
+    <div class="ttl">Preparing The Residences</div>
+    <div class="bar"><div class="fill" id="pkgFill"></div></div>
+    <div class="pct" id="pkgPct">Loading 0%</div>
+  </div>
+  <script>
+  (function(){
+    var splash=document.getElementById('pkg'),fill=document.getElementById('pkgFill'),pct=document.getElementById('pkgPct');
+    function done(){ if(!splash)return; splash.classList.add('done'); setTimeout(function(){ try{splash.remove();}catch(e){} },700); }
+    function set(p){ p=Math.max(0,Math.min(100,Math.round(p))); fill.style.width=p+'%'; pct.textContent='Loading '+p+'%'; }
+    if(/[?&]nopkg/.test(location.search) || !('caches' in window)){ done(); return; }
+    fetch('assets-manifest.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(man){
+      var KEY='eo-pkg-ver', CACHE='eo-offline-v44';
+      if(localStorage.getItem(KEY)===man.version){ set(100); done(); return; }       // already fully on this device
+      try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}
+      caches.open(CACHE).then(function(c){
+        var list=man.assets.slice(), total=list.length||1, n=0, CONC=8;
+        function next(){ var u=list.shift(); if(u===undefined) return Promise.resolve();
+          return c.match(u).then(function(h){ return h?null:c.add(u).catch(function(){}); })
+            .then(function(){ n++; set(n/total*100); return next(); }); }
+        var w=[]; for(var i=0;i<CONC;i++) w.push(next());
+        Promise.all(w).then(function(){ try{localStorage.setItem(KEY,man.version);}catch(e){} set(100); done(); });
+      }).catch(done);
+    }).catch(done);
+  })();
+  </script>
+
+  <div id="stage" aria-hidden="true">
+    <img class="bg" src="assets/plate-2560.webp" alt="">
+    <div class="bg-veil"></div>
+    <svg id="towerLines" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><filter id="tlBlur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5.4"/></filter></defs><g class="tl-base"><path class="ln" d="M1200.48,656.4l1.2-53.76,4.41-7.62.8-42.52,5.22-.4-.4-7.22s-1.2-4.01,4.81-7.22,8.02-3.21,8.02-3.21c0,0-1.6-4.41,4.41-4.81,0-9.63,5.22-184.94,5.22-184.94l-5.22-.8,4.81-14.44-3.21-1.2,2.81-10.03-2.41-3.61,3.21-11.23-3.61-.8,3.21-10.83-3.61-.8,5.22-11.63h-3.61l2.41-12.84-4.01-2.81,4.01-11.23-3.61-1.2,3.61-12.84-2.81-.8,3.21-14.84-3.21-2.81,9.23-40.12.4-58.17"/><line class="ln" x1="1249.82" y1="83.54" x2="1243.8" y2="537.66"/><line class="ln" x1="1264.06" y1="89.13" x2="1256.68" y2="539.13"/><polyline class="ln" points="1321.39 80.83 1321.39 289.44 1320.07 590.18"/><polyline class="ln" points="1323.33 269.01 1328.16 261.76 1359.93 269.19"/><polyline class="ln" points="1322.96 306.54 1326.86 301.52 1360.86 306.73"/><polyline class="ln" points="1322.4 341.29 1326.3 334.23 1361.24 341.29"/><polyline class="ln" points="1322.59 373.24 1325.75 369.16 1360.68 374.55"/><polyline class="ln" points="1322.77 407.06 1327.05 402.23 1360.86 408.18"/><polyline class="ln" points="1322.4 442.55 1326.3 437.91 1361.24 442.18"/><polyline class="ln" points="1322.59 476.37 1325.93 472.84 1361.42 476.37"/><polyline class="ln" points="1322.4 516.13 1325.19 515.02 1361.42 516.5"/><polyline class="ln" points="1323.13 101.94 1327.31 95.25 1357.72 103.34"/><line class="ln" x1="1389.75" y1="122.92" x2="1417.83" y2="122.67"/><line class="ln" x1="1389.5" y1="140.88" x2="1417.58" y2="141.13"/><line class="ln" x1="1389.5" y1="159.34" x2="1417.32" y2="159.6"/><line class="ln" x1="1389.5" y1="176.8" x2="1416.56" y2="177.05"/><line class="ln" x1="1390.01" y1="196.02" x2="1417.32" y2="196.27"/><line class="ln" x1="1389.5" y1="215.75" x2="1417.83" y2="216"/><line class="ln" x1="1389.5" y1="239.02" x2="1416.56" y2="238.77"/><polyline class="ln" points="1359.31 84.7 1424.45 82.37 1429.1 567.4"/><path class="ln" d="M1243.07,595.01l162.19,1.24s-1.67,4.18-3.17,6.53-6,.86-5.36,3.43,4.07,3.64,4.5,5.57,4.5,5.57,4.5,8.78.86,5.78.86,8.57-1.93,8.57-1.93,9.43-11.78,9.21-9.64,19.92,1.93,10.07,1.93,13.71-.21,6-.21,6"/><line class="ln" x1="1371.78" y1="664.43" x2="1512.85" y2="890.34"/><line class="ln" x1="1357.47" y1="668.52" x2="1493.43" y2="922.03"/><line class="ln" x1="1353.38" y1="694.08" x2="1455.61" y2="921.01"/><line class="ln" x1="1217.43" y1="708.39" x2="1119.3" y2="939.41"/><path class="ln" d="M1031.03,847.11l32.7-45.07s-14.14-15.02-4.42-29.16,24.74-9.72,28.28-7.95,73.35-83.95,73.35-83.95"/><line class="ln" x1="1203.34" y1="680.98" x2="1074.33" y2="932.83"/><polyline class="ln" points="1217.36 938.8 1247.16 748.3 1315.85 748.3 1339.82 940.1"/></g><g class="tl-shine" filter="url(#tlBlur)"><path class="ln" d="M1200.48,656.4l1.2-53.76,4.41-7.62.8-42.52,5.22-.4-.4-7.22s-1.2-4.01,4.81-7.22,8.02-3.21,8.02-3.21c0,0-1.6-4.41,4.41-4.81,0-9.63,5.22-184.94,5.22-184.94l-5.22-.8,4.81-14.44-3.21-1.2,2.81-10.03-2.41-3.61,3.21-11.23-3.61-.8,3.21-10.83-3.61-.8,5.22-11.63h-3.61l2.41-12.84-4.01-2.81,4.01-11.23-3.61-1.2,3.61-12.84-2.81-.8,3.21-14.84-3.21-2.81,9.23-40.12.4-58.17"/><line class="ln" x1="1249.82" y1="83.54" x2="1243.8" y2="537.66"/><line class="ln" x1="1264.06" y1="89.13" x2="1256.68" y2="539.13"/><polyline class="ln" points="1321.39 80.83 1321.39 289.44 1320.07 590.18"/><polyline class="ln" points="1323.33 269.01 1328.16 261.76 1359.93 269.19"/><polyline class="ln" points="1322.96 306.54 1326.86 301.52 1360.86 306.73"/><polyline class="ln" points="1322.4 341.29 1326.3 334.23 1361.24 341.29"/><polyline class="ln" points="1322.59 373.24 1325.75 369.16 1360.68 374.55"/><polyline class="ln" points="1322.77 407.06 1327.05 402.23 1360.86 408.18"/><polyline class="ln" points="1322.4 442.55 1326.3 437.91 1361.24 442.18"/><polyline class="ln" points="1322.59 476.37 1325.93 472.84 1361.42 476.37"/><polyline class="ln" points="1322.4 516.13 1325.19 515.02 1361.42 516.5"/><polyline class="ln" points="1323.13 101.94 1327.31 95.25 1357.72 103.34"/><line class="ln" x1="1389.75" y1="122.92" x2="1417.83" y2="122.67"/><line class="ln" x1="1389.5" y1="140.88" x2="1417.58" y2="141.13"/><line class="ln" x1="1389.5" y1="159.34" x2="1417.32" y2="159.6"/><line class="ln" x1="1389.5" y1="176.8" x2="1416.56" y2="177.05"/><line class="ln" x1="1390.01" y1="196.02" x2="1417.32" y2="196.27"/><line class="ln" x1="1389.5" y1="215.75" x2="1417.83" y2="216"/><line class="ln" x1="1389.5" y1="239.02" x2="1416.56" y2="238.77"/><polyline class="ln" points="1359.31 84.7 1424.45 82.37 1429.1 567.4"/><path class="ln" d="M1243.07,595.01l162.19,1.24s-1.67,4.18-3.17,6.53-6,.86-5.36,3.43,4.07,3.64,4.5,5.57,4.5,5.57,4.5,8.78.86,5.78.86,8.57-1.93,8.57-1.93,9.43-11.78,9.21-9.64,19.92,1.93,10.07,1.93,13.71-.21,6-.21,6"/><line class="ln" x1="1371.78" y1="664.43" x2="1512.85" y2="890.34"/><line class="ln" x1="1357.47" y1="668.52" x2="1493.43" y2="922.03"/><line class="ln" x1="1353.38" y1="694.08" x2="1455.61" y2="921.01"/><line class="ln" x1="1217.43" y1="708.39" x2="1119.3" y2="939.41"/><path class="ln" d="M1031.03,847.11l32.7-45.07s-14.14-15.02-4.42-29.16,24.74-9.72,28.28-7.95,73.35-83.95,73.35-83.95"/><line class="ln" x1="1203.34" y1="680.98" x2="1074.33" y2="932.83"/><polyline class="ln" points="1217.36 938.8 1247.16 748.3 1315.85 748.3 1339.82 940.1"/></g></svg>
+    <svg id="outerLine" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="ol" pathLength="1000" d="M1428.16,572.17l-2.43-504.15-6.33,13.15-60.62.73v3.16h-34.32v5.11h-2.43v-9.98l-45.04-13.15-6.33-.73-5.36,20.21-14.85-4.26-9.42,39.88-.4,58.17-9.23,40.12,3.21,2.81-3.21,14.84,2.81.8-3.61,12.84,3.61,1.2-4.01,11.23,4.01,2.81-2.41,12.84h3.61l-5.22,11.63,3.61.8-3.21,10.83,3.61.8-3.21,11.23,2.41,3.61-2.81,10.03,3.21,1.2-4.81,14.44,5.22.8s-5.22,175.31-5.22,184.94"/></svg>
+    <div class="shimmer"></div>
+    <div class="skylife" aria-hidden="true">
+      <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+      <img class="scloud sc1" src="assets/clouds/cloud22.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc2" src="assets/clouds/cloud65.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc3" src="assets/clouds/cloud54.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc4" src="assets/clouds/cloud02.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc5" src="assets/clouds/cloud44.webp" alt="" aria-hidden="true" draggable="false">
+      <svg class="bird b1" viewBox="0 0 24 12"><path d="M2 8 Q7 2 12 7 Q17 2 22 8"><animate attributeName="d" dur="0.8s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" values="M2 8 Q7 2 12 7 Q17 2 22 8;M2 6.4 Q7 5.6 12 6.4 Q17 5.6 22 6.4;M2 8 Q7 2 12 7 Q17 2 22 8"/></path></svg>
+      <svg class="bird b2" viewBox="0 0 24 12"><path d="M2 8 Q7 2 12 7 Q17 2 22 8"><animate attributeName="d" dur="0.95s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" values="M2 8 Q7 2 12 7 Q17 2 22 8;M2 6.4 Q7 5.6 12 6.4 Q17 5.6 22 6.4;M2 8 Q7 2 12 7 Q17 2 22 8"/></path></svg>
+      <svg class="bird b3" viewBox="0 0 24 12"><path d="M2 8 Q7 2 12 7 Q17 2 22 8"><animate attributeName="d" dur="0.72s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" values="M2 8 Q7 2 12 7 Q17 2 22 8;M2 6.4 Q7 5.6 12 6.4 Q17 5.6 22 6.4;M2 8 Q7 2 12 7 Q17 2 22 8"/></path></svg>
+    </div>
+    <div class="tower-lights" id="towerLights" aria-hidden="true"></div>
+    <div class="petals" id="petals" aria-hidden="true"></div>
+  </div>
+
+  <main id="home" aria-label="Embassy ONE home">
+
+    <img class="corner-logo" src="assets/embassy-one-logo.svg" alt="Embassy ONE — back to start" draggable="false" title="Back to start">
+
+    <div class="hero">
+      <div class="rise d2">
+        <h1 class="bb-script">the residences</h1>
+        <div class="bb-dia"></div>
+        <p class="bb-copy">A landmark address for elevated urban living.<br>Private residences crafted with timeless design, service, and serenity.</p>
+      </div>
+
+      <div class="minirow rise d3" aria-label="More">
+        <button class="minibtn" data-screen="overview" aria-label="Overview"><img src="assets/home/btn-overview.webp" alt="Overview" draggable="false"></button>
+        <button class="minibtn" data-screen="gallery" aria-label="Gallery"><img src="assets/home/btn-gallery.webp" alt="Gallery" draggable="false"></button>
+      </div>
+
+      <nav class="cardrow" aria-label="Explore the residence">
+        <button class="card" data-screen="place"      aria-label="The Place"><img src="assets/home/btn-place.webp" alt="The Place"></button>
+        <button class="card" data-screen="grounds"    aria-label="The Grounds"><img src="assets/home/btn-grounds.webp" alt="The Grounds"></button>
+        <button class="card tower" data-screen="tower" aria-label="The Tower"><img src="assets/home/btn-tower.webp" alt="The Tower"></button>
+        <button class="card" data-screen="residences" aria-label="The Residences"><img src="assets/home/btn-residences.webp" alt="The Residences"></button>
+        <button class="card" data-screen="service"    aria-label="The Service"><img src="assets/home/btn-service.webp" alt="The Service"></button>
+        <button class="lantern-btn" data-screen="lanterns" aria-label="Explore the Lanterns — a symphony of seasons">
+          <span class="lantern-glow" aria-hidden="true"></span>
+          <img src="assets/home/lantern-bar.webp" alt="" draggable="false">
+          <span class="lantern-cap">Explore<br>Lanterns</span>
+        </button>
+      </nav>
+
+      <div class="pills rise d4">
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 22s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12Z"/><circle cx="12" cy="10" r="2.4"/></svg>Mekri Circle, Bengaluru</span>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke-linecap="round"/></svg>12.99&deg; N &nbsp;&middot;&nbsp; 77.59&deg; E</span>
+      </div>
+      <div class="metaline rise d4"><b>60</b> Residences <span class="sep">&middot;</span> <b>2</b> per floor <span class="sep">&middot;</span> <b>4,150&ndash;15,125</b> sq ft</div>
+    </div>
+  </main>
+
+  <section id="shell" aria-live="polite">
+    <div class="eyebrow" id="shEyebrow">EMBASSY ONE · THE RESIDENCES</div>
+    <h2 class="ttl" id="shTitle">THE TOWER</h2>
+    <div class="hr"></div>
+    <p class="note" id="shNote">This world is being composed.</p>
+    <button class="back" id="shBack">&larr; RETURN</button>
+  </section>
+
+  <div id="screenOverlay" aria-hidden="true"><iframe id="screenFrame" title="Embassy ONE"></iframe></div>
+
+  <div id="intro" aria-label="Embassy ONE — glide into ONE to enter">
+    <div class="intro-cluster">
+      <div class="eo-logo-wrap ia" style="--d:.2s"><svg class="eo-logo" viewBox="0 0 1000 500" aria-label="Embassy One"><defs><linearGradient id="eoGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e3c88e"/><stop offset=".52" stop-color="#bd934c"/><stop offset="1" stop-color="#9c7437"/></linearGradient></defs><g fill="#231f20"><polygon points="165.15 203.71 209.62 203.71 197.43 182.6 165.14 182.6 165.14 191.9 127.5 191.9 120.68 203.71 165.14 203.71 165.15 203.71"/><polygon points="165.15 177.95 194.75 177.95 182.56 156.84 165.14 156.84 165.14 166.14 142.36 166.14 135.55 177.94 165.14 177.94 165.15 177.95"/><polygon points="212.31 208.35 165.15 208.35 165.15 217.65 112.63 217.65 105.82 229.46 224.49 229.46 212.31 208.35"/><polygon points="165.15 126.69 150.42 152.2 179.88 152.2 165.15 126.69 165.15 126.69"/><path d="M598.63,135.99l-.08-.16h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47ZM575.43,193.48h0l15.96-37.36,17.4,37.36h-33.36Z"/><path d="M703.89,180.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94"/><path d="M791.17,180.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94"/><polygon points="883.84 135.83 857.23 181.73 831.85 135.83 814.32 135.83 846.71 194.05 846.71 229.46 862.15 229.46 862.15 192.9 895.11 135.83 883.83 135.83 883.84 135.83"/><polygon points="260.45 229.46 324.2 229.46 324.2 218.64 275.89 218.64 275.89 184.78 317.66 184.78 317.66 175.12 275.89 175.12 275.89 146.66 324.2 146.66 324.2 135.84 260.45 135.84 260.45 229.47 260.45 229.46"/><polygon points="600.16 369.55 672.86 369.55 672.86 357.21 617.77 357.21 617.77 318.59 665.4 318.59 665.4 307.58 617.77 307.58 617.77 275.12 672.86 275.12 672.86 262.78 600.16 262.78 600.16 369.56 600.16 369.55"/><polygon points="398.8 197.6 361.61 135.98 361.54 135.83 349.8 135.83 349.8 229.46 359.21 229.46 359.21 160.86 395.39 220.15 432.49 161.21 432.49 229.46 447.93 229.46 447.93 135.83 436.07 135.83 398.8 197.6 398.8 197.6"/><polygon points="556.79 368.38 539.81 368.47 510.7 332.23 479.62 294.68 479.59 368.4 468.41 368.41 468.41 264.18 477.15 264.14 545.44 346.6 545.47 264.19 556.78 264.14 556.79 368.38"/><path d="M420.47,352.23c-13.36,14.93-34.16,19.74-53.67,16.52-24.82-4.09-43.04-25.38-43.74-50.38-.77-27.65,17.01-49.97,44.21-54.69,10.19-1.77,20.49-1.16,30.26,1.82,21.85,6.65,36.15,26.28,36.51,48.97.22,14.02-4.14,27.22-13.57,37.76ZM395.82,356.4c10-4.24,15.6-12.13,19.7-22.07,4.74-11.47,4.7-24.33.5-35.31-4.59-12-12.2-21.77-25.94-25.05-6.91-1.65-13.9-1.77-20.91-.55-15.31,2.66-23.78,13.21-28.44,26.3-3.57,10.03-3.74,21.56-.13,32.18,5.32,15.63,17.28,26.41,33.82,27.58,7.4.52,14.3-.07,21.4-3.08Z"/><path d="M538.72,189.38c-2.27-3.11-9.46-9.94-24.33-9.93,14.95-.77,20.59-9.33,21.89-11.96,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77ZM490.34,145.24h16.22c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.39,210.37h-.02c-.96,2.07-2.26,3.85-3.87,5.3s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17Z"/></g></svg></div>
+      <div class="ib-script ia" style="--d:.55s">the residences</div>
+      <div class="ib-dia ia" style="--d:.7s"></div>
+      <p class="ib-copy ia" style="--d:.9s">A landmark address for elevated urban living.<br>Private residences crafted with timeless design, service, and serenity.</p>
+      <div class="coins ia" style="--d:1.15s">
+        <img class="intro-belt" src="assets/belt.webp" alt="" aria-hidden="true" draggable="false">
+        <span class="chev" aria-hidden="true">SWIPE TO EXPLORE</span>
+        <img class="coin-gold" id="oneCoin" src="assets/one-coin.webp" alt="Glide into ONE" tabindex="0" role="button" draggable="false">
+      </div>
+      <div class="swipe-cap ia" style="--d:1.35s">Glide into ONE</div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  (function(){
+    var bars="", H=[8,16,26,38,52];
+    for(var k=-4;k<=4;k++){ var x=40+k*8, top=H[Math.abs(k)];
+      bars+='<rect x="'+(x-1.4)+'" y="'+top+'" width="2.8" height="'+(90-top)+'" rx="1.3"/>'; }
+    var svg='<svg viewBox="0 0 80 100" fill="currentColor" aria-hidden="true">'+bars+
+      '<path d="M40 1.5 43.4 9 36.6 9Z"/><rect x="16" y="92" width="48" height="2.2" rx="1.1"/></svg>';
+    var a=document.getElementById("heroMono"); if(a) a.innerHTML=svg;
+    var b=document.getElementById("introMono"); if(b) b.innerHTML=svg;
+  })();
+
+  var SCREENS = {
+    place:      {t:"THE PLACE",      e:"01 · PROVENANCE & ADDRESS",   n:"A statement of prestige — the confluence of three storied enclaves."},
+    grounds:    {t:"THE GROUNDS",    e:"02 · LANDSCAPE & LIFE",       n:"Rooted in nature — two acres, five lanterns, a life unfolds."},
+    tower:      {t:"THE TOWER",      e:"03 · ARCHITECTURE & VISUALS", n:"Rising with distinction — a vertical manor of thirty floors."},
+    residences: {t:"THE RESIDENCES", e:"04 · THE HOMES",              n:"Crafted for excellence — sixty homes, two to a floor."},
+    service:    {t:"THE SERVICE",    e:"05 · THE STANDARD",           n:"Beyond expectations — a home that takes care of itself."}
+  };
+
+  var intro=document.getElementById("intro");
+  var skip=/[?&]view=home/.test(location.search);
+  var entered=false;
+  function enterHome(){ if(entered) return; entered=true; var b=document.body; b.classList.remove("seq"); intro.classList.add("leave"); b.classList.add("home-in"); setTimeout(function(){ if(intro&&intro.parentNode) intro.remove(); },1100); }
+
+  /* cinematic ~5s leaf-reveal: pile of 4-season leaves in centre -> wind scatters them ->
+     logo revealed with gold motes -> leaves vanish while the logo flies to place & all appears */
+  function runIntroReveal(){
+    var b=document.body;
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches){ b.classList.remove("seq"); b.classList.add("revealed"); return; }
+    var R=function(a,c){ return a+Math.random()*(c-a); };
+    var W=window.innerWidth||1600, H=window.innerHeight||900;
+    var rs=document.createElement("div"); rs.className="reveal-stage"; rs.setAttribute("aria-hidden","true");
+    /* hero brand foliage — single cluster (no split, so it never shows a hard cut edge) */
+    var fol=document.createElement("img"); fol.className="foliage"; fol.src="assets/leaf-cluster.webp";
+    fol.alt=""; fol.setAttribute("aria-hidden","true"); fol.draggable=false;
+    /* subtle muted green-gold falling leaves, brought in as the foliage glides out */
+    var FGOLD=["#8a945e","#9a8f56","#73855a","#a99a5e"];
+    function fleafSVG(c){ return '<svg viewBox="0 0 24 34"><path d="M12 1.5 C 19.6 8 23 19 13.4 32.6 C 12.7 33.5 11.3 33.5 11 32.7 C 2.8 20 4.6 8 12 1.5 Z" fill="'+c+'"/><path d="M12 4 C 12.7 16 12.3 26 12 31.6" stroke="rgba(255,255,255,.3)" stroke-width=".8" fill="none"/></svg>'; }
+    var fleaves=[];
+    for(var f=0;f<11;f++){ var fl=document.createElement("div"); fl.className="fleaf"; fl.innerHTML=fleafSVG(FGOLD[f%4]);
+      fl.style.setProperty("--fx",R(6,94).toFixed(1)+"vw");
+      fl.style.setProperty("--fw",R(16,30).toFixed(0)+"px");
+      fl.style.setProperty("--fdur",R(4.6,7.2).toFixed(2)+"s");
+      fl.style.setProperty("--fdl",R(0,1.5).toFixed(2)+"s");
+      fl.style.setProperty("--fdx",R(-6,8).toFixed(1)+"vw");
+      fl.style.setProperty("--frz",R(120,360).toFixed(0)+"deg");
+      fl.style.setProperty("--fo",R(.2,.38).toFixed(2));
+      fleaves.push(fl); }
+    var pl=document.createElement("div"); pl.className="reveal-particles";
+    for(var j=0;j<20;j++){
+      var m=document.createElement("div"); m.className="mote";
+      var ma=R(0,6.2832), mr=R(18,130);
+      m.style.setProperty("--mx",(Math.cos(ma)*mr).toFixed(0)+"px");
+      m.style.setProperty("--my",(Math.sin(ma)*mr*.8).toFixed(0)+"px");
+      m.style.setProperty("--mx2",(Math.cos(ma)*R(170,360)).toFixed(0)+"px");
+      m.style.setProperty("--my2",(Math.sin(ma)*R(170,360)-R(90,210)).toFixed(0)+"px");
+      m.style.setProperty("--ms",R(3,7).toFixed(0)+"px");
+      m.style.setProperty("--mdur",R(2.0,3.0).toFixed(2)+"s");
+      m.style.setProperty("--mdl",R(0,.6).toFixed(2)+"s");
+      pl.appendChild(m);
+    }
+    /* reveal logo = the REAL logo split into [pyramid+EMBASSY] and [ONE] (exact geometry → seamless) */
+    var rl=document.createElement("div"); rl.className="reveal-logo";
+    var srcLogo=document.querySelector(".intro-cluster .eo-logo");
+    function isOne(el){ var s=el.getAttribute("d")||el.getAttribute("points")||"";
+      return /^\s*M?420\.47/.test(s)||/^\s*556\.79 368\.38/.test(s)||/^\s*600\.16 369\.55/.test(s); }
+    if(srcLogo){
+      var restSvg=srcLogo.cloneNode(true), oneSvg=srcLogo.cloneNode(true);
+      restSvg.setAttribute("class","lg-rest-svg"); oneSvg.setAttribute("class","lg-one-svg");
+      restSvg.removeAttribute("aria-label"); oneSvg.removeAttribute("aria-label");
+      restSvg.innerHTML=restSvg.innerHTML.replace(/eoGold/g,"eoGoldA");
+      oneSvg.innerHTML=oneSvg.innerHTML.replace(/eoGold/g,"eoGoldB");
+      Array.prototype.forEach.call(restSvg.querySelectorAll("polygon,path"),function(el){ if(isOne(el)) el.parentNode.removeChild(el); });
+      Array.prototype.forEach.call(oneSvg.querySelectorAll("polygon,path"),function(el){ if(!isOne(el)) el.parentNode.removeChild(el); });
+      rl.appendChild(restSvg); rl.appendChild(oneSvg);
+    }
+    var ff=document.createElement("div"); ff.className="foliage-fade"; ff.setAttribute("aria-hidden","true");
+    var fft=document.createElement("div"); fft.className="foliage-fade-top"; fft.setAttribute("aria-hidden","true");
+    rs.appendChild(fol);
+    fleaves.forEach(function(fl){ rs.appendChild(fl); });
+    rs.appendChild(ff); rs.appendChild(fft); rs.appendChild(rl); rs.appendChild(pl); intro.appendChild(rs);
+
+    function setSettleTarget(){ /* fly the reveal-logo to where the cluster logo sits (layout exists even at opacity 0) */
+      var src=document.querySelector(".intro-cluster .eo-logo-wrap"); if(!src) return;
+      var tr=src.getBoundingClientRect(), rr=rl.getBoundingClientRect(); if(!rr.width||!tr.width) return;
+      rl.style.setProperty("--sx",((tr.left+tr.width/2)-window.innerWidth/2).toFixed(1)+"px");
+      rl.style.setProperty("--sy",((tr.top+tr.height/2)-window.innerHeight/2).toFixed(1)+"px");
+      rl.style.setProperty("--ss",(tr.width/rr.width).toFixed(3));
+    }
+    var steps=[[40,"rv"],[3000,"rv-drop"],[4000,"rv-show"],[4250,"rv-part"],[6600,"revealed"],[6650,"rv-settle"]];
+    steps.forEach(function(s){ setTimeout(function(){ if(s[1]==="rv-settle") setSettleTarget(); b.classList.add(s[1]); }, s[0]); });
+  }
+
+  if(skip){ document.body.classList.remove("seq"); intro.remove(); document.body.classList.add("home-in"); entered=true; }
+  else {
+    /* the scene + logo cluster simply fade in (the old leaf-pile reveal animation was removed) */
+    document.body.classList.add("revealed");   /* steady-state: reveal the cluster (no leaf sequence anymore) */
+    var coin=document.getElementById("oneCoin");
+    coin.classList.add("hint");   /* idle "swipe me right" nudge until the user grabs it */
+    var track=intro.querySelector(".coins"), ghost=intro.querySelector(".coin-ghost"), chev=intro.querySelector(".chev");
+    var dragging=false, sx=0, cx=0, x=0, max=0, moved=false;
+    function calcMax(){ max=Math.max(40, track.clientWidth - coin.clientWidth); }
+    function setX(v){ x=Math.max(0,Math.min(max,v)); coin.style.transform="translateX("+x+"px)"; var pr=max?x/max:0; if(ghost) ghost.style.opacity=(0.4+0.5*pr).toFixed(2); if(chev) chev.style.opacity=(1-0.9*pr).toFixed(2); }
+    function snapBack(){ coin.style.transition="transform .5s var(--ease-expo)"; setX(0); if(ghost) ghost.style.opacity=.4; if(chev) chev.style.opacity=1; }
+    /* released near the end: glide the last stretch slowly to the end (~1s, decelerating), lock, then switch */
+    function complete(){ coin.style.transition="transform 1s cubic-bezier(.3,.85,.3,1)"; calcMax(); setX(max);
+      if(chev) chev.style.opacity=0;
+      setTimeout(function(){ coin.classList.add("arrived"); }, 1000);   /* lock at the end */
+      setTimeout(enterHome, 1350); }                                    /* then switch */
+    function autoGlide(){ coin.style.transition="transform 1.05s cubic-bezier(.3,.85,.3,1)"; calcMax(); setX(max);
+      if(chev) chev.style.opacity=0;
+      setTimeout(function(){ coin.classList.add("arrived"); }, 1050);
+      setTimeout(enterHome, 1420); }
+    coin.addEventListener("pointerdown", function(e){ coin.classList.remove("hint"); calcMax(); dragging=true; moved=false; sx=e.clientX; cx=x; coin.classList.add("drag"); try{coin.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); });
+    window.addEventListener("pointermove", function(e){ if(!dragging) return; if(Math.abs(e.clientX-sx)>4) moved=true; coin.style.transition="none"; setX(cx+(e.clientX-sx)); });
+    window.addEventListener("pointerup", function(){ if(!dragging) return; dragging=false; coin.classList.remove("drag");
+      if(!moved){ autoGlide(); return; }
+      if(max && x>max*0.8){ complete(); } else { snapBack(); } });
+    coin.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "||e.key==="ArrowRight"){ e.preventDefault(); coin.classList.remove("hint"); autoGlide(); } });
+  }
+
+  var shell=document.getElementById("shell"), shT=document.getElementById("shTitle"), shE=document.getElementById("shEyebrow"), shN=document.getElementById("shNote");
+  /* built inner screens load as an iframe overlay; others fall back to the ScreenShell placeholder */
+  var BUILT={
+    place:"screens/place-location.html",
+    grounds:"screens/masterplan.html",
+    tower:"screens/tower.html",
+    residences:"screens/floorplans.html",
+    service:"screens/service.html",
+    overview:"screens/overview.html",
+    gallery:"screens/gallery.html",
+    amenities:"screens/amenities.html",
+    lanterns:"screens/lanterns.html"
+  };
+  var sOv=document.getElementById("screenOverlay"), sFr=document.getElementById("screenFrame");
+  function openBuilt(key){ sFr.src=BUILT[key]; sOv.classList.add("show"); sOv.setAttribute("aria-hidden","false"); try{localStorage.setItem("eo.last",key);}catch(e){} }
+  function closeBuilt(){ sOv.classList.remove("show"); sOv.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!sOv.classList.contains("show")) sFr.src="about:blank"; },650); }
+  window.addEventListener("message", function(e){ if(e&&e.data==="eo-screen-close") closeBuilt(); });
+  function openScreen(key){ if(BUILT[key]){ openBuilt(key); return; } var s=SCREENS[key]; if(!s) return;
+    shT.textContent=s.t; shE.textContent=s.e; shN.textContent=s.n;
+    shell.classList.add("show"); requestAnimationFrame(function(){ requestAnimationFrame(function(){ shell.classList.add("vis"); }); });
+    try{ localStorage.setItem("eo.last",key); }catch(e){} }
+  function closeScreen(){ shell.classList.remove("vis"); setTimeout(function(){ shell.classList.remove("show"); },620); }
+  document.querySelectorAll(".card").forEach(function(b){
+    b.addEventListener("click", function(){
+      if(b.classList.contains("flare")) return;
+      b.classList.add("flare");
+      setTimeout(function(){ openScreen(b.dataset.screen); }, 560);
+      setTimeout(function(){ b.classList.remove("flare"); }, 1300);
+    });
+  });
+  document.querySelectorAll(".minibtn,.lantern-btn").forEach(function(b){
+    b.addEventListener("click", function(){ openScreen(b.dataset.screen); });
+  });
+  document.getElementById("shBack").addEventListener("click", closeScreen);
+  /* the corner Embassy logo returns to the intro (point 1) */
+  (function(){ var cl=document.querySelector(".corner-logo"); if(cl) cl.addEventListener("click", function(){ location.href = location.pathname; }); })();
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && shell.classList.contains("show")) closeScreen(); });
+  // deep-link: ?open=grounds opens that screen directly (dev / kiosk shortcut)
+  (function(){ try{ var k=new URLSearchParams(location.search).get("open"); if(k && BUILT[k]) setTimeout(function(){ openScreen(k); }, 300); }catch(e){} })();
+
+  /* ---------- fireflies: wander, blink, occasionally rest on a card 3-4s ---------- */
+  (function fireflies(){
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var N=7, flies=[], W=innerWidth, H=innerHeight;
+    function R(a,b){ return a+Math.random()*(b-a); }
+    addEventListener("resize", function(){ W=innerWidth; H=innerHeight; }, {passive:true});
+    function cards(){ return [].slice.call(document.querySelectorAll(".card")); }
+    for(var i=0;i<N;i++){
+      var el=document.createElement("div"); el.className="firefly";
+      el.innerHTML='<span class="ff-glow"></span>';
+      el.style.setProperty("--s", R(9,16).toFixed(1)+"px");
+      el.style.setProperty("--fl", R(2.4,4.4).toFixed(2)+"s");
+      el.style.setProperty("--fd", (-R(0,4)).toFixed(2)+"s");
+      document.body.appendChild(el);
+      flies.push({el:el,x:R(0,W),y:R(0,H),tx:R(0,W),ty:R(0,H),v:R(.008,.016),ph:R(0,6.28),state:"fly",until:0,cool:0,onCard:false});
+    }
+    function retarget(f,now){
+      var cs=cards();
+      if(cs.length && now>f.cool && Math.random()<0.42){
+        var r=cs[Math.floor(Math.random()*cs.length)].getBoundingClientRect();
+        f.tx=r.left+R(r.width*0.25,r.width*0.75); f.ty=r.top+R(-4,r.height*0.18); f.onCard=true;
+      } else { f.tx=R(W*0.06,W*0.94); f.ty=R(H*0.08,H*0.82); f.onCard=false; }
+    }
+    flies.forEach(function(f){ retarget(f,0); });
+    function loop(now){
+      for(var i=0;i<flies.length;i++){ var f=flies[i];
+        if(f.state==="rest"){ if(now>=f.until){ f.state="fly"; f.cool=now+4000; retarget(f,now); } }
+        else if(f.state==="hover"){
+          f.x+=Math.sin(now*0.002+f.ph)*0.65; f.y+=Math.cos(now*0.0023+f.ph)*0.65;
+          if(now>=f.until){ f.state="fly"; retarget(f,now); } }
+        else { var dx=f.tx-f.x, dy=f.ty-f.y, d=Math.sqrt(dx*dx+dy*dy);
+          f.x+=dx*f.v; f.y+=dy*f.v;
+          f.x+=Math.sin(now*0.0011+f.ph)*0.6 + Math.sin(now*0.0027+f.ph*2)*0.32;
+          f.y+=Math.cos(now*0.0014+f.ph)*0.6 + Math.cos(now*0.0031+f.ph*2)*0.32;
+          if(d<8){ if(f.onCard){ f.state="rest"; f.until=now+R(3000,4000); }
+            else if(Math.random()<0.5){ f.state="hover"; f.until=now+R(500,1700); }
+            else { retarget(f,now); } } }
+        f.el.style.transform="translate3d("+f.x.toFixed(1)+"px,"+f.y.toFixed(1)+"px,0)";
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  /* tower window-lights: sparse warm glints over the facade, flickering on/off */
+  (function towerLights(){
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var c=document.getElementById("towerLights"); if(!c) return;
+    function R(a,b){ return a+Math.random()*(b-a); }
+    var cols=[14,40,66,86];
+    for(var r=8;r<92;r+=5.5){
+      cols.forEach(function(cx){
+        if(Math.random()<0.4){
+          var w=document.createElement("span"); w.className="win";
+          w.style.left=(cx+R(-3,3)).toFixed(1)+"%"; w.style.top=(r+R(-1,1)).toFixed(1)+"%";
+          w.style.setProperty("--o", R(.38,.78).toFixed(2));
+          w.style.setProperty("--wd", R(4,9).toFixed(1)+"s");
+          w.style.setProperty("--wdl", (-R(0,8)).toFixed(1)+"s");
+          c.appendChild(w);
+        }
+      });
+    }
+  })();
+
+  /* seasonal blossom petals: sparse pink (Tabebuia) + a few gold (Cassia), drifting */
+  (function petals(){
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var c=document.getElementById("petals"); if(!c) return;
+    function R(a,b){ return a+Math.random()*(b-a); }
+    function svg(col){
+      return '<svg viewBox="0 0 20 28"><path d="M10 0 C 17 8 17 20 10 28 C 3 20 3 8 10 0 Z" fill="'+col+'"/>'+
+             '<path d="M10 4 L10 24" stroke="rgba(255,255,255,.4)" stroke-width="1" fill="none"/></svg>';
+    }
+    // four muted seasons of the Five Lanterns: winter rose (Tabebuia) / spring ivory
+    // (Alstonia) / summer gold (Cassia) / autumn terracotta (Erythrina, scarlet pulled down).
+    // Pool is weighted toward the soft parchment tones; terracotta is rarest so it stays quiet.
+    var SEASONS=["#dca7b4","#e3b3be","#efe6d2","#f1ead9","#e6cf8f","#ddc382","#d49678","#cf8e6e","#efe6d2","#e6cf8f","#dca7b4"], N=18;
+    for(var i=0;i<N;i++){
+      var col = SEASONS[Math.floor(Math.random()*SEASONS.length)];
+      var dur=R(9,19), pe=document.createElement("div"); pe.className="petal";
+      pe.style.setProperty("--x", R(0,100).toFixed(1)+"vw");
+      pe.style.setProperty("--dur", dur.toFixed(1)+"s");
+      pe.style.setProperty("--delay", (-R(0,dur)).toFixed(1)+"s");
+      pe.style.setProperty("--drift", R(3,13).toFixed(1)+"vw");
+      pe.style.setProperty("--sway", R(1,3.5).toFixed(1)+"vw");
+      pe.style.setProperty("--swd", R(3,6).toFixed(1)+"s");
+      pe.style.setProperty("--tud", R(4,9).toFixed(1)+"s");
+      pe.style.setProperty("--size", R(11,22).toFixed(0)+"px");
+      pe.style.setProperty("--op", R(.5,.82).toFixed(2));
+      pe.style.setProperty("--bl", R(0,0.8).toFixed(2)+"px");
+      pe.innerHTML='<span class="sway"><span class="tum">'+svg(col)+'</span></span>';
+      c.appendChild(pe);
+    }
+  })();
+
+  /* tower lines: random shine timing per line (feathered glow travels each line) */
+  (function towerLineShine(){
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var sh=document.querySelectorAll("#towerLines .tl-shine .ln");
+    var base=document.querySelectorAll("#towerLines .ln");
+    base.forEach(function(el){ el.setAttribute("pathLength","100"); });
+    sh.forEach(function(el){
+      el.style.setProperty("--sd",(3.4+Math.random()*4.6).toFixed(2)+"s");
+      el.style.setProperty("--sdl",(-Math.random()*7).toFixed(2)+"s");
+    });
+  })();
+
+  window.__recording=false; window.__seek=function(){}; window.__ready=true;
+})();
+</script>
+  <script src="assets/leaf.js"></script>
+  <script src="./assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

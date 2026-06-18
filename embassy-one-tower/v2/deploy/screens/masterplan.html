@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>The Grounds · Master Plan</title>
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE GROUNDS — MASTER PLAN EXPLORER
+  ──────────────────────────────────────────────────────────────────────
+  A plan-switcher explorer (modelled on the Embassy Citadel pattern):
+   · View switcher swaps the base drawing (Master / Zoning / Planting /
+     Trees) and its own calibrated legend + pins.
+   · Master view carries the 25 numbered features from the CD master plan
+     legend, pinned onto the real drawing; the legend is a navigable list
+     (click an item → fly-to + spotlight that pin).
+   · Pan (drag), zoom (wheel cursor-anchored / pinch / ± / double-click
+     reset). Plans sourced from the FOUR SEASONS Landscape CD.
+   · "Illustrated" view loads the vector explorer (retained) in an iframe.
+  Plan drawings: assets/masterplan/views/*.webp
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parch:#f1e9d8; --paper:#fbf8f1; --ink:#2b2a26; --muted:#6e685b; --faint:#9a917f;
+    --gold:#b8924e; --gold-d:#8a6e45; --gold-l:#c89b61; --line:#d8ccb4;
+    --exo:cubic-bezier(0.23,1,0.32,1);          /* strong ease-out (design-eng) */
+    --eio:cubic-bezier(0.77,0,0.175,1);          /* strong ease-in-out */
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; overflow:hidden; position:fixed; inset:0;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:none}
+  img,svg{-webkit-user-drag:none}
+  .bg{position:fixed; inset:0; z-index:0; background:#efe7d6 url("../assets/bg-inner.webp") center/cover no-repeat}
+
+  /* ── TOP BAR ─────────────────────────────────────────── */
+  .top{position:fixed; top:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:1fr auto 1fr;
+    align-items:center; padding:clamp(14px,2vh,26px) clamp(20px,3vw,52px) 0; gap:12px; pointer-events:none}
+  .top>*{pointer-events:auto}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:linear-gradient(180deg,#fdfaf3,#f2e8d4); border:1px solid #b8924e; color:#8a6e45; font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.32em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.6), 0 8px 18px -8px rgba(40,28,10,.28), 0 0 10px rgba(233,199,135,.55);
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:hover{ background:linear-gradient(180deg,#ffffff,#f6eeda); border-color:#c89b61;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.72), 0 10px 22px -8px rgba(40,28,10,.32), 0 0 14px rgba(233,199,135,.72); }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px; stroke:#8a6e45}
+  .eyebrow{justify-self:center; font-size:clamp(9px,1.2vh,13px); letter-spacing:.42em; text-transform:uppercase; color:var(--gold-d); white-space:nowrap}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--faint)}
+
+  /* ── STAGE (pan/zoom plan) ───────────────────────────── */
+  .stage{position:fixed; inset:0; z-index:5; overflow:hidden; cursor:grab; isolation:isolate}
+  .stage.grabbing{cursor:grabbing}
+  .canvas{position:absolute; inset:0; transform-origin:0 0; will-change:transform}
+  .planwrap{position:absolute; right:0.5%; top:50%; transform:translateY(-50%);
+    width:min(80vw,1680px); aspect-ratio:4961/3507; max-height:97vh;
+    filter:drop-shadow(0 18px 40px rgba(40,28,12,.10))}
+  .planimg{position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
+    transition:opacity .42s var(--exo), filter .42s var(--exo)}
+  .planimg.swapping{opacity:0; filter:blur(6px)}
+
+  /* numbered pins (master view) */
+  .pin{position:absolute; transform:translate(-50%,-50%); z-index:3; cursor:pointer;
+    width:clamp(20px,2.0vw,30px); height:clamp(20px,2.0vw,30px);
+    display:flex; align-items:center; justify-content:center; border-radius:50%;
+    background:rgba(251,248,241,.92); border:1.5px solid var(--gold);
+    color:var(--gold-d); font-size:clamp(9px,1.1vw,13px); font-weight:500; font-family:"Jost";
+    box-shadow:0 3px 9px -2px rgba(40,28,10,.4); transition:transform .18s var(--exo), background .2s, color .2s, border-color .2s}
+  @media (hover:hover){ .pin:hover{transform:translate(-50%,-50%) scale(1.18); background:var(--gold); color:#fff} }
+  .pin:active{transform:translate(-50%,-50%) scale(1.05)}
+  .pin.is-active{background:var(--gold); color:#fff; border-color:var(--gold-l)}
+  .pin.is-lantern{border-color:var(--gold-d); background:var(--gold-d); color:#fff}
+  .pin.dim{opacity:.32}
+  .pin .ring{position:absolute; inset:-7px; border-radius:50%; border:1.5px solid var(--gold); opacity:0; pointer-events:none}
+  .pin.is-active .ring{animation:ping 1.6s var(--exo) infinite}
+  @keyframes ping{0%{transform:scale(.7);opacity:.7}70%{transform:scale(1.7);opacity:0}100%{opacity:0}}
+
+  /* ── LEFT RAIL ───────────────────────────────────────── */
+  .rail{position:fixed; top:0; left:0; bottom:0; z-index:30; width:clamp(290px,24vw,372px);
+    display:flex; flex-direction:column; padding:clamp(64px,9vh,96px) clamp(16px,1.4vw,26px) clamp(16px,2vh,26px) clamp(20px,3vw,52px);
+    pointer-events:none}
+  .rail>*{pointer-events:auto}
+  .rail-head{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(26px,3.4vh,40px); line-height:1; color:#26241e}
+  .rail-head em{font-style:italic; color:var(--gold-d)}
+  .rail-sub{font-weight:300; color:var(--muted); font-size:clamp(11px,1.35vh,14px); line-height:1.55; margin:10px 0 16px; max-width:34ch}
+
+  /* view switcher */
+  .views{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px}
+  .vbtn{appearance:none; border:1px solid var(--line); background:rgba(255,253,247,.7); cursor:pointer;
+    color:var(--muted); font-family:"Jost"; font-size:clamp(9px,1.1vh,12px); letter-spacing:.14em; text-transform:uppercase;
+    padding:8px 13px; border-radius:999px; transition:background .2s var(--exo), color .2s, border-color .2s, transform .14s var(--exo)}
+  .vbtn:hover{border-color:var(--gold-l); color:var(--gold-d)} .vbtn:active{transform:scale(.96)}
+  .vbtn.is-active{background:var(--gold-d); color:#fbf6ec; border-color:var(--gold-d)}
+
+  /* facts */
+  .facts{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:14px}
+  .fact{background:rgba(255,253,247,.6); border:1px solid var(--line); border-radius:11px; padding:10px 12px}
+  .fact .n{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(17px,2.3vh,25px); color:var(--gold-d); line-height:1; font-variant-numeric:tabular-nums}
+  .fact .l{font-size:clamp(8px,1vh,10.5px); letter-spacing:.12em; text-transform:uppercase; color:var(--faint); margin-top:4px}
+
+  /* legend list */
+  .legend{flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+    background:rgba(255,253,247,.66); border:1px solid var(--line); border-radius:13px; overflow:hidden;
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+  .legend-h{flex:0 0 auto; padding:11px 15px; font-size:clamp(9px,1.1vh,12px); letter-spacing:.22em; text-transform:uppercase;
+    color:var(--gold-d); border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .legend-h .ct{color:var(--faint); letter-spacing:.1em}
+  .legend-body{flex:1 1 auto; overflow-y:auto; padding:6px}
+  .legend-body::-webkit-scrollbar{width:7px} .legend-body::-webkit-scrollbar-thumb{background:var(--line); border-radius:7px}
+  .lg-group-h{font-size:clamp(8.5px,1vh,11px); letter-spacing:.18em; text-transform:uppercase; color:var(--faint);
+    padding:11px 9px 5px}
+  .lg-item{display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:9px; cursor:pointer;
+    transition:background .16s var(--exo)}
+  .lg-item:hover{background:rgba(184,146,78,.10)}
+  .lg-item.is-active{background:rgba(184,146,78,.18)}
+  .lg-item .num{flex:0 0 auto; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:500; color:var(--gold-d); border:1.5px solid var(--gold); background:rgba(251,248,241,.9)}
+  .lg-item.lantern .num{background:var(--gold-d); color:#fff; border-color:var(--gold-d)}
+  .lg-item .sw{flex:0 0 auto; width:16px; height:16px; border-radius:5px; border:1px solid rgba(0,0,0,.1)}
+  .lg-item .t{flex:1 1 auto; font-size:clamp(11px,1.35vh,14px); color:var(--ink); line-height:1.25}
+  .lg-item .t small{display:block; font-size:clamp(8.5px,1vh,10.5px); color:var(--faint); letter-spacing:.02em; margin-top:1px}
+  .lg-item .go{flex:0 0 auto; color:var(--gold); opacity:0; transition:opacity .16s, transform .16s var(--exo)}
+  .lg-item:hover .go{opacity:1; transform:translateX(2px)}
+
+  /* zoom controls */
+  .zoomctl{position:fixed; right:clamp(16px,1.6vw,28px); bottom:clamp(16px,2.4vh,30px); z-index:31; display:flex; flex-direction:column; gap:8px}
+  .zbtn{width:42px; height:42px; border-radius:12px; border:1px solid var(--line); background:rgba(255,253,247,.86);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); cursor:pointer; color:var(--gold-d);
+    display:flex; align-items:center; justify-content:center; transition:background .2s, transform .14s var(--exo), border-color .2s}
+  .zbtn:hover{border-color:var(--gold-l); background:#fff} .zbtn:active{transform:scale(.94)}
+  .zbtn svg{width:18px;height:18px}
+
+  /* info card */
+  .info{position:fixed; right:clamp(16px,1.6vw,28px); bottom:clamp(72px,11vh,108px); z-index:33;
+    width:clamp(244px,21vw,320px); background:rgba(251,248,241,.97); border:1px solid var(--line); border-radius:15px;
+    padding:16px 17px; box-shadow:0 16px 40px -12px rgba(40,28,10,.34); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+    opacity:0; transform:translateY(10px) scale(.97); transform-origin:bottom right; pointer-events:none;
+    transition:opacity .26s var(--exo), transform .26s var(--exo)}
+  .info.on{opacity:1; transform:translateY(0) scale(1); pointer-events:auto}
+  .info .ic{display:flex; align-items:center; gap:9px; margin-bottom:8px}
+  .info .ic .b{width:26px;height:26px;border-radius:50%;background:var(--gold-d);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500}
+  .info .ic .cat{font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--gold-d)}
+  .info h3{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(19px,2.5vh,26px); color:#26241e; line-height:1.05}
+  .info p{font-weight:300; color:var(--muted); font-size:clamp(11px,1.3vh,13.5px); line-height:1.55; margin-top:6px}
+  .info .x{position:absolute; top:11px; right:12px; width:24px;height:24px;border:none;background:transparent;color:var(--faint);cursor:pointer;font-size:17px}
+  .info .x:hover{color:var(--ink)}
+
+  /* illustrated (iframe) view */
+  .illus{position:fixed; inset:0; z-index:20; border:0; width:100%; height:100%; opacity:0; visibility:hidden; transition:opacity .4s var(--exo), visibility .4s}
+  .illus.on{opacity:1; visibility:visible}
+
+  .scalehint{position:fixed; left:clamp(16px,1.4vw,26px); bottom:clamp(16px,2.4vh,30px); z-index:31;
+    font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); font-variant-numeric:tabular-nums}
+  @media (max-width:1024px){ .rail{width:clamp(220px,40vw,300px)} .planwrap{width:min(64vw,980px); right:1%} }
+</style>
+</head>
+<body data-kd-brand="ros">
+<div class="bg"></div>
+
+<div class="top">
+  <button class="back" id="backBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Return</button>
+  <div class="eyebrow">The Grounds · Master Plan</div>
+  <div class="corner">Embassy One</div>
+</div>
+
+<!-- pan/zoom stage -->
+<div class="stage" id="stage">
+  <div class="canvas" id="canvas">
+    <div class="planwrap" id="planwrap">
+      <img class="planimg" id="planimg" src="../assets/masterplan/views/master-fs.webp" alt="Master plan">
+      <div id="pinLayer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- illustrated explorer (retained) -->
+<iframe class="illus" id="illus" title="Illustrated master plan"></iframe>
+
+<!-- right rail -->
+<aside class="rail">
+  <div class="rail-head"><em>The</em> Grounds</div>
+  <div class="rail-sub">Four gardens for four seasons, gathered around one living garden — explore the plan, zone by zone.</div>
+  <div class="views" id="views"></div>
+  <div class="facts" id="facts"></div>
+  <div class="legend">
+    <div class="legend-h"><span id="legendTitle">What's Where</span><span class="ct" id="legendCt"></span></div>
+    <div class="legend-body" id="legendBody"></div>
+  </div>
+</aside>
+
+<div class="zoomctl">
+  <button class="zbtn" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="zbtn" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+  <button class="zbtn" id="zreset" aria-label="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/></svg></button>
+</div>
+<div class="scalehint" id="scaleHint">100%</div>
+
+<div class="info" id="info">
+  <button class="x" id="infoX">×</button>
+  <div class="ic"><span class="b" id="infoNum">1</span><span class="cat" id="infoCat">Feature</span></div>
+  <h3 id="infoTitle">Title</h3>
+  <p id="infoBody">Description</p>
+</div>
+
+<script>
+// ── data: facts ────────────────────────────────────────
+const FACTS=[
+  {n:'5',label:'Seasonal Lanterns'}, {n:'25',label:'Named Features'},
+  {n:'262m',label:'Jogging Loop'}, {n:'9',label:'Landscape Zones'}
+];
+// ── master plan: 25 numbered features (px,py = % of master.webp) ──
+const GROUPS=[['Lanterns'],['Arrival'],['Sport & Play'],['Gardens & Lawn'],['Pool & Wellness'],['Banquet']];
+const MASTER=[
+  {n:1, g:'Lanterns', lantern:1, t:'Twin Lantern', d:'Paired woven-mesh towers marking the entrance arrival.', px:82, py:80},
+  {n:3, g:'Lanterns', lantern:1, t:'Winter Lantern', d:'Terracotta brick-jali planter at the main drop-off.', px:59, py:87},
+  {n:10,g:'Lanterns', lantern:1, t:'Summer Lantern', d:'Frosted glass-block pavilion on the rain terrace.', px:37, py:34},
+  {n:14,g:'Lanterns', lantern:1, t:'Center Lantern', d:'The milky frosted “All Seasons” glass cube at the cascade edge.', px:52, py:41},
+  {n:20,g:'Lanterns', lantern:1, t:'Spring Lantern · Miyawaki Forest', d:'Woven-mesh lantern with a feature tree, in a mini forest.', px:64, py:35},
+  {n:22,g:'Lanterns', lantern:1, t:'Autumn Lantern', d:'Corten-and-wire bridge cabana with a lunar lamp.', px:72, py:49},
+  {n:2, g:'Arrival', t:'Drop-off', d:'The sheltered arrival court.', px:55, py:78},
+  {n:4, g:'Sport & Play', t:"Pet's Park", d:'A fenced run for residents’ pets.', px:30, py:85},
+  {n:5, g:'Sport & Play', t:'Linear Playground', d:'A linear play trail for children.', px:27, py:68},
+  {n:6, g:'Sport & Play', t:'Yoga Deck', d:'A 4.7 × 4.7 m timber practice deck.', px:26, py:51},
+  {n:7, g:'Sport & Play', t:'Half Muga / Pickleball Court', d:'A multi-use sport court.', px:25, py:28},
+  {n:9, g:'Sport & Play', t:'Padel Court', d:'A glazed padel court (20.1 × 9.8 m).', px:28, py:15},
+  {n:8, g:'Gardens & Lawn', t:'Orchard Garden', d:'A fruiting-tree garden.', px:16, py:30},
+  {n:12,g:'Gardens & Lawn', t:'Open Lawn', d:'A flexible event lawn.', px:42, py:24},
+  {n:13,g:'Gardens & Lawn', t:'Seating Area', d:'Shaded garden seating.', px:47, py:18},
+  {n:21,g:'Gardens & Lawn', t:'Grand Trellis', d:'A 14.5 × 7.8 m planted trellis walk.', px:74, py:42},
+  {n:11,g:'Pool & Wellness', t:'Rain Terrace', d:'A water-play terrace (21.3 × 9.8 m).', px:45, py:32},
+  {n:15,g:'Pool & Wellness', t:'Swimming Pool', d:'A 25 × 9 m lap pool.', px:53, py:47},
+  {n:16,g:'Pool & Wellness', t:'Children Pool Cabana', d:'Cabana by the children’s pool.', px:43, py:48},
+  {n:17,g:'Pool & Wellness', t:'Pool Deck Cabana', d:'A shaded pool-deck cabana.', px:35, py:54},
+  {n:18,g:'Pool & Wellness', t:'Jacuzzi Cabana', d:'A jacuzzi retreat.', px:64, py:48},
+  {n:19,g:'Pool & Wellness', t:'Pool Deck', d:'The sun-deck along the pool.', px:53, py:54},
+  {n:23,g:'Banquet', t:'Banquet Garden', d:'A garden for events.', px:80, py:48},
+  {n:24,g:'Banquet', t:'Banquet Cabana', d:'A banquet-side cabana.', px:85, py:60},
+  {n:25,g:'Banquet', t:'Banquet Spill-out Deck', d:'An outdoor banquet deck.', px:79, py:66},
+];
+// ── zone legend (zoning view) ──
+const ZONES=[
+  {c:'#c98b6b', t:'Drop-off & Access', d:'The sheltered arrival court and porte-cochère — the first address moment, framed by the twin and winter lanterns.'},
+  {c:'#b8915a', t:'Sports', d:'Padel and half-muga / pickleball courts, a linear playground and a yoga deck — the active heart of the grounds.'},
+  {c:'#a9b06a', t:'Lawn & Rain Terrace', d:'A flexible open event lawn beside the rain terrace water feature — the social green for gatherings.'},
+  {c:'#7fa18a', t:'Forest', d:'A dense Miyawaki micro-forest woven around the spring lantern — native layered planting for cool shade.'},
+  {c:'#8aa0b4', t:'Pool Area', d:'The 25 × 9 m lap pool, children’s pool, pool deck and cabanas — the wellness and leisure zone.'},
+  {c:'#caa36a', t:'Herbs Garden', d:'A productive herb and kitchen garden threading between the wellness lawns.'},
+  {c:'#d68f6a', t:'Bridge & Rear Entrance', d:'The corten-and-wire autumn bridge cabana marking the rear access and grand trellis walk.'},
+  {c:'#bcae8e', t:'Banquet Spill-out', d:'The banquet garden, cabana and outdoor spill-out deck for events at the building’s edge.'},
+  {c:'#cdbf9a', t:'Pet-Friendly', d:'A fenced pet run and pet-friendly lawn for residents and their companions.'}
+];
+const VIEWS=[
+  {key:'master',  label:'Master',   img:'../assets/masterplan/views/master-fs.webp',  mode:'pins',  title:"What's Where"},
+  {key:'zoning',  label:'Zones',    img:'../assets/masterplan/views/zoning.webp',  mode:'zones', title:'Zoning Plan'},
+  {key:'planting',label:'Planting', img:'../assets/masterplan/views/planting.webp',mode:'note',  title:'Softscape', note:'The planting plan layers seasonal flowering trees, shrubs and groundcover across the grounds — a garden that changes through the year.'},
+  {key:'trees',   label:'Trees',    img:'../assets/masterplan/views/trees.webp',   mode:'note',  title:'Existing Trees', note:'91 mature trees surveyed — 76 retained and woven into the design, anchoring the landscape in established greenery.'},
+  {key:'illus',   label:'Illustrated', mode:'illus', title:'Illustrated'}
+];
+
+// ── elements ──
+const stage=document.getElementById('stage'), canvas=document.getElementById('canvas');
+const planimg=document.getElementById('planimg'), pinLayer=document.getElementById('pinLayer');
+const illus=document.getElementById('illus');
+const legendBody=document.getElementById('legendBody'), legendTitle=document.getElementById('legendTitle'), legendCt=document.getElementById('legendCt');
+const info=document.getElementById('info'), scaleHint=document.getElementById('scaleHint');
+let activeView='master', activeId=null;
+
+// facts
+const factsEl=document.getElementById('facts');
+FACTS.forEach(f=>{ const d=document.createElement('div'); d.className='fact';
+  d.innerHTML='<div class="n">'+f.n+'</div><div class="l">'+f.label+'</div>'; factsEl.appendChild(d); });
+
+// view switcher
+const viewsEl=document.getElementById('views');
+VIEWS.forEach((v,i)=>{ const b=document.createElement('button'); b.className='vbtn'+(i===0?' is-active':'');
+  b.textContent=v.label; b.dataset.key=v.key; b.addEventListener('click',()=>setView(v.key)); viewsEl.appendChild(b); });
+
+// ── transform state (pan/zoom) ──
+let scale=1, tx=0, ty=0; const MIN=1, MAX=4.5;
+function apply(){ canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; scaleHint.textContent=Math.round(scale*100)+'%'; }
+function clampPan(){ const r=stage.getBoundingClientRect();
+  const maxX=(scale-1)*r.width*0.5+r.width*0.18, maxY=(scale-1)*r.height*0.5+r.height*0.18;
+  tx=Math.max(-maxX,Math.min(maxX,tx)); ty=Math.max(-maxY,Math.min(maxY,ty)); }
+function zoomAt(cx,cy,ns){ ns=Math.max(MIN,Math.min(MAX,ns)); const r=stage.getBoundingClientRect();
+  const ox=cx-r.left, oy=cy-r.top; tx=ox-(ox-tx)*(ns/scale); ty=oy-(oy-ty)*(ns/scale); scale=ns; clampPan(); apply(); }
+function reset(){ scale=1; tx=0; ty=0; apply(); }
+
+stage.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY, scale*(e.deltaY<0?1.12:1/1.12)); },{passive:false});
+document.getElementById('zin').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,scale+0.5);};
+document.getElementById('zout').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,scale-0.5);};
+document.getElementById('zreset').onclick=reset;
+stage.addEventListener('dblclick',e=>{ if(scale>1.05) reset(); else zoomAt(e.clientX,e.clientY,2.4); });
+let drag=false,lx=0,ly=0,moved=0,downPin=false;
+stage.addEventListener('pointerdown',e=>{ downPin=!!e.target.closest('.pin'); moved=0; if(downPin)return; drag=true;lx=e.clientX;ly=e.clientY;stage.classList.add('grabbing');stage.setPointerCapture(e.pointerId); });
+stage.addEventListener('pointermove',e=>{ if(!drag)return; const dx=e.clientX-lx,dy=e.clientY-ly; lx=e.clientX;ly=e.clientY; moved+=Math.abs(dx)+Math.abs(dy); tx+=dx;ty+=dy; clampPan(); apply(); });
+function endDrag(e){ drag=false; stage.classList.remove('grabbing'); try{stage.releasePointerCapture(e.pointerId);}catch(_){}
+  if(!downPin && moved<6){ if(scale>1.05) reset(); if(activeId) clearSel(); } }   // click on empty plan → zoom out + deselect
+stage.addEventListener('pointerup',endDrag); stage.addEventListener('pointercancel',endDrag);
+let pts=new Map(), pd0=0, ps0=1;
+stage.addEventListener('pointerdown',e=>{ pts.set(e.pointerId,e); if(pts.size===2){drag=false; const a=[...pts.values()]; pd0=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY); ps0=scale;} });
+stage.addEventListener('pointermove',e=>{ if(!pts.has(e.pointerId))return; pts.set(e.pointerId,e); if(pts.size===2){ const a=[...pts.values()]; const d=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY); const cx=(a[0].clientX+a[1].clientX)/2, cy=(a[0].clientY+a[1].clientY)/2; if(pd0) zoomAt(cx,cy, ps0*(d/pd0)); } });
+function dropPt(e){ pts.delete(e.pointerId); if(pts.size<2)pd0=0; }
+stage.addEventListener('pointerup',dropPt); stage.addEventListener('pointercancel',dropPt);
+
+// ── fly-to a master pin ──
+function flyTo(m){ const ns=2.4;
+  scale=1; tx=0; ty=0; apply();
+  const pr=stage.getBoundingClientRect(), wr=document.getElementById('planwrap').getBoundingClientRect();
+  const pinX=wr.left-pr.left + wr.width*(m.px/100);
+  const pinY=wr.top-pr.top + wr.height*(m.py/100);
+  const railEl=document.querySelector('.rail');
+  const railWidth=railEl?railEl.getBoundingClientRect().width:0;
+  const cx=(pr.width + railWidth)/2;     // centre of the OPEN area, right of the left rail
+  tx=cx - pinX*ns; ty=pr.height/2 - pinY*ns; scale=ns; clampPan(); apply();
+}
+
+// ── render pins (master) ──
+function renderPins(){ pinLayer.innerHTML=''; if(activeView!=='master') return;
+  MASTER.forEach(m=>{ const p=document.createElement('div');
+    p.className='pin'+(m.lantern?' is-lantern':''); p.style.left=m.px+'%'; p.style.top=m.py+'%';
+    p.dataset.n=m.n; p.innerHTML=m.n+'<span class="ring"></span>';
+    p.addEventListener('click',ev=>{ ev.stopPropagation(); select(m); });
+    pinLayer.appendChild(p); });
+}
+// ── render legend ──
+function renderLegend(){ const v=VIEWS.find(x=>x.key===activeView);
+  legendTitle.textContent=v.title; legendBody.innerHTML='';
+  if(v.mode==='pins'){ legendCt.textContent=MASTER.length;
+    GROUPS.forEach(([g])=>{ const items=MASTER.filter(m=>m.g===g); if(!items.length)return;
+      const h=document.createElement('div'); h.className='lg-group-h'; h.textContent=g; legendBody.appendChild(h);
+      items.forEach(m=>{ const it=document.createElement('div'); it.className='lg-item'+(m.lantern?' lantern':''); it.dataset.n=m.n;
+        it.innerHTML='<span class="num">'+m.n+'</span><span class="t">'+m.t+'</span><span class="go">›</span>';
+        it.addEventListener('click',()=>select(m)); legendBody.appendChild(it); }); });
+  } else if(v.mode==='zones'){ legendCt.textContent=ZONES.length;
+    ZONES.forEach((z,zi)=>{ const it=document.createElement('div'); it.className='lg-item zone'; it.dataset.zone=zi;
+      it.innerHTML='<span class="sw" style="background:'+z.c+'"></span><span class="t">'+z.t+'</span><span class="go">›</span>';
+      it.addEventListener('click',()=>selectZone(z,zi)); legendBody.appendChild(it); });
+  } else if(v.mode==='note'){ legendCt.textContent='';
+    const d=document.createElement('div'); d.style.cssText='padding:14px 11px;font-weight:300;color:var(--muted);font-size:13px;line-height:1.6';
+    d.textContent=v.note; legendBody.appendChild(d);
+  } else legendCt.textContent='';
+}
+// ── select feature ──
+function select(m){ activeId=m.n;
+  pinLayer.querySelectorAll('.pin').forEach(p=>{ p.classList.toggle('is-active',+p.dataset.n===m.n); p.classList.toggle('dim',+p.dataset.n!==m.n); });
+  legendBody.querySelectorAll('.lg-item').forEach(it=>it.classList.toggle('is-active',+it.dataset.n===m.n));
+  const act=legendBody.querySelector('.lg-item.is-active'); if(act&&act.scrollIntoView)act.scrollIntoView({block:'nearest'});
+  document.getElementById('infoNum').textContent=m.n; document.getElementById('infoCat').textContent=m.lantern?'Lantern':m.g;
+  document.getElementById('infoTitle').textContent=m.t; document.getElementById('infoBody').textContent=m.d;
+  info.classList.add('on'); flyTo(m);
+}
+function clearSel(){ activeId=null; info.classList.remove('on'); document.getElementById('infoNum').style.background=''; pinLayer.querySelectorAll('.pin').forEach(p=>p.classList.remove('is-active','dim')); legendBody.querySelectorAll('.lg-item').forEach(it=>it.classList.remove('is-active')); }
+// ── select a ZONE (zoning view): highlight legend item + popup detail ──
+function selectZone(z,zi){ activeId='z'+zi;
+  legendBody.querySelectorAll('.lg-item').forEach(it=>it.classList.toggle('is-active',+it.dataset.zone===zi));
+  const numEl=document.getElementById('infoNum'); numEl.textContent=''; numEl.style.background=z.c;
+  document.getElementById('infoCat').textContent='Landscape Zone';
+  document.getElementById('infoTitle').textContent=z.t; document.getElementById('infoBody').textContent=z.d;
+  info.classList.add('on');
+}
+document.getElementById('infoX').onclick=clearSel;
+
+// ── view switch ──
+function setView(key){ if(key===activeView)return; activeView=key; clearSel(); reset();
+  viewsEl.querySelectorAll('.vbtn').forEach(b=>b.classList.toggle('is-active',b.dataset.key===key));
+  const v=VIEWS.find(x=>x.key===key);
+  if(v.mode==='illus'){ if(!illus.src) illus.src='masterplan-illustrated.html'; illus.classList.add('on'); stage.style.visibility='hidden'; }
+  else { illus.classList.remove('on'); stage.style.visibility='';
+    planimg.classList.add('swapping');
+    setTimeout(()=>{ planimg.onload=()=>{ planimg.classList.remove('swapping'); fitWrap(); }; planimg.src=v.img; },180); }
+  renderLegend(); renderPins();
+}
+
+// keep the plan wrapper matched to the current drawing's aspect so pins (% of wrapper) align exactly
+function fitWrap(){ if(planimg.naturalWidth) document.getElementById('planwrap').style.aspectRatio = planimg.naturalWidth+'/'+planimg.naturalHeight; }
+if(planimg.complete) fitWrap(); else planimg.onload=()=>{ planimg.classList.remove('swapping'); fitWrap(); };
+apply(); renderLegend(); renderPins();
+document.getElementById('backBtn').onclick=()=>{ try{ parent.postMessage('eo-screen-close','*'); }catch(e){ location.href='../index.html'; } };
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

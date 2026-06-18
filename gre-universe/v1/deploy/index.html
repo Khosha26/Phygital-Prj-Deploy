@@ -1,0 +1,2868 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+<title>GRE · the UNIVERSE</title>
+<meta name="theme-color" content="#0a0a0a"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="GRE"/>
+<meta name="application-name" content="GRE"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ============================================================
+   the UNIVERSE — Reception (walk-in kiosk)
+   Fully fluid: one responsive system, 360px phone → 2560px kiosk.
+   No fixed design canvas; clamp()-driven type + flex/grid layout.
+   ============================================================ */
+
+:root{
+  --black:#0a0a0a;
+  --soft:#141210;
+  --softer:#1c1814;
+  --gold:#c9a96e;
+  --gold-deep:#8b6c2c;
+  --gold-light:#e8cd87;
+  --cream:#f5f1e8;
+  --slate:#8a8278;
+  --line:rgba(201,169,110,0.22);
+  --line-strong:rgba(201,169,110,0.45);
+  --press:cubic-bezier(.22,1,.36,1);
+  /* Cinematic easing set — stronger than CSS built-ins.
+     out = responsive entrances; inOut = on-screen movement. */
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --ease-inout:cubic-bezier(.77,0,.175,1);
+
+  /* Fluid spacing scale — viewport-relative, clamped at both ends.
+     Phone floor keeps things compact; kiosk ceiling gives grandeur. */
+  --gap-xs:clamp(.5rem, 0.864vmin, 0.72rem);
+  --gap-sm:clamp(.75rem, 1.3vmin, 1.08rem);
+  --gap-md:clamp(1rem, 1.87vmin, 1.62rem);
+  --gap-lg:clamp(1.5rem, 2.88vmin, 2.52rem);
+  --gap-xl:clamp(2rem, 4.32vmin, 4.32rem);
+
+  /* Edge padding respects notches and grows on the kiosk. */
+  --edge-x:clamp(1rem, 2.52vw, 2.88rem);
+  --edge-top:clamp(.75rem, 1.73vmin, 2.16rem);
+  --edge-bottom:clamp(.75rem, 1.73vmin, 2.16rem);
+
+  /* Touch-target floor: never below 44px on phones,
+     comfortably large on the kiosk. */
+  --tap:clamp(44px, 5.4vmin, 86.4px);
+
+  --radius:clamp(14px, 1.44vmin, 20.2px);
+  --radius-sm:clamp(10px, 1.01vmin, 14.4px);
+
+  /* Comfortable content column. */
+  --measure:min(94vw, 2200px);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html{font-size:100%}
+html,body{
+  width:100%;min-height:100%;
+  background:var(--black);
+  font-family:'Cormorant Garamond',serif;color:var(--cream);
+  overflow-x:hidden;
+}
+body{min-height:100svh}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input{font-family:inherit;color:inherit;background:none;border:none;outline:none;-webkit-user-select:text;user-select:text}
+
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px;border-radius:6px}
+
+/* ---- Viewport: full-bleed responsive container ---- */
+.viewport{
+  position:relative;
+  width:100%;min-height:100svh;
+  display:flex;flex-direction:column;
+  background:var(--black);
+  overflow:hidden;
+}
+.stage{
+  position:relative;
+  flex:1 1 auto;
+  display:flex;flex-direction:column;
+  width:100%;min-height:100svh;
+  isolation:isolate;
+  overflow:hidden;
+}
+
+/* ---- Ambient starfield ---- */
+.starfield{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.starfield i{position:absolute;width:3px;height:3px;border-radius:50%;background:var(--gold-light);box-shadow:0 0 8px rgba(232,205,135,.5);opacity:.18;animation:twinkle 6s ease-in-out infinite;will-change:opacity,transform}
+@keyframes twinkle{0%,100%{opacity:.08}50%{opacity:.32}}
+
+/* Filmic base wash under everything — deepens corners, lifts center.
+   GPU-friendly: fixed gradient, no animation, no overflow. */
+.filmbase{position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% -10%, rgba(201,169,110,.05), transparent 55%),
+    radial-gradient(ellipse 130% 100% at 50% 115%, rgba(139,108,44,.09), transparent 60%),
+    linear-gradient(180deg, #0c0b09 0%, #0a0a0a 42%, #08070a 100%);
+}
+
+/* Soft radial vignette glow — viewport-relative so it never overflows.
+   Wrapped in a layer we can slowly drift via transform (GPU only). */
+.glow{position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 32%, rgba(201,169,110,.09), transparent 60%),
+    radial-gradient(ellipse 90% 65% at 50% 108%, rgba(139,108,44,.10), transparent 65%);
+}
+/* Ambient light drift — a single large soft bloom that breathes and
+   slowly slides, lending the kiosk a living title-sequence depth.
+   Pure transform/opacity, off the main thread. */
+.aura{position:absolute;left:50%;top:34%;width:min(120vmin,1600px);height:min(120vmin,1600px);
+  margin-left:calc(min(120vmin,1600px) / -2);margin-top:calc(min(120vmin,1600px) / -2);
+  pointer-events:none;z-index:0;border-radius:50%;
+  background:radial-gradient(circle, rgba(201,169,110,.10), rgba(201,169,110,.04) 38%, transparent 64%);
+  filter:blur(40px);
+  opacity:.85;
+  will-change:transform,opacity;
+  animation:auraDrift 26s ease-in-out infinite;
+}
+@keyframes auraDrift{
+  0%  {transform:translate3d(-3%,-2%,0) scale(1)   ;opacity:.72}
+  50% {transform:translate3d( 3%, 2%,0) scale(1.08);opacity:.95}
+  100%{transform:translate3d(-3%,-2%,0) scale(1)   ;opacity:.72}
+}
+
+/* Cinematic vignette — sits ABOVE content (z 30, pointer-none) to frame
+   the whole stage like a lens. Subtle; corners only. */
+.vignette{position:absolute;inset:0;pointer-events:none;z-index:30;
+  background:radial-gradient(ellipse 92% 86% at 50% 46%, transparent 60%, rgba(0,0,0,.34) 100%);
+  mix-blend-mode:multiply;
+}
+/* A barely-there film grain via tiled radial dots — masks banding in the
+   big gradients. Static, no cost beyond one paint. */
+.grain{position:absolute;inset:0;pointer-events:none;z-index:31;opacity:.025;
+  background-image:radial-gradient(rgba(245,241,232,.9) .5px, transparent .5px);
+  background-size:3px 3px;
+  mix-blend-mode:overlay;
+}
+
+/* ---- Top progress rail ---- */
+.rail{position:fixed;top:0;left:0;right:0;height:clamp(3px, 0.36vmin, 4.32px);background:rgba(201,169,110,.08);z-index:20}
+.rail-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold-deep),var(--gold) 60%,var(--gold-light));box-shadow:0 0 18px rgba(201,169,110,.55);transition:width .5s var(--press)}
+
+/* ---- Top chrome: a real flex bar that reflows ---- */
+.topbar{
+  position:relative;z-index:12;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:var(--gap-sm);
+  padding:calc(var(--edge-top) + env(safe-area-inset-top)) calc(var(--edge-x) + env(safe-area-inset-right)) var(--gap-xs) calc(var(--edge-x) + env(safe-area-inset-left));
+  flex:0 0 auto;
+}
+.identity{display:flex;align-items:center;gap:clamp(8px, 1.01vmin, 14.4px);min-width:0}
+.identity img{width:clamp(28px, 3.17vmin, 43.2px);height:clamp(28px, 3.17vmin, 43.2px);display:block;filter:drop-shadow(0 0 18px rgba(201,169,110,.25));flex:0 0 auto}
+.identity .lbl{font-family:'JetBrains Mono',monospace;font-size:clamp(8px, 0.936vmin, 11.5px);letter-spacing:.28em;color:var(--slate);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.identity .lbl b{color:var(--gold);font-weight:500}
+/* On very tight bars, drop the "· Reception" suffix */
+.identity .lbl .sfx{opacity:1}
+
+.stepmeta{display:flex;align-items:center;gap:clamp(10px, 1.3vmin, 17.3px);flex:0 0 auto}
+.stepmeta .num{font-family:'JetBrains Mono',monospace;font-size:clamp(8px, 0.936vmin, 13px);letter-spacing:.26em;color:var(--slate);white-space:nowrap}
+.stepmeta .num b{color:var(--gold);font-weight:500}
+
+.pill{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:max(44px, var(--tap));
+  height:clamp(40px, 4.32vmin, 46.1px);
+  padding:0 clamp(14px, 1.73vw, 23px);border-radius:999px;
+  border:1px solid var(--line);background:rgba(20,18,16,.6);
+  font-family:'JetBrains Mono',monospace;font-size:clamp(9px, 0.864vmin, 10.8px);letter-spacing:.22em;color:var(--cream);
+  text-transform:uppercase;transition:transform .2s var(--press),background .25s,border-color .25s;
+}
+.pill:active{transform:scale(.96);background:rgba(201,169,110,.12);border-color:var(--line-strong)}
+
+/* ---- Bottom chrome: Back lives in its own reflowing footer ---- */
+.botbar{
+  position:relative;z-index:12;flex:0 0 auto;
+  display:flex;align-items:center;
+  min-height:0;
+  padding:var(--gap-xs) calc(var(--edge-x) + env(safe-area-inset-right)) calc(var(--edge-bottom) + env(safe-area-inset-bottom)) calc(var(--edge-x) + env(safe-area-inset-left));
+}
+.backbtn{display:none}
+.backbtn.show{display:inline-flex}
+
+/* ---- Step container: fills the space between bars, centers content ---- */
+.steps{
+  position:relative;z-index:2;
+  flex:1 1 auto;
+  display:grid;
+  min-height:0;
+}
+.step{
+  grid-area:1 / 1;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:var(--gap-lg) var(--edge-x);
+  text-align:center;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  opacity:0;transform:translateY(18px);pointer-events:none;visibility:hidden;
+  transition:opacity .32s var(--press),transform .32s var(--press),visibility 0s linear .32s;
+}
+.step.active{opacity:1;transform:translateY(0);pointer-events:auto;visibility:visible;transition:opacity .32s var(--press),transform .32s var(--press),visibility 0s}
+/* Inner wrapper keeps a sane measure and consistent vertical rhythm */
+.step > .inner{
+  display:flex;flex-direction:column;align-items:center;
+  gap:var(--gap-sm);
+  width:100%;max-width:var(--measure);
+  margin:auto;
+  padding-block:var(--gap-md);
+}
+
+/* ---- Typography primitives (fluid) ---- */
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:clamp(9px, 0.972vmin, 11.5px);letter-spacing:.38em;color:var(--gold);text-transform:uppercase;margin-bottom:var(--gap-sm)}
+.h1{font-family:'Cinzel',serif;font-weight:500;font-size:clamp(2rem, 6.48vmin, 5.4rem);line-height:1.06;letter-spacing:.03em;color:var(--cream)}
+.h1 .it{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;color:var(--gold);text-transform:lowercase;letter-spacing:0}
+.h1.smaller{font-size:clamp(1.65rem, 5.04vmin, 4.32rem)}
+.sub{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(1rem, 1.87vmin, 1.62rem);line-height:1.45;color:var(--slate);max-width:65ch;margin-top:var(--gap-xs)}
+.sub b{color:var(--gold);font-weight:400;font-style:normal}
+
+/* ---- Big CTA button ---- */
+.cta{
+  display:inline-flex;align-items:center;justify-content:center;gap:clamp(12px, 1.15vmin, 17.3px);
+  min-height:max(48px, var(--tap));
+  height:clamp(52px, 5.76vmin, 86.4px);
+  padding:0 clamp(30px, 3.6vw, 63.4px);border-radius:999px;
+  background:linear-gradient(180deg,var(--gold-light),var(--gold) 55%,var(--gold-deep));
+  color:#1a1208;
+  font-family:'Cinzel',serif;font-weight:500;font-size:clamp(.85rem, 1.66vmin, 1.62rem);letter-spacing:.16em;text-transform:uppercase;
+  box-shadow:0 24px 60px -20px rgba(201,169,110,.55), inset 0 1px 0 rgba(255,255,255,.4);
+  transition:transform .18s var(--press),box-shadow .25s,filter .2s;
+  max-width:100%;
+}
+.cta:active{transform:scale(.97);box-shadow:0 12px 30px -10px rgba(201,169,110,.5),inset 0 1px 0 rgba(255,255,255,.4)}
+.cta[disabled]{filter:grayscale(.6) brightness(.5);pointer-events:none;opacity:.45}
+.cta .arr{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(1.1rem, 1.87vmin, 1.87rem);letter-spacing:0;text-transform:none}
+.cta-wrap{margin-top:var(--gap-lg)}
+
+.cta.ghost{background:transparent;color:var(--cream);border:1px solid var(--line-strong);box-shadow:none}
+.cta.ghost:active{background:rgba(201,169,110,.1)}
+
+/* ============================================================
+   STEP 0 — Welcome
+   ============================================================ */
+.welcome-mark{
+  width:clamp(120px, 18.7vmin, 245px);height:clamp(120px, 18.7vmin, 245px);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:var(--gap-md);
+  position:relative;
+  /* whole-mark settle: gentle fade-up + scale-settle, physical ease-out */
+  opacity:0;transform:translateY(10px) scale(.94);
+  transition:opacity .9s var(--ease-out),transform 1.1s var(--ease-out);
+  will-change:opacity,transform;
+}
+/* Radial glow that blooms then softly breathes. Two stacked auras so the
+   bloom can fire once while a slow breath continues underneath. */
+.welcome-mark::before{
+  content:"";position:absolute;inset:-16%;border-radius:50%;z-index:0;
+  background:radial-gradient(circle,rgba(201,169,110,.26),transparent 64%);
+  filter:blur(22px);
+  opacity:0;transform:scale(.82);
+  will-change:opacity,transform;
+}
+/* The original UNIVERSE mark (brand PNG) is the hero — revealed, not redrawn. */
+.welcome-mark img,.welcome-mark .mark-img{
+  width:100%;height:100%;object-fit:contain;position:relative;z-index:2;
+  filter:drop-shadow(0 0 40px rgba(201,169,110,.4));
+  opacity:0;transform:scale(1.03);
+  transition:opacity 1s var(--ease-out),transform 1.2s var(--ease-out);
+  will-change:opacity,transform;
+}
+/* Gold light-sweep clipped to the real mark's silhouette (mask = the logo).
+   A bright diagonal band travels across the ACTUAL logo once on entry. */
+.mark-shine{
+  position:absolute;inset:0;z-index:3;pointer-events:none;
+  opacity:0;
+  background:linear-gradient(115deg,
+     transparent 40%,
+     rgba(255,247,224,0) 46%,
+     rgba(255,247,224,.9) 50%,
+     rgba(255,247,224,0) 54%,
+     transparent 60%);
+  background-size:260% 260%;background-position:125% 0;
+  -webkit-mask:url(assets/logo-mark.png) center/contain no-repeat;
+          mask:url(assets/logo-mark.png) center/contain no-repeat;
+  mix-blend-mode:screen;
+  will-change:background-position,opacity;
+}
+
+/* ---- Intro choreography (added by JS via .play class on the step) ---- */
+.step[data-step="0"].intro-play .welcome-mark{opacity:1;transform:translateY(0) scale(1)}
+/* the real mark settles in: gentle fade + scale-down, physical ease, no bounce */
+.step[data-step="0"].intro-play .welcome-mark img,
+.step[data-step="0"].intro-play .welcome-mark .mark-img{
+  animation:markRise 1.3s var(--ease-out) .05s forwards;
+}
+.step[data-step="0"].intro-play .welcome-mark::before{
+  animation:glowBloom 4.6s var(--ease-out) .15s forwards;
+}
+/* gold light-sweep travels across the actual logo once, as the bloom rises */
+.step[data-step="0"].intro-play .mark-shine{
+  animation:markSweep 1.7s var(--ease-out) .85s forwards;
+}
+@keyframes markRise{
+  0%  {opacity:0;transform:scale(1.04)}
+  100%{opacity:1;transform:scale(1)}
+}
+@keyframes markSweep{
+  0%  {opacity:0;background-position:125% 0}
+  12% {opacity:1}
+  88% {opacity:1}
+  100%{opacity:0;background-position:-45% 0}
+}
+@keyframes glowBloom{
+  0%  {opacity:0;transform:scale(.82)}
+  30% {opacity:1;transform:scale(1.06)}     /* bloom peak */
+  55% {opacity:.62;transform:scale(.98)}
+  78% {opacity:.82;transform:scale(1.02)}    /* settle into breath */
+  100%{opacity:.7;transform:scale(1)}
+}
+/* After the intro, a perpetual gentle breath keeps the mark alive. */
+.step[data-step="0"].intro-done .welcome-mark::before{
+  animation:glowBreath 6.5s ease-in-out infinite;
+}
+@keyframes glowBreath{
+  0%,100%{opacity:.6;transform:scale(.99)}
+  50%    {opacity:.86;transform:scale(1.04)}
+}
+
+/* Reduced motion / fallback: show the original mark statically, no movement. */
+.step[data-step="0"].intro-static .welcome-mark{opacity:1;transform:none}
+.step[data-step="0"].intro-static .welcome-mark img,
+.step[data-step="0"].intro-static .welcome-mark .mark-img{opacity:1;transform:none}
+.step[data-step="0"].intro-static .mark-shine{opacity:0;animation:none}
+.step[data-step="0"].intro-static .welcome-mark::before{opacity:.7;transform:none;animation:none}
+
+/* ============================================================
+   STEP 1 — Phone
+   ============================================================ */
+.phone-row{
+  display:flex;align-items:stretch;justify-content:center;gap:clamp(8px, 1.01vmin, 17.3px);
+  margin-top:var(--gap-md);
+  width:100%;max-width:min(92vw, 1100px);
+}
+.cc-chip{
+  display:flex;align-items:center;justify-content:center;gap:clamp(8px, 0.864vmin, 13px);
+  min-height:var(--tap);
+  height:clamp(56px, 6.48vmin, 86.4px);padding:0 clamp(14px, 1.73vw, 31.7px);
+  background:var(--soft);border:1px solid var(--line);border-radius:var(--radius);
+  font-family:'Cinzel',serif;font-size:clamp(1.25rem, 2.3vmin, 1.8rem);letter-spacing:.06em;color:var(--cream);
+  flex:0 0 auto;
+}
+.cc-chip .flag{font-size:clamp(1.4rem, 2.59vmin, 2.16rem);line-height:1}
+.bigInput{
+  min-height:var(--tap);
+  height:clamp(56px, 6.48vmin, 86.4px);
+  flex:1 1 auto;min-width:0;
+  background:var(--soft);border:1px solid var(--line);border-radius:var(--radius);
+  font-family:'Cormorant Garamond',serif;font-weight:400;
+  font-size:clamp(1.25rem, 2.59vmin, 2.52rem);letter-spacing:.04em;color:var(--cream);
+  padding:0 clamp(18px, 1.73vw, 25.9px);text-align:center;
+  transition:border-color .25s,background .25s;
+}
+.bigInput::placeholder{color:var(--slate);font-style:italic}
+.bigInput:focus{border-color:var(--line-strong);background:var(--softer)}
+.bigInput:focus-visible{outline:2px solid var(--gold-light);outline-offset:2px}
+
+/* ============================================================
+   STEP 2 — OTP
+   ============================================================ */
+.otp-row{display:flex;gap:clamp(8px, 1.73vmin, 23px);justify-content:center;margin-top:var(--gap-md);flex-wrap:nowrap}
+.otp-cell{
+  width:clamp(56px, 7.92vmin, 101px);height:clamp(72px, 10.1vmin, 130px);border-radius:var(--radius);
+  background:var(--soft);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:clamp(2.2rem, 5.04vmin, 4.32rem);color:var(--gold);
+  transition:border-color .25s,background .25s,transform .2s var(--press);
+}
+.otp-cell.filled{border-color:var(--line-strong);background:var(--softer)}
+.otp-cell.active{border-color:var(--gold);box-shadow:0 0 0 clamp(2px, 0.36vmin, 2.88px) rgba(201,169,110,.12)}
+/* fill-pop: the digit lands with a tiny scale-settle, never from scale(0) */
+.otp-cell .digit{display:inline-block;transform:scale(1);will-change:transform,opacity}
+.otp-cell.pop .digit{animation:otpPop .28s var(--ease-out)}
+@keyframes otpPop{0%{opacity:.2;transform:scale(.6)}55%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
+.otp-cell .caret{width:clamp(3px, 0.288vmin, 2.88px);height:clamp(36px, 5.04vmin, 69.1px);background:var(--gold);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+.keypad{
+  margin-top:var(--gap-md);display:grid;
+  grid-template-columns:repeat(3, clamp(64px, 8.64vmin, 101px));
+  gap:clamp(10px, 1.3vmin, 17.3px);justify-content:center;
+}
+.keypad button{
+  width:clamp(64px, 8.64vmin, 101px);height:clamp(56px, 7.92vmin, 101px);
+  min-height:44px;
+  border-radius:var(--radius);
+  background:var(--soft);border:1px solid var(--line);
+  font-family:'Cinzel',serif;font-size:clamp(1.4rem, 2.88vmin, 2.34rem);color:var(--cream);
+  transition:transform .15s var(--press),background .25s,border-color .25s;
+}
+.keypad button:active{transform:scale(.95);background:rgba(201,169,110,.14);border-color:var(--line-strong)}
+.keypad button.del{font-family:'JetBrains Mono',monospace;font-size:clamp(1rem, 1.73vmin, 1.08rem);letter-spacing:.2em;color:var(--slate)}
+
+.tip{margin-top:var(--gap-sm);font-family:'JetBrains Mono',monospace;font-size:clamp(9px, 0.792vmin, 10.1px);letter-spacing:.28em;color:var(--slate);text-transform:uppercase}
+.tip b{color:var(--gold);font-weight:500}
+
+/* ============================================================
+   STEP 3 — Name + Email
+   ============================================================ */
+.field-stack{display:flex;flex-direction:column;align-items:stretch;gap:var(--gap-sm);margin-top:var(--gap-md);width:100%;max-width:min(92vw,1400px)}
+.field-stack .bigInput{width:100%;text-align:center}
+@media (max-width:560px){.field-stack .bigInput{text-align:left}}
+
+/* ============================================================
+   STEP 4 — Typology
+   ============================================================ */
+.cards-row{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  justify-content:center;gap:clamp(12px, 1.73vmin, 34.6px);margin-top:var(--gap-lg);
+  width:100%;max-width:min(94vw,2100px);
+}
+.card{
+  width:100%;min-height:clamp(72px, 13vmin, 173px);
+  background:var(--soft);border:1px solid var(--line);border-radius:var(--radius);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(4px, 0.72vmin, 10.1px);
+  padding:clamp(16px, 1.87vmin, 23px);
+  transition:transform .2s var(--press),background .25s,border-color .25s,box-shadow .25s;
+  position:relative;overflow:hidden;text-align:center;
+}
+.card .label{font-family:'Cinzel',serif;font-weight:500;font-size:clamp(1.35rem, 3.17vmin, 2.88rem);letter-spacing:.05em;color:var(--cream);line-height:1.05;position:relative;z-index:2;transition:color .3s var(--ease-out)}
+.card .meta{font-family:'JetBrains Mono',monospace;font-size:clamp(9px, 0.792vmin, 10.8px);letter-spacing:.26em;color:var(--slate);text-transform:uppercase;position:relative;z-index:2}
+/* sheen: a diagonal light band that sweeps once when the card is chosen */
+.card::after{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(115deg,transparent 38%,rgba(255,247,224,.16) 50%,transparent 62%);
+  transform:translateX(-130%);
+}
+.card.selected::after{animation:sheen .9s var(--ease-out) forwards}
+@keyframes sheen{to{transform:translateX(130%)}}
+.card:active{transform:scale(.97)}
+.card.selected{
+  background:var(--softer);border-color:var(--gold);
+  box-shadow:0 0 0 clamp(2px, 0.36vmin, 2.88px) rgba(201,169,110,.12),0 24px 60px -20px rgba(201,169,110,.35);
+}
+.card.selected .label{color:var(--gold)}
+.card.small{min-height:clamp(54px, 8.64vmin, 115px)}
+.card.small .label{font-size:clamp(1.1rem, 2.3vmin, 1.87rem)}
+
+/* ============================================================
+   STEP 5 — Budget slider
+   ============================================================ */
+.budget-display{margin-top:var(--gap-md);display:flex;flex-direction:column;align-items:center;gap:var(--gap-xs)}
+.budget-num{font-family:'Cinzel',serif;font-weight:500;font-size:clamp(3rem, 9.36vmin, 7.2rem);line-height:1;letter-spacing:.02em;color:var(--gold);text-shadow:0 0 60px rgba(201,169,110,.35);
+  transform:scale(var(--budget-scale,1));transition:transform .12s var(--ease-out),text-shadow .25s var(--ease-out);will-change:transform}
+.budget-cap{font-family:'JetBrains Mono',monospace;font-size:clamp(10px, 1.01vmin, 13px);letter-spacing:.3em;color:var(--slate);text-transform:uppercase}
+
+.slider-wrap{margin-top:var(--gap-lg);width:min(92vw,2000px);display:flex;flex-direction:column;align-items:center;gap:var(--gap-sm)}
+.slider{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:clamp(6px, 0.72vmin, 5.76px);border-radius:999px;
+  background:linear-gradient(90deg,var(--gold) 0% var(--pct,30%), rgba(201,169,110,.18) var(--pct,30%) 100%);
+  outline:none;
+  /* enlarge the hit area without enlarging the visual track */
+  padding-block:clamp(14px, 1.87vmin, 15.8px);
+  background-clip:content-box;
+}
+.slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:clamp(36px, 4.32vmin, 43.2px);height:clamp(36px, 4.32vmin, 43.2px);border-radius:50%;
+  background:linear-gradient(180deg,var(--gold-light),var(--gold) 55%,var(--gold-deep));
+  border:clamp(3px, 0.432vmin, 2.88px) solid #1a1208;
+  box-shadow:0 12px 30px -8px rgba(201,169,110,.7);
+  cursor:pointer;
+}
+.slider::-moz-range-thumb{
+  width:clamp(36px, 4.32vmin, 43.2px);height:clamp(36px, 4.32vmin, 43.2px);border-radius:50%;border:clamp(3px, 0.432vmin, 2.88px) solid #1a1208;
+  background:linear-gradient(180deg,var(--gold-light),var(--gold) 55%,var(--gold-deep));
+  box-shadow:0 12px 30px -8px rgba(201,169,110,.7);cursor:pointer;
+}
+.slider:focus-visible{outline:2px solid var(--gold-light);outline-offset:6px}
+.slider-labels{display:flex;justify-content:space-between;width:100%;font-family:'JetBrains Mono',monospace;font-size:clamp(11px, 1.08vmin, 11.5px);letter-spacing:.22em;color:var(--slate);text-transform:uppercase}
+
+/* ============================================================
+   STEP 6 — Purpose + Timeline
+   ============================================================ */
+.group{display:flex;flex-direction:column;align-items:center;gap:var(--gap-sm);width:100%}
+.group + .group{margin-top:var(--gap-lg)}
+.group h3{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(1.15rem, 2.16vmin, 1.98rem);color:var(--cream)}
+.group h3 b{color:var(--gold);font-weight:400;font-style:normal}
+.opts{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  justify-content:center;gap:clamp(10px, 1.3vmin, 20.2px);width:100%;max-width:min(94vw,2000px);
+}
+/* timeline has 5 items — let them flow into a tidy grid */
+#timelineRow{grid-template-columns:repeat(auto-fit, minmax(min(100%, 180px), 1fr))}
+
+/* ============================================================
+   STEP 7 — Family + Must-haves
+   ============================================================ */
+.family-row{display:flex;align-items:center;justify-content:center;gap:clamp(20px, 4.32vmin, 57.6px);margin-top:var(--gap-md)}
+.fbtn{
+  width:clamp(54px, 7.92vmin, 115px);height:clamp(54px, 7.92vmin, 115px);border-radius:50%;
+  min-width:44px;min-height:44px;
+  background:var(--soft);border:1px solid var(--line);
+  font-family:'Cinzel',serif;font-size:clamp(1.8rem, 3.96vmin, 3.6rem);color:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .18s var(--press),background .25s,border-color .25s;
+}
+.fbtn:active{transform:scale(.94);background:rgba(201,169,110,.14);border-color:var(--line-strong)}
+.fbtn[disabled]{opacity:.3;pointer-events:none}
+.fnum{font-family:'Cinzel',serif;font-weight:500;font-size:clamp(4rem, 11.5vmin, 9.9rem);line-height:1;color:var(--cream);min-width:clamp(100px, 13vmin, 202px);text-align:center}
+
+.pills-title{margin-top:var(--gap-lg);font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:clamp(1.1rem, 1.87vmin, 1.73rem);color:var(--cream)}
+.pills-title b{color:var(--gold);font-weight:400;font-style:normal}
+.pills{margin-top:var(--gap-sm);display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(8px, 0.864vmin, 13px);max-width:min(94vw,2300px)}
+.pill-opt{
+  min-height:max(44px, clamp(44px, 3.96vmin, 54.7px));
+  height:clamp(44px, 3.96vmin, 54.7px);padding:0 clamp(18px, 1.73vw, 25.9px);border-radius:999px;
+  background:var(--soft);border:1px solid var(--line);
+  font-family:'Cormorant Garamond',serif;font-weight:400;font-size:clamp(.95rem, 1.37vmin, 1.26rem);color:var(--cream);
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:transform .15s var(--press),background .25s,border-color .25s,color .25s;
+}
+.pill-opt:active{transform:scale(.94)}
+.pill-opt.selected{background:var(--gold);color:#1a1208;border-color:var(--gold);box-shadow:0 12px 30px -12px rgba(201,169,110,.6);animation:pillPop .3s var(--ease-out)}
+@keyframes pillPop{0%{transform:scale(.92)}55%{transform:scale(1.05)}100%{transform:scale(1)}}
+
+.continue-row{margin-top:var(--gap-lg)}
+
+/* ============================================================
+   STEP 8 — Done
+   ============================================================ */
+.check-ring{
+  width:clamp(120px, 15.8vmin, 202px);height:clamp(120px, 15.8vmin, 202px);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle,rgba(201,169,110,.18),transparent 70%);
+  margin-bottom:var(--gap-md);
+  position:relative;
+}
+.check-ring svg{width:100%;height:100%}
+.check-ring circle{fill:none;stroke:var(--gold);stroke-width:4;stroke-dasharray:760;stroke-dashoffset:760;animation:dash 1s var(--press) .1s forwards}
+.check-ring path{fill:none;stroke:var(--gold);stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:200;stroke-dashoffset:200;animation:dash 0.6s var(--press) 0.9s forwards}
+@keyframes dash{to{stroke-dashoffset:0}}
+
+.token-chip{
+  margin-top:var(--gap-md);display:inline-flex;align-items:center;gap:clamp(16px, 1.73vmin, 23px);
+  padding:clamp(16px, 1.73vmin, 23px) clamp(28px, 3.6vw, 51.8px);border-radius:999px;
+  background:linear-gradient(180deg,var(--gold-light),var(--gold) 55%,var(--gold-deep));
+  color:#1a1208;
+  box-shadow:0 24px 60px -20px rgba(201,169,110,.5);
+  position:relative;overflow:hidden;
+  opacity:0;transform:translateY(10px) scale(.96);
+  animation:tokenIn .6s var(--ease-out) 1.5s forwards;
+  will-change:transform,opacity;
+}
+/* one-time light pass across the token, like it just minted */
+.token-chip::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.45) 50%,transparent 60%);
+  transform:translateX(-130%);
+  animation:tokenShine 1.1s var(--ease-out) 2.1s forwards;
+}
+@keyframes tokenIn{to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes tokenShine{to{transform:translateX(130%)}}
+.token-chip .lbl{font-family:'JetBrains Mono',monospace;font-size:clamp(11px, 1.01vmin, 13px);letter-spacing:.3em;text-transform:uppercase;font-weight:500}
+.token-chip .val{font-family:'Cinzel',serif;font-weight:600;font-size:clamp(2rem, 4.32vmin, 2.88rem);letter-spacing:.1em;display:flex;align-items:center;gap:clamp(12px, 1.15vmin, 13px)}
+.token-chip .dot{width:clamp(7px, 0.72vmin, 7.2px);height:clamp(7px, 0.72vmin, 7.2px);border-radius:50%;background:#1a1208;opacity:.4}
+
+.reset-link{
+  margin-top:var(--gap-lg);font-family:'JetBrains Mono',monospace;font-size:clamp(11px, 0.864vmin, 10.8px);letter-spacing:.28em;color:var(--slate);text-transform:uppercase;
+  min-height:44px;
+  padding:clamp(12px, 1.01vmin, 13px) clamp(22px, 1.73vw, 23px);border-radius:999px;border:1px solid transparent;transition:border-color .25s,color .25s,background .25s;
+}
+.reset-link:active{border-color:var(--line);color:var(--gold);background:rgba(201,169,110,.06)}
+
+.done-name{font-family:'Cinzel',serif;font-weight:500;font-size:clamp(2rem, 6.48vmin, 5.4rem);letter-spacing:.04em;color:var(--cream)}
+.done-name .it{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;color:var(--gold);text-transform:lowercase}
+
+/* ============================================================
+   POINTER-ONLY HOVER STATES + CTA SHEEN
+   Gated so touch taps never trigger sticky hover. Kiosk with a
+   trackpad/mouse gets the lift; phones stay clean.
+   ============================================================ */
+.cta{position:relative;overflow:hidden}
+.cta > *{position:relative;z-index:1}
+.cta::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(110deg,transparent 42%,rgba(255,255,255,.35) 50%,transparent 58%);
+  transform:translateX(-130%);
+}
+@media (hover:hover) and (pointer:fine){
+  .cta:hover{transform:translateY(-1px);box-shadow:0 30px 70px -20px rgba(201,169,110,.6),inset 0 1px 0 rgba(255,255,255,.45)}
+  .cta:hover::before{animation:ctaSheen .8s var(--ease-out)}
+  .cta.ghost:hover{background:rgba(201,169,110,.08)}
+  .card:hover{border-color:var(--line-strong);background:var(--softer);transform:translateY(-2px)}
+  .card.selected:hover{transform:translateY(-2px)}
+  .pill-opt:hover{border-color:var(--line-strong);color:var(--gold)}
+  .pill-opt.selected:hover{color:#1a1208}
+  .pill:hover{border-color:var(--line-strong);background:rgba(201,169,110,.08)}
+  .keypad button:hover{border-color:var(--line-strong);background:rgba(201,169,110,.06)}
+  .fbtn:hover:not([disabled]){border-color:var(--line-strong);background:rgba(201,169,110,.06)}
+  .reset-link:hover{color:var(--gold);border-color:var(--line)}
+}
+@keyframes ctaSheen{0%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
+
+/* ============================================================
+   STAGGERED ENTRANCE — when a step becomes active, its option
+   cards / pills cascade in. Decorative; never blocks input.
+   ============================================================ */
+.step.active .cards-row > .card,
+.step.active .opts > .card{
+  animation:optIn .42s var(--ease-out) both;
+}
+.step.active .cards-row > .card:nth-child(1),
+.step.active .opts > .card:nth-child(1){animation-delay:.04s}
+.step.active .cards-row > .card:nth-child(2),
+.step.active .opts > .card:nth-child(2){animation-delay:.10s}
+.step.active .cards-row > .card:nth-child(3),
+.step.active .opts > .card:nth-child(3){animation-delay:.16s}
+.step.active .cards-row > .card:nth-child(4),
+.step.active .opts > .card:nth-child(4){animation-delay:.22s}
+.step.active .cards-row > .card:nth-child(5),
+.step.active .opts > .card:nth-child(5){animation-delay:.28s}
+@keyframes optIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ============================================================
+   ORIENTATION / SIZE NUANCES
+   The fluid system handles most sizing; these only fix reflow
+   pressure that pure clamp() can't (short landscape, tiny bars).
+   ============================================================ */
+
+/* Short landscape phones: protect vertical room, tighten chrome,
+   make steps scroll rather than crush. */
+@media (orientation:landscape) and (max-height:560px){
+  :root{--gap-lg:clamp(1rem, 1.87vmin, 1.44rem);--gap-xl:clamp(1.25rem, 2.16vmin, 2.16rem)}
+  .step{justify-content:flex-start;padding-block:var(--gap-sm)}
+  .step > .inner{margin-block:0;padding-block:var(--gap-sm);justify-content:center;min-height:100%}
+  .h1{font-size:clamp(1.5rem, 5.76vh, 2.52rem)}
+  .h1.smaller{font-size:clamp(1.35rem, 5.04vh, 2.16rem)}
+  .otp-cell{height:clamp(60px, 13vh, 86.4px)}
+  .keypad button{height:clamp(46px, 8.64vh, 64.8px)}
+  .fnum{font-size:clamp(3.5rem, 15.8vh, 6.48rem)}
+  .budget-num{font-size:clamp(2.5rem, 11.5vh, 5.04rem)}
+}
+
+/* Very narrow phones: shorten the identity label to avoid bar overflow */
+@media (max-width:430px){
+  .identity .lbl .sfx{display:none}
+}
+
+/* Large kiosk: stop type from outrunning the box on ultra-wide,
+   keep the elegant ceiling and add breathing room. */
+@media (min-width:1800px){
+  :root{--measure:min(86vw,2200px)}
+  .step > .inner{gap:var(--gap-md)}
+}
+
+/* Reduced motion: kill entry transforms, twinkle, draw animations, and
+   all the new cinematic motion. Logo shows statically (PNG), glow holds. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;animation-delay:0s !important;transition-delay:0s !important}
+  .step{transform:none}
+  .check-ring circle,.check-ring path{animation:none;stroke-dashoffset:0}
+  .otp-cell .caret{animation:none}
+  .starfield i{animation:none;opacity:.16}
+  /* atmosphere holds still */
+  .aura{animation:none;opacity:.8;transform:none}
+  /* intro: static original mark, no sweep/bloom regardless of JS class */
+  .welcome-mark{opacity:1 !important;transform:none !important}
+  .welcome-mark img,.welcome-mark .mark-img{opacity:1 !important;transform:none !important}
+  .mark-shine{opacity:0 !important;animation:none !important}
+  .welcome-mark::before{opacity:.7 !important;transform:none !important;animation:none !important}
+  /* selection / token / option motion: no movement, state still reads */
+  .card::after,.pill-opt,.token-chip,.token-chip::after,.cta::before,
+  .step.active .cards-row > .card,.step.active .opts > .card{animation:none !important;transform:none !important}
+  .token-chip{opacity:1 !important}
+  .budget-num{transform:none !important}
+}
+
+/* LIGHT THEME — synced from parent app via postMessage */
+:root[data-theme="light"]{
+  --black:#f5f1e8;
+  --soft:#ece5d6;
+  --softer:#e2d9c4;
+  --gold:#8b6c2c;
+  --gold-deep:#6c4e1c;
+  --gold-light:#a07a37;
+  --cream:#1a1612;
+  --slate:#6b6358;
+  --line:rgba(14,13,12,0.18);
+  --line-soft:rgba(14,13,12,0.06);
+  --line-strong:rgba(14,13,12,0.36);
+}
+:root[data-theme="light"] html,
+:root[data-theme="light"] body{ background:#f5f1e8; color:var(--cream); }
+:root[data-theme="light"] .viewport,
+:root[data-theme="light"] .stage{ background:#f5f1e8; }
+:root[data-theme="light"] .glow{
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 32%, rgba(139,108,44,.08), transparent 60%),
+    radial-gradient(ellipse 90% 65% at 50% 108%, rgba(139,108,44,.10), transparent 65%);
+}
+:root[data-theme="light"] .starfield i{ background:var(--gold-deep); box-shadow:0 0 4px rgba(139,108,44,0.45); opacity:0.22; }
+:root[data-theme="light"] .pill{ background:rgba(245,241,232,0.6); color:var(--cream); border-color:var(--line); }
+:root[data-theme="light"] .pill:active{ background:rgba(139,108,44,0.10); border-color:var(--gold); }
+:root[data-theme="light"] .cc-chip{ background:rgba(0,0,0,0.04); border-color:var(--line); color:var(--cream); }
+:root[data-theme="light"] .bigInput{ background:rgba(0,0,0,0.03); border-color:var(--line); color:var(--cream); }
+:root[data-theme="light"] .bigInput::placeholder{ color:rgba(14,13,12,0.40); }
+:root[data-theme="light"] .bigInput:focus{ background:rgba(139,108,44,0.06); border-color:var(--line-strong); }
+:root[data-theme="light"] .otp-cell{ background:rgba(0,0,0,0.03); border-color:var(--line); color:var(--gold); }
+:root[data-theme="light"] .otp-cell.filled{ background:rgba(139,108,44,0.10); border-color:var(--line-strong); }
+:root[data-theme="light"] .otp-cell.active{ border-color:var(--gold); }
+:root[data-theme="light"] .keypad button{ background:rgba(0,0,0,0.03); border-color:var(--line); color:var(--cream); }
+:root[data-theme="light"] .keypad button:active{ background:rgba(139,108,44,0.10); border-color:var(--line-strong); }
+:root[data-theme="light"] .card{ background:rgba(0,0,0,0.03); border-color:var(--line); }
+:root[data-theme="light"] .card.selected{ background:rgba(139,108,44,0.12); border-color:var(--gold); }
+:root[data-theme="light"] .card.selected .label{ color:var(--gold-deep); }
+:root[data-theme="light"] .slider{ background:linear-gradient(90deg,var(--gold) 0% var(--pct,30%), rgba(139,108,44,0.18) var(--pct,30%) 100%);background-clip:content-box; }
+:root[data-theme="light"] .fbtn{ background:rgba(0,0,0,0.03); border-color:var(--line); color:var(--gold); }
+:root[data-theme="light"] .pill-opt{ background:rgba(0,0,0,0.03); border-color:var(--line); color:var(--cream); }
+:root[data-theme="light"] .pill-opt.selected{ background:var(--gold); color:#fff; border-color:var(--gold-deep); }
+:root[data-theme="light"] .cta{ box-shadow:0 24px 60px -20px rgba(139,108,44,.45), inset 0 1px 0 rgba(255,255,255,.6); color:#fff; }
+:root[data-theme="light"] .cta.ghost{ color:var(--cream); border-color:var(--line-strong); }
+:root[data-theme="light"] .cta.ghost:active{ background:rgba(139,108,44,0.10); }
+:root[data-theme="light"] .reset-link:active{ border-color:var(--line); color:var(--gold); background:rgba(139,108,44,0.06); }
+:root[data-theme="light"] .token-chip{ color:#fff; box-shadow:0 24px 60px -20px rgba(139,108,44,.5); }
+:root[data-theme="light"] .token-chip .dot{ background:#fff; opacity:.5; }
+/* ============================================================
+   INTRO SCREEN ENHANCEMENT (step 0 only) — eclipse, timeline,
+   side rails, footer, topo lines, frame. Revealed in sequence:
+   logo first → content → ambient deco. All deco lives in
+   .intro-bg (behind content) and .intro-ui (above, edges only),
+   shown via body.show-intro and faded out on every other step.
+   ============================================================ */
+.intro-bg,.intro-ui{position:absolute;inset:0;pointer-events:none;opacity:0;
+  transition:opacity 1s var(--ease-out);z-index:1}
+.intro-ui{z-index:11}
+body.show-intro .intro-bg{opacity:1}
+body.show-intro .intro-ui{opacity:1;transition-delay:1.4s} /* deco arrives last */
+.intro-ui a{pointer-events:auto}
+/* On the cinematic intro, hide the kiosk chrome (topbar + top progress bar) for
+   a clean title-sequence landing; both fade back in on every form step. */
+.topbar,.rail{transition:opacity .6s var(--ease-out)}
+body.show-intro .topbar,body.show-intro .rail{opacity:0;pointer-events:none}
+
+/* ============================================================
+   VOLUMETRIC INTRO — a light shaft pours down a receding golden
+   corridor inside the ring; concentric rings shimmer; dust motes
+   rise in the beam; diamond sparkles twinkle; silk threads drift.
+   Refined, de-saturated gold. Built to a reference comp.
+   Shared geometry: ring is centred, ~82vmin, top at 43%.
+   ============================================================ */
+:root{--ring-d:min(82vmin,820px); --ring-top:43%}
+
+/* overhead shaft — light descending from above the ring into its crown */
+.intro-bg::before{content:"";position:absolute;left:50%;top:-2%;transform:translateX(-50%);
+  width:min(30vmin,300px);height:calc(var(--ring-top) + var(--ring-d) * .2);
+  pointer-events:none;mix-blend-mode:screen;opacity:0;
+  transition:opacity 1.7s var(--ease-out);
+  background:linear-gradient(180deg, rgba(255,238,200,.085), rgba(255,236,196,.028) 46%, transparent 78%);
+  -webkit-mask:linear-gradient(90deg,transparent,#000 28%,#000 72%,transparent);
+          mask:linear-gradient(90deg,transparent,#000 28%,#000 72%,transparent);
+  filter:blur(7px)}
+body.show-intro .intro-bg::before{opacity:1;transition-delay:.85s}
+
+/* ---- The beam: corridor + god-rays, clipped to the ring circle ---- */
+.beam{position:absolute;left:50%;top:var(--ring-top);transform:translate(-50%,-50%) scale(.94);
+  width:var(--ring-d);height:var(--ring-d);border-radius:50%;overflow:hidden;
+  background:radial-gradient(circle at 50% 50%, #0c0a07 0%, #0a0907 64%, #070608 100%);
+  opacity:0;transition:opacity 1.5s var(--ease-out),transform 1.7s var(--ease-out);
+  -webkit-mask:radial-gradient(95% 135% at 50% -8%, #000 0%, rgba(0,0,0,.82) 24%, rgba(0,0,0,.42) 48%, rgba(0,0,0,.14) 68%, transparent 90%);
+          mask:radial-gradient(95% 135% at 50% -8%, #000 0%, rgba(0,0,0,.82) 24%, rgba(0,0,0,.42) 48%, rgba(0,0,0,.14) 68%, transparent 90%);}
+body.show-intro .beam{opacity:1;transform:translate(-50%,-50%) scale(1);transition-delay:.9s}
+.corridor{position:absolute;inset:-3%;
+  -webkit-mask:radial-gradient(72% 76% at 50% 22%, #000 12%, rgba(0,0,0,.42) 48%, transparent 74%);
+          mask:radial-gradient(72% 76% at 50% 22%, #000 12%, rgba(0,0,0,.42) 48%, transparent 74%)}
+.corridor::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(56% 46% at 50% 11%, rgba(255,228,176,.08), transparent 66%)}
+.corridor-svg{width:100%;height:100%;display:block;transform-origin:50% 14%;filter:blur(.4px);
+  animation:corrZoom 26s ease-in-out infinite}
+.corridor .corr-ribs line{stroke:#b89a5e;fill:none;stroke-width:1;vector-effect:non-scaling-stroke}
+.corridor .corr-steps line{stroke:#e0c074;fill:none;stroke-width:1;vector-effect:non-scaling-stroke}
+.corr-core{filter:blur(30px);opacity:.22;animation:corePulse 6.5s ease-in-out infinite}
+@keyframes corrZoom{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes corePulse{0%,100%{opacity:.4}50%{opacity:.62}}
+.rays{position:absolute;inset:0;mix-blend-mode:screen;opacity:.7}
+.rays-svg{width:100%;height:100%;display:block;animation:raysShim 8s ease-in-out infinite}
+.rays-svg .ray{fill:#ffe8b6}
+@keyframes raysShim{0%,100%{opacity:.5;transform:scaleX(.99)}50%{opacity:.85;transform:scaleX(1.02)}}
+.beam-core{position:absolute;left:50%;top:2%;transform:translateX(-50%);
+  width:30%;height:20%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side, rgba(255,241,206,.18), rgba(255,233,178,.06) 52%, transparent 74%);
+  filter:blur(11px);animation:corePulse 6.5s ease-in-out infinite}
+
+/* ---- Concentric shimmer rings ---- */
+.rings{position:absolute;left:50%;top:var(--ring-top);transform:translate(-50%,-50%);
+  width:var(--ring-d);height:var(--ring-d);opacity:0;transition:opacity 1.4s var(--ease-out)}
+body.show-intro .rings{opacity:1;transition-delay:1.05s}
+.ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(202,168,106,.5)}
+.r1{border-color:rgba(220,190,130,.82);
+  box-shadow:0 0 42px rgba(202,168,106,.2), inset 0 0 52px rgba(202,168,106,.07)}
+.r2{inset:1.8%;border-color:rgba(210,176,114,.5);transform:translate(-1.4%,-1.1%)}
+.r3{inset:-3.6%;border-color:rgba(204,170,108,.34);transform:translate(1.3%,1.7%)}
+.r0{inset:-7.5%;border-color:rgba(200,166,104,.18)}
+/* rotating dashed/dotted rings — give the portal constant orbital motion */
+.rd-out{inset:-5.4%;border:1px dashed rgba(214,184,124,.34);animation:ringSpin 64s linear infinite}
+.rd-in{inset:5.5%;border:1px dashed rgba(214,184,124,.42);animation:ringSpin 42s linear infinite reverse}
+.rd-core{inset:13%;border:1px dotted rgba(220,190,130,.32);animation:ringSpin 30s linear infinite}
+/* THE SHINE — a bright comet sweeping the main ring */
+.ring-shimmer{position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 0deg,
+    transparent 0 50%, rgba(255,248,224,0) 58%,
+    rgba(255,248,224,.55) 70%, rgba(255,253,242,1) 78%, rgba(255,248,224,.2) 84%,
+    transparent 90% 100%);
+  -webkit-mask:radial-gradient(circle, transparent 0 97.2%, #000 98.2%);
+          mask:radial-gradient(circle, transparent 0 97.2%, #000 98.2%);
+  filter:drop-shadow(0 0 7px rgba(255,250,230,.95)) drop-shadow(0 0 20px rgba(232,205,135,.7));
+  animation:ringSpin 8.5s linear infinite}
+/* the comet head — a bright glowing point riding the same orbit */
+.ring-comet{position:absolute;inset:0;border-radius:50%;pointer-events:none;animation:ringSpin 8.5s linear infinite}
+.ring-comet::before{content:"";position:absolute;left:50%;top:-3px;transform:translateX(-50%);
+  width:9px;height:9px;border-radius:50%;background:#fffdf4;
+  box-shadow:0 0 10px 3px rgba(255,250,230,.95), 0 0 26px 8px rgba(232,205,135,.7), 0 0 48px 14px rgba(232,205,135,.35)}
+/* a second, fainter counter-travelling shine for depth */
+.ring-shimmer::after{content:"";position:absolute;inset:-3.6%;border-radius:50%;
+  background:conic-gradient(from 180deg, transparent 0 64%, rgba(255,245,218,.45) 76%, transparent 88% 100%);
+  -webkit-mask:radial-gradient(circle, transparent 0 97.8%, #000 98.6%);
+          mask:radial-gradient(circle, transparent 0 97.8%, #000 98.6%);
+  filter:drop-shadow(0 0 9px rgba(232,205,135,.5));
+  animation:ringSpin 14s linear infinite reverse}
+@keyframes ringSpin{to{transform:rotate(360deg)}}
+/* warm bloom behind the BEGIN button — dissolves the lower ring rim into glow */
+.bottom-bloom{position:absolute;left:50%;bottom:-3%;transform:translateX(-50%);
+  width:78%;height:40%;pointer-events:none;
+  background:radial-gradient(56% 100% at 50% 100%, rgba(234,196,120,.5), rgba(234,196,120,.2) 40%, rgba(234,196,120,.06) 62%, transparent 78%);
+  filter:blur(18px);animation:bloomPulse 5.6s ease-in-out infinite}
+@keyframes bloomPulse{0%,100%{opacity:.78}50%{opacity:1}}
+/* gently fade only the very bottom of the rings so the button never crosses a hard line */
+.rings{-webkit-mask:radial-gradient(130% 130% at 50% 42%, #000 0 78%, rgba(0,0,0,.55) 90%, rgba(0,0,0,.2) 100%);
+        mask:radial-gradient(130% 130% at 50% 42%, #000 0 78%, rgba(0,0,0,.55) 90%, rgba(0,0,0,.2) 100%)}
+
+/* ---- Silk thread filaments at the sides ---- */
+.threads{position:absolute;inset:0;opacity:0;mix-blend-mode:screen;
+  transition:opacity 1.6s var(--ease-out);
+  -webkit-mask:radial-gradient(120% 80% at 50% 50%, transparent 30%, #000 60%);
+          mask:radial-gradient(120% 80% at 50% 50%, transparent 30%, #000 60%)}
+body.show-intro .threads{opacity:.9;transition-delay:1.3s}
+.threads-svg{width:100%;height:100%;display:block}
+.threads-svg path{fill:none;stroke:#c2a268;vector-effect:non-scaling-stroke;stroke-linecap:round}
+.threads-svg .th-left{animation:threadL 17s ease-in-out infinite;transform-origin:left center}
+.threads-svg .th-right{animation:threadR 20s ease-in-out infinite;transform-origin:right center}
+@keyframes threadL{0%,100%{transform:translate(-1%,.4%)}50%{transform:translate(1.4%,-1.1%)}}
+@keyframes threadR{0%,100%{transform:translate(1%,-.4%)}50%{transform:translate(-1.4%,1.1%)}}
+
+/* ---- Floating dust motes (rising in the beam) ---- */
+.motes{position:absolute;inset:0;overflow:hidden;opacity:0;transition:opacity 1.6s var(--ease-out)}
+body.show-intro .motes{opacity:1;transition-delay:1.2s}
+.mote{position:absolute;width:var(--s);height:var(--s);border-radius:50%;
+  background:radial-gradient(circle,#ffeec2 0%,rgba(255,238,194,.5) 35%,transparent 72%);
+  opacity:0;will-change:transform,opacity;
+  animation:moteRise var(--d) linear var(--delay) infinite}
+@keyframes moteRise{0%{opacity:0;transform:translateY(24px) scale(.5)}
+  12%{opacity:var(--o)}82%{opacity:var(--o)}
+  100%{opacity:0;transform:translateY(calc(-1 * var(--rise))) scale(1)}}
+
+/* ---- Diamond sparkles (4-point stars) ---- */
+.sparkles{position:absolute;inset:0}
+.spark{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);
+  transform:translate(-50%,-50%);background:#ffe9b8;
+  clip-path:polygon(50% 0%, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0% 50%, 42% 42%);
+  filter:drop-shadow(0 0 5px rgba(255,233,184,.8));opacity:0;
+  animation:sparkTwinkle var(--d) ease-in-out var(--delay) infinite}
+@keyframes sparkTwinkle{0%,100%{opacity:.18;transform:translate(-50%,-50%) scale(.5) rotate(0deg)}
+  50%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(10deg)}}
+
+/* ---- Inflow particles: drawn from all around the screen toward the centre ---- */
+.influx{position:absolute;left:50%;top:26%;width:0;height:0;pointer-events:none;
+  opacity:0;transition:opacity 1.4s var(--ease-out)}
+body.show-intro .influx{opacity:1;transition-delay:1.2s}
+.inflow{position:absolute;left:0;top:0;width:var(--s);height:var(--s);margin:calc(var(--s) / -2);
+  border-radius:50%;background:radial-gradient(circle,#fff6dc 0%,rgba(255,240,200,.7) 40%,transparent 72%);
+  box-shadow:0 0 7px rgba(255,240,200,.7), 0 0 14px rgba(234,196,120,.4);opacity:0;will-change:transform,opacity;
+  animation:inflow var(--d) ease-in var(--delay) infinite}
+@keyframes inflow{0%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(.25)}
+  14%{opacity:var(--o)}
+  86%{opacity:calc(var(--o) * .8)}
+  100%{opacity:0;transform:translate(0,0) scale(1)}}
+
+/* ---- Glow line: the light source the bottom glow rises from ---- */
+.glow-line{position:absolute;left:50%;top:calc(100% + clamp(10px,1.8vmin,22px));transform:translateX(-50%);
+  width:clamp(260px,38vmin,440px);height:2px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(240,206,134,.95) 22%,rgba(255,238,196,1) 50%,rgba(240,206,134,.95) 78%,transparent);
+  box-shadow:0 0 14px rgba(234,196,120,.8), 0 0 40px rgba(234,196,120,.4);
+  opacity:0;transition:opacity 1.2s var(--ease-out)}
+body.show-intro .glow-line{opacity:1;transition-delay:1.1s}
+/* the glow rises upward from the line */
+.glow-line::before{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:min(150%,640px);height:clamp(180px,34vh,360px);
+  background:radial-gradient(60% 100% at 50% 100%, rgba(234,196,120,.5), rgba(234,196,120,.16) 42%, transparent 72%);
+  filter:blur(20px);animation:bloomPulse 5.6s ease-in-out infinite}
+/* a soft sheen travelling along the line */
+.glow-line::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 40%,rgba(255,250,232,.9) 50%,transparent 60%);
+  background-size:240% 100%;background-repeat:no-repeat;
+  animation:lineSheen 4.6s ease-in-out infinite}
+@keyframes lineSheen{0%{background-position:130% 0}55%,100%{background-position:-60% 0}}
+
+/* ============================================================
+   FORM-STEP BACKDROP (steps 1-8) — carries ~70% of the intro
+   language: a faint gold ring + lens-flare star, a soft crown
+   glow, a bottom silk-wave field and scattered diamond sparkles.
+   Shown via body.show-form, behind the step content.
+   ============================================================ */
+.form-bg{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .9s var(--ease-out);z-index:1}
+body.show-form .form-bg{opacity:1}
+/* soft crown glow */
+.form-glow{position:absolute;left:50%;top:9%;transform:translateX(-50%);
+  width:min(72vmin,860px);height:min(46vmin,560px);border-radius:50%;
+  background:radial-gradient(closest-side, rgba(232,205,135,.1), rgba(232,205,135,.03) 55%, transparent 74%);
+  filter:blur(16px);animation:formGlowPulse 7s ease-in-out infinite}
+@keyframes formGlowPulse{0%,100%{opacity:.8}50%{opacity:1}}
+/* faint gold ring, brighter arc igniting upper-left */
+.form-ring{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(82vmin,1040px);height:min(82vmin,1040px);border-radius:50%;
+  background:conic-gradient(from 0deg,
+    rgba(202,168,106,.16) 0deg, rgba(202,168,106,.1) 110deg, rgba(202,168,106,.1) 235deg,
+    rgba(232,205,135,.5) 296deg, rgba(255,246,222,.95) 318deg, rgba(232,205,135,.46) 340deg, rgba(202,168,106,.16) 360deg);
+  -webkit-mask:radial-gradient(circle, transparent 0 98.7%, #000 99.3%);
+          mask:radial-gradient(circle, transparent 0 98.7%, #000 99.3%);
+  filter:drop-shadow(0 0 11px rgba(232,205,135,.28));
+  animation:formRingShimmer 9s ease-in-out infinite}
+@keyframes formRingShimmer{0%,100%{opacity:.82}50%{opacity:1}}
+/* lens-flare star at the ring's bright (upper-left) point */
+.form-flare{position:absolute;left:calc(50% - min(29vmin,368px));top:calc(50% - min(29vmin,368px));
+  width:clamp(10px,2vmin,26px);height:clamp(10px,2vmin,26px);transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle,#fff 0%,rgba(255,246,222,.9) 20%,transparent 62%);
+  animation:formFlareTw 5s ease-in-out infinite}
+.form-flare::before,.form-flare::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.form-flare::before{width:1.4px;height:clamp(34px,8vmin,110px);background:linear-gradient(rgba(255,246,222,0),rgba(255,246,222,.85),rgba(255,246,222,0))}
+.form-flare::after{height:1.4px;width:clamp(34px,8vmin,110px);background:linear-gradient(90deg,rgba(255,246,222,0),rgba(255,246,222,.85),rgba(255,246,222,0))}
+@keyframes formFlareTw{0%,100%{transform:translate(-50%,-50%) scale(.85);filter:brightness(.9)}50%{transform:translate(-50%,-50%) scale(1.12);filter:brightness(1.3)}}
+/* subtle particles surrounding the central field area */
+.form-motes{position:absolute;inset:0;overflow:hidden}
+.fmote{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);border-radius:50%;
+  background:radial-gradient(circle,rgba(255,240,200,.95) 0%,rgba(255,236,194,.5) 40%,transparent 72%);
+  box-shadow:0 0 5px rgba(255,238,196,.5);opacity:0;will-change:transform,opacity;
+  animation:fmoteFloat var(--d) ease-in-out var(--delay) infinite}
+@keyframes fmoteFloat{
+  0%{opacity:0;transform:translate(0,0)}
+  18%{opacity:var(--o)}
+  50%{transform:translate(var(--dx),var(--dy))}
+  82%{opacity:var(--o)}
+  100%{opacity:0;transform:translate(calc(var(--dx) * -.4),calc(var(--dy) * .6))}}
+.form-sparkles{position:absolute;inset:0}
+/* converging inflow — particles stream in from all edges to screen centre (like the intro);
+   reuses the .inflow particle + `inflow` keyframe, anchored at the form ring centre. */
+.form-influx{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;
+  opacity:0;transition:opacity 1s var(--ease-out)}
+body.show-form .form-influx{opacity:1;transition-delay:.4s}
+.form-influx .inflow{box-shadow:0 0 5px rgba(255,242,204,.5), 0 0 11px rgba(234,196,120,.3)}
+
+/* ---- Eyebrow flourishes (— TEXT —) on every step ---- */
+.eyebrow{display:inline-flex;align-items:center;justify-content:center;gap:clamp(10px,1.4vmin,18px)}
+.eyebrow::before,.eyebrow::after{content:"";width:clamp(22px,4vmin,64px);height:1px;flex:0 0 auto}
+.eyebrow::before{background:linear-gradient(90deg,transparent,var(--line-strong))}
+.eyebrow::after{background:linear-gradient(90deg,var(--line-strong),transparent)}
+
+/* ---- Circular EXIT button (top-right) ---- */
+#exitBtn{width:clamp(42px,4.8vmin,56px);height:clamp(42px,4.8vmin,56px);min-width:42px;padding:0;border-radius:50%;
+  letter-spacing:.14em;font-size:clamp(8px,.82vmin,10px)}
+
+/* ---- CTA: leading-icon support + warmer glow + idle sheen ---- */
+.cta .ico{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+.cta .ico svg{width:clamp(16px,1.9vmin,24px);height:auto;display:block}
+.cta:not(.ghost):not(.begin-cta):not([disabled]){box-shadow:0 22px 56px -18px rgba(201,169,110,.62),0 0 38px rgba(201,169,110,.2),inset 0 1px 0 rgba(255,255,255,.45)}
+.cta:not(.ghost):not(.begin-cta):not([disabled])::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(115deg,transparent 36%,rgba(255,255,255,.5) 50%,transparent 64%);
+  background-size:230% 100%;background-position:135% 0;background-repeat:no-repeat;
+  animation:ctaSheen 5s ease-in-out infinite}
+@keyframes ctaSheen{0%{background-position:135% 0}54%,100%{background-position:-60% 0}}
+
+/* ---- Focus / hover glow on inputs, keypad, cards, chips ---- */
+.bigInput:focus,.bigInput:focus-visible{border-color:var(--gold);
+  box-shadow:0 0 0 clamp(2px,.36vmin,3px) rgba(201,169,110,.14), 0 0 26px rgba(201,169,110,.16);background:var(--softer)}
+.cc-chip:hover,.keypad button:hover,.fbtn:hover,.pill-opt:hover{border-color:var(--line-strong);background:var(--softer)}
+.card:hover{border-color:var(--line-strong)}
+.keypad button:focus-visible,.cc-chip:focus-visible{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,169,110,.18)}
+
+/* ---- Subtle icon animation across all screens (gentle breathing float) ----
+   Applied to the SVG itself, so wrapper hover/selected transforms never clash. */
+@keyframes iconBob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.5px) scale(1.06)}}
+.cta .ico svg,
+.step[data-step="1"] .field-ico__icon svg,
+.step[data-step="1"] .cc-chevron svg,
+.step[data-step="3"] .field-ico__icon svg,
+.t-card__icon svg,
+.step[data-step="6"] .s6-icon svg,
+.step[data-step="7"] .s7-people-icon,
+.step[data-step="7"] .s7-pill-licon svg{
+  animation:iconBob 3.6s ease-in-out infinite;transform-origin:center;will-change:transform}
+/* stagger so they don't pulse in unison */
+.t-card:nth-child(2) .t-card__icon svg{animation-duration:4.1s;animation-delay:.5s}
+.t-card:nth-child(3) .t-card__icon svg{animation-duration:3.3s;animation-delay:.9s}
+.step[data-step="6"] .s6-chip:nth-child(2n) .s6-icon svg{animation-duration:4.2s;animation-delay:.6s}
+.step[data-step="6"] .s6-chip:nth-child(3n) .s6-icon svg{animation-duration:3.2s;animation-delay:1.1s}
+.step[data-step="3"] .field-ico:last-child .field-ico__icon svg{animation-duration:4.2s;animation-delay:.7s}
+@media (prefers-reduced-motion: reduce){
+  .cta .ico svg,.field-ico__icon svg,.cc-chevron svg,.t-card__icon svg,
+  .s6-icon svg,.s7-people-icon,.s7-pill-licon svg{animation:none !important}
+}
+
+/* ---- Top-center progress timeline ---- */
+.timeline{position:absolute;top:clamp(40px,4.6vmin,66px);left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:clamp(6px,1vmin,14px)}
+.tl-item{display:flex;flex-direction:column;align-items:center;gap:6px}
+.tl-dot{width:clamp(7px,.9vmin,10px);height:clamp(7px,.9vmin,10px);border-radius:50%;
+  border:1px solid var(--line-strong);background:transparent;transition:all .3s var(--ease-out)}
+.tl-item.on .tl-dot{background:var(--gold);border-color:var(--gold);box-shadow:0 0 12px rgba(201,169,110,.8)}
+.tl-num{font-family:'JetBrains Mono',monospace;font-size:clamp(8px,.85vmin,11px);letter-spacing:.14em;color:var(--slate)}
+.tl-item.on .tl-num{color:var(--gold)}
+.tl-bar{width:clamp(16px,2.4vw,40px);height:1px;background:var(--line)}
+
+/* ---- Side rails ---- */
+.rail-left,.rail-right{position:absolute;top:50%;transform:translateY(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:clamp(14px,2vmin,26px)}
+.rail-left{left:clamp(20px,2.6vw,46px)}
+.rail-right{right:clamp(20px,2.6vw,46px)}
+.rail-cap{font-family:'JetBrains Mono',monospace;font-size:clamp(9px,1vmin,12px);letter-spacing:.34em;
+  color:var(--slate);text-transform:uppercase;writing-mode:vertical-rl}
+.rail-left .rail-cap{transform:rotate(180deg)}
+.rail-line{width:1px;height:clamp(28px,5vmin,64px);background:linear-gradient(var(--line-strong),transparent)}
+.rail-right .rail-line{background:linear-gradient(transparent,var(--line-strong))}
+.rail-soc{display:flex;flex-direction:column;gap:clamp(12px,1.8vmin,22px)}
+.rail-soc a{display:flex;color:var(--slate);transition:color .25s,transform .25s}
+.rail-soc a:hover{color:var(--gold);transform:translateY(-1px)}
+.rail-soc svg{width:clamp(15px,1.7vmin,20px);height:clamp(15px,1.7vmin,20px);display:block}
+.rail-star{width:5px;height:5px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px rgba(201,169,110,.8)}
+
+/* ---- Footer ---- */
+.intro-foot{position:absolute;left:0;right:0;bottom:clamp(16px,2.2vmin,30px);
+  padding:0 clamp(40px,5vw,90px);display:flex;justify-content:space-between;align-items:center;
+  font-family:'JetBrains Mono',monospace;font-size:clamp(8px,.92vmin,11px);letter-spacing:.2em;
+  color:var(--slate);text-transform:uppercase}
+.intro-foot .copy{display:flex;align-items:center;gap:10px}
+.intro-foot .copy svg{width:14px;height:16px;opacity:.7}
+.intro-foot .links{display:flex;gap:14px}
+.intro-foot a{color:var(--slate);transition:color .25s}
+.intro-foot a:hover{color:var(--gold)}
+
+/* ---- Outer luxury frame ---- */
+.intro-frame{position:absolute;inset:clamp(10px,1.4vmin,18px);border:1px solid var(--line);
+  border-radius:clamp(12px,1.6vmin,20px);pointer-events:none}
+.intro-frame::before,.intro-frame::after{content:"";position:absolute;width:18px;height:18px;border:1px solid var(--gold);opacity:.6}
+.intro-frame::before{top:-1px;left:-1px;border-right:0;border-bottom:0;border-top-left-radius:inherit}
+.intro-frame::after{bottom:-1px;right:-1px;border-left:0;border-top:0;border-bottom-right-radius:inherit}
+
+/* ---- Intro divider (hairline + sparkle, between headline and sub) ---- */
+.intro-divider{display:flex;align-items:center;justify-content:center;gap:14px;
+  width:min(40vmin,360px);margin:var(--gap-sm) auto 0}
+.intro-divider span{flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line-strong))}
+.intro-divider span:last-child{background:linear-gradient(90deg,var(--line-strong),transparent)}
+.intro-divider i{width:5px;height:5px;background:var(--gold);transform:rotate(45deg);box-shadow:0 0 10px rgba(201,169,110,.8)}
+
+/* ---- BEGIN button: CIRCULAR outlined glass, gold text, warm aura ---- */
+.begin-wrap{position:relative}
+.begin-cta{position:relative;flex-direction:column;gap:clamp(1px,.5vmin,4px);
+  width:clamp(118px,16vmin,156px);height:clamp(118px,16vmin,156px);
+  min-height:0;padding:0;border-radius:50%;
+  letter-spacing:.26em;font-weight:500;font-size:clamp(.72rem,1.36vmin,1.02rem);
+  color:var(--gold-light);
+  background:rgba(16,13,8,.34);
+  border:1px solid rgba(208,176,116,.64);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  text-shadow:0 0 14px rgba(234,196,120,.4);
+  box-shadow:
+    0 0 0 1px rgba(208,176,116,.10),
+    0 14px 44px -14px rgba(234,196,120,.5),
+    inset 0 0 26px rgba(234,196,120,.12);
+  animation:beginAura 4.6s ease-in-out infinite;}
+.begin-cta .bt{font-family:'Cinzel',serif;font-weight:500}
+.begin-cta .arr{font-style:normal;font-family:'Cinzel',serif;font-weight:500;color:var(--gold-light);
+  font-size:clamp(1rem,2vmin,1.5rem);letter-spacing:0;line-height:1}
+/* faint inner sheen that orbits the glass */
+.begin-cta::before{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 0deg, transparent 0 60%, rgba(255,240,205,.22) 76%, transparent 90% 100%);
+  -webkit-mask:radial-gradient(circle, transparent 0 86%, #000 92%);
+          mask:radial-gradient(circle, transparent 0 86%, #000 92%);
+  animation:ringSpin 6s linear infinite}
+.begin-cta:hover{border-color:rgba(232,205,135,.95);color:#fff4dc;
+  box-shadow:0 0 0 1px rgba(232,205,135,.28),0 18px 52px -14px rgba(234,196,120,.75),inset 0 0 32px rgba(234,196,120,.2)}
+@keyframes beginAura{0%,100%{box-shadow:0 0 0 1px rgba(208,176,116,.10),0 12px 40px -14px rgba(234,196,120,.42),inset 0 0 24px rgba(234,196,120,.1)}
+  50%{box-shadow:0 0 0 1px rgba(208,176,116,.2),0 18px 54px -12px rgba(234,196,120,.66),inset 0 0 32px rgba(234,196,120,.18)}}
+
+/* ---- Particle stream: rises from the button's top arc up to the light ---- */
+.begin-stream{position:absolute;left:50%;bottom:50%;transform:translateX(-50%);
+  width:clamp(118px,16vmin,156px);height:60vh;pointer-events:none;overflow:visible;
+  opacity:0;transition:opacity 1.4s var(--ease-out)}
+body.show-intro .begin-stream{opacity:1;transition-delay:1.5s}
+.bdot{position:absolute;bottom:var(--y0,0);left:var(--x);width:var(--s);height:var(--s);border-radius:50%;
+  background:radial-gradient(circle,#fff6dc 0%,rgba(255,240,200,.7) 38%,transparent 72%);
+  box-shadow:0 0 6px rgba(255,240,200,.7), 0 0 12px rgba(234,196,120,.4);
+  opacity:0;will-change:transform,opacity;
+  animation:bRise var(--d) ease-in var(--delay) infinite}
+@keyframes bRise{0%{opacity:0;transform:translate(-50%,0) scale(.35)}
+  14%{opacity:var(--o)}
+  68%{opacity:calc(var(--o) * .55)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)), calc(-1 * var(--h))) scale(1)}}
+
+/* ---- Press Enter hint ---- */
+.press-enter{margin-top:var(--gap-md);font-family:'JetBrains Mono',monospace;
+  font-size:clamp(9px,1vmin,12px);letter-spacing:.28em;color:var(--slate);text-transform:uppercase;
+  animation:pressPulse 3s ease-in-out infinite}
+@keyframes pressPulse{0%,100%{opacity:.45}50%{opacity:.95}}
+
+/* ============================================================
+   INTRO SEQUENCE — logo first, then content rises, then deco.
+   ============================================================ */
+/* lift the welcome column so BEGIN sits clear of the ring's lower rim */
+.step[data-step="0"] .inner{transform:translateY(-3.4%)}
+.step[data-step="0"] .inner > :not(.welcome-mark){opacity:0;transform:translateY(16px)}
+.step[data-step="0"].intro-play .inner > .eyebrow{animation:introRise .85s var(--ease-out) 1.25s forwards}
+.step[data-step="0"].intro-play .inner > .h1{animation:introRise .9s var(--ease-out) 1.5s forwards}
+.step[data-step="0"].intro-play .inner > .intro-divider{animation:introRise .8s var(--ease-out) 1.85s forwards}
+.step[data-step="0"].intro-play .inner > .sub{animation:introRise .85s var(--ease-out) 2.05s forwards}
+.step[data-step="0"].intro-play .inner > .cta-wrap{animation:introRise .85s var(--ease-out) 2.35s forwards}
+.step[data-step="0"].intro-play .inner > .press-enter{animation:introRise .8s var(--ease-out) 2.7s forwards}
+@keyframes introRise{to{opacity:1;transform:none}}
+/* static (reduced-motion or fallback): everything visible at rest */
+.step[data-step="0"].intro-static .inner > *{opacity:1;transform:none}
+
+/* ---- Clean composition to match the reference: the intro is just the ring,
+   logo, headline, divider, subtitle and button over the silk field. Edge
+   furniture (timeline, side rails, footer, outer frame) is hidden — markup
+   kept in place for an easy restore if ever wanted. ---- */
+.timeline,.rail-left,.rail-right,.intro-foot,.intro-frame{display:none !important}
+
+/* ---- Narrow screens: tighten the ring ---- */
+@media (max-width:820px){
+  :root{--ring-d:min(112vmin,560px); --ring-top:40%}
+  .threads{display:none}
+}
+
+/* ---- Reduced motion: hold the scene still, no looping motion ---- */
+@media (prefers-reduced-motion: reduce){
+  .corridor-svg,.corr-core,.beam-core,.rays-svg,.ring-shimmer,.ring-shimmer::after,
+  .ring-comet,.rd-out,.rd-in,.rd-core,.bottom-bloom,
+  .threads-svg .th-left,.threads-svg .th-right,.mote,.spark,.bdot,.press-enter,
+  .inflow,.glow-line::before,.glow-line::after,.fmote,.form-ring,.form-flare,.form-glow,
+  .begin-cta,.begin-cta::before{animation:none !important}
+  .fmote{opacity:var(--o) !important}
+  .intro-bg,.beam,.rings,.threads,.motes,.begin-stream,.influx,.glow-line,.form-influx,.form-motes{opacity:1 !important;transition:none !important}
+  .beam{transform:translate(-50%,-50%) scale(1) !important}
+  .mote{opacity:var(--o) !important}
+  .spark{opacity:.8 !important}
+  .bdot{opacity:0 !important}
+  .inflow{opacity:0 !important}
+  .step[data-step="0"] .inner > *{opacity:1 !important;transform:none !important}
+}
+
+
+/* ===================== INSIDE-SCREEN ENHANCEMENTS (steps 1-8) ===================== */
+
+/* ── Step 1 scoped additions ─────────────────────────────────── */
+.step[data-step="1"] .cc-chip .cc-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--gold);
+  opacity: .7;
+  flex-shrink: 0;
+  margin-left: clamp(2px, 0.22vmin, 3px);
+}
+.step[data-step="1"] .cc-chip .cc-chevron svg {
+  width: clamp(8px, 0.9vmin, 12px);
+  height: auto;
+  display: block;
+}
+.step[data-step="1"] .field-ico {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+}
+.step[data-step="1"] .field-ico__icon {
+  position: absolute;
+  left: clamp(14px, 1.73vw, 22px);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+  color: var(--gold);
+  opacity: .55;
+}
+.step[data-step="1"] .field-ico__icon svg {
+  width: clamp(15px, 1.73vmin, 22px);
+  height: auto;
+  display: block;
+}
+.step[data-step="1"] .field-ico .bigInput {
+  width: 100%;
+  flex: 1 1 auto;
+  padding-left: clamp(42px, 4.75vw, 58px);
+}
+
+/* ===== STEP 2 — OTP ELEVATED ===== */
+.otp-eyebrow { gap: clamp(10px, 1.4vmin, 18px); }
+.otp-shield {
+  width: clamp(13px, 1.6vmin, 19px); height: auto; color: var(--gold); opacity: .72;
+  flex: 0 0 auto; margin-inline-end: clamp(4px, .5vmin, 7px);
+  filter: drop-shadow(0 0 6px rgba(201,169,110,.35)); transition: opacity .3s;
+}
+.step[data-step="2"]:is(.active) .otp-shield { animation: otp-shield-glow 3.6s ease-in-out infinite; }
+@keyframes otp-shield-glow {
+  0%, 100% { opacity: .6; filter: drop-shadow(0 0 5px rgba(201,169,110,.25)); }
+  50%       { opacity: .9; filter: drop-shadow(0 0 11px rgba(201,169,110,.55)); }
+}
+.step[data-step="2"] .otp-cell {
+  width:  clamp(60px, 8.4vmin, 108px); height: clamp(76px, 10.8vmin, 138px);
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, rgba(28,24,20,.92), rgba(20,18,16,.96));
+  border: 1px solid var(--line-strong);
+  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(232,205,135,.12), inset 0 -1px 0 rgba(0,0,0,.28), 0 4px 18px rgba(0,0,0,.30);
+  transition: border-color .28s var(--ease-out), background .28s var(--ease-out), box-shadow .28s var(--ease-out), transform .22s var(--press);
+}
+@media (hover:hover) and (pointer:fine) {
+  .step[data-step="2"] .otp-cell:not(.active):not(.filled):hover {
+    border-color: var(--line-strong);
+    box-shadow: inset 0 1px 0 rgba(232,205,135,.16), inset 0 -1px 0 rgba(0,0,0,.28), 0 4px 18px rgba(0,0,0,.30), 0 0 0 1px rgba(201,169,110,.10);
+  }
+}
+.step[data-step="2"] .otp-cell.filled {
+  background: linear-gradient(160deg, rgba(32,27,21,.96), rgba(22,19,15,.98));
+  border-color: rgba(201,169,110,.68);
+  box-shadow: inset 0 1px 0 rgba(232,205,135,.22), inset 0 -1px 0 rgba(0,0,0,.32), 0 0 28px -8px rgba(201,169,110,.22), 0 4px 18px rgba(0,0,0,.35);
+}
+.step[data-step="2"] .otp-cell.active {
+  border-color: var(--gold);
+  background: linear-gradient(160deg, rgba(36,29,20,.97), rgba(24,20,14,.99));
+  box-shadow: inset 0 1px 0 rgba(232,205,135,.26), inset 0 -1px 0 rgba(0,0,0,.32), 0 0 0 clamp(2px,.36vmin,3px) rgba(201,169,110,.18), 0 0 28px -6px rgba(201,169,110,.45), 0 4px 20px rgba(0,0,0,.40);
+  transform: translateY(-1px);
+}
+.step[data-step="2"] .otp-cell .digit {
+  font-family: 'Cinzel', serif; font-weight: 500; font-size: clamp(2.1rem, 5.0vmin, 4.1rem);
+  color: var(--gold-light); letter-spacing: .02em; line-height: 1;
+  text-shadow: 0 0 22px rgba(201,169,110,.6), 0 0 8px rgba(201,169,110,.3);
+  display: inline-block; transform: scale(1); will-change: transform, opacity;
+}
+.step[data-step="2"] .otp-cell.pop .digit { animation: otpPop .28s var(--ease-out); }
+.step[data-step="2"] .otp-cell .caret {
+  width: clamp(2px, .25vmin, 2.5px); height: clamp(32px, 4.6vmin, 62px); border-radius: 2px;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  box-shadow: 0 0 14px rgba(201,169,110,.8), 0 0 5px rgba(201,169,110,.5);
+  animation: blink 1s steps(2) infinite;
+}
+.step[data-step="2"] .otp-cell::before {
+  content: ""; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px;
+  border-top: 1px solid rgba(201,169,110,.55); border-left: 1px solid rgba(201,169,110,.55);
+  border-top-left-radius: var(--radius); pointer-events: none; opacity: 0; transition: opacity .28s;
+}
+.step[data-step="2"] .otp-cell.active::before, .step[data-step="2"] .otp-cell.filled::before { opacity: 1; }
+.step[data-step="2"] .keypad {
+  margin-top: var(--gap-md); display: grid; grid-template-columns: repeat(3, clamp(66px, 9.0vmin, 108px));
+  gap: clamp(10px, 1.35vmin, 18px); justify-content: center;
+}
+.step[data-step="2"] .keypad button {
+  width: clamp(66px, 9.0vmin, 108px); height: clamp(58px, 8.2vmin, 108px); min-height: 44px;
+  border-radius: var(--radius); background: linear-gradient(170deg, rgba(30,25,18,.88), rgba(20,18,15,.94));
+  border: 1px solid var(--line-strong); font-family: 'Cinzel', serif; font-weight: 500;
+  font-size: clamp(1.35rem, 2.8vmin, 2.25rem); color: var(--cream); letter-spacing: .04em;
+  position: relative; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(232,205,135,.10), inset 0 -1px 0 rgba(0,0,0,.25), 0 3px 14px rgba(0,0,0,.25);
+  transition: transform .14s var(--press), background .22s, border-color .22s, box-shadow .22s, color .22s;
+}
+.step[data-step="2"] .keypad button::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,247,224,.12) 50%, transparent 62%);
+  transform: translateX(-130%); pointer-events: none;
+}
+.step[data-step="2"] .keypad button:active {
+  transform: scale(.935) translateY(1px); background: linear-gradient(170deg, rgba(40,33,22,.94), rgba(26,22,15,.97));
+  border-color: var(--gold); color: var(--gold-light);
+  box-shadow: inset 0 1px 0 rgba(232,205,135,.20), inset 0 -1px 0 rgba(0,0,0,.32), 0 0 0 1px rgba(201,169,110,.20), 0 0 20px -4px rgba(201,169,110,.30), 0 1px 6px rgba(0,0,0,.35);
+  text-shadow: 0 0 14px rgba(201,169,110,.5);
+}
+.step[data-step="2"] .keypad button:active::after { animation: keySheen .35s var(--ease-out) forwards; }
+@keyframes keySheen { to { transform: translateX(130%); } }
+@media (hover:hover) and (pointer:fine) {
+  .step[data-step="2"] .keypad button:hover {
+    background: linear-gradient(170deg, rgba(34,28,20,.92), rgba(23,20,15,.96)); border-color: rgba(201,169,110,.52); color: var(--gold-light);
+    box-shadow: inset 0 1px 0 rgba(232,205,135,.15), inset 0 -1px 0 rgba(0,0,0,.28), 0 0 0 1px rgba(201,169,110,.10), 0 6px 20px rgba(0,0,0,.28);
+    text-shadow: 0 0 10px rgba(201,169,110,.3); transform: translateY(-1px);
+  }
+  .step[data-step="2"] .keypad button:hover::after { animation: keySheen .6s var(--ease-out) forwards; }
+}
+.step[data-step="2"] .keypad button.del {
+  color: var(--slate); font-family: 'JetBrains Mono', monospace; font-size: clamp(.9rem, 1.6vmin, 1.1rem);
+  letter-spacing: .14em; border-color: var(--line); background: linear-gradient(170deg, rgba(22,19,15,.78), rgba(16,14,11,.85));
+}
+.step[data-step="2"] .keypad button.del:active { color: var(--gold); border-color: rgba(201,169,110,.55); }
+@media (hover:hover) and (pointer:fine) {
+  .step[data-step="2"] .keypad button.del:hover { color: var(--gold-light); border-color: rgba(201,169,110,.40); text-shadow: 0 0 8px rgba(201,169,110,.3); }
+}
+.step[data-step="2"] .keypad button.del svg { width: clamp(20px, 2.4vmin, 29px); height: auto; display: block; }
+.step[data-step="2"] .tip {
+  margin-top: var(--gap-sm); font-family: 'JetBrains Mono', monospace; font-size: clamp(9px, .78vmin, 10px);
+  letter-spacing: .32em; color: rgba(138,130,120,.45); text-transform: uppercase;
+}
+.step[data-step="2"] .tip b { color: rgba(201,169,110,.5); font-weight: 500; }
+
+/* ===== STEP 3 — Name + Email field-ico pill ===== */
+.field-ico {
+  display: flex; align-items: center; gap: 0; width: 100%;
+  min-height: var(--tap); height: clamp(56px, 6.48vmin, 86.4px);
+  background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius);
+  cursor: text; transition: border-color .25s, background .25s, box-shadow .25s;
+  position: relative; overflow: hidden;
+}
+.field-ico:focus-within {
+  border-color: var(--gold); background: var(--softer);
+  box-shadow: 0 0 0 clamp(2px, .36vmin, 3px) rgba(201, 169, 110, .14), 0 0 26px rgba(201, 169, 110, .16);
+}
+@media (hover: hover) and (pointer: fine) {
+  .field-ico:hover { border-color: var(--line-strong); background: var(--softer); }
+  .field-ico:focus-within:hover { border-color: var(--gold); }
+}
+.field-ico__icon {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: clamp(44px, 5.04vmin, 68px); height: 100%; opacity: .72; transition: opacity .25s; pointer-events: none;
+}
+.field-ico__icon svg { width: clamp(16px, 1.8vmin, 22px); height: auto; display: block; }
+.field-ico:focus-within .field-ico__icon { opacity: 1; }
+.field-ico__icon::after {
+  content: ""; position: absolute; left: clamp(44px, 5.04vmin, 68px); top: 18%; height: 64%; width: 1px;
+  background: var(--line); transition: background .25s; pointer-events: none;
+}
+.field-ico:focus-within .field-ico__icon::after { background: var(--line-strong); }
+.field-ico .bigInput {
+  flex: 1 1 auto; min-width: 0; width: 100%; height: 100%; min-height: 0;
+  background: transparent; border: none; border-radius: 0; box-shadow: none;
+  font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: clamp(1.15rem, 2.3vmin, 2.16rem);
+  letter-spacing: .04em; color: var(--cream); text-align: left;
+  padding: 0 clamp(14px, 1.44vw, 20px) 0 clamp(12px, 1.15vw, 16px); outline: none !important;
+}
+.field-ico .bigInput::placeholder { color: var(--slate); font-style: italic; }
+.field-ico .bigInput:focus, .field-ico .bigInput:focus-visible {
+  border-color: transparent; background: transparent; box-shadow: none; outline: none;
+}
+.field-ico .bigInput:focus-visible { outline: none; }
+.step[data-step="3"] .field-stack { max-width: min(92vw, 1100px); }
+.step[data-step="3"] .field-stack > .field-ico { width: 100%; }
+
+/* ===== STEP 4 — Typology cards ===== */
+.step[data-step="4"] .t-card {
+  min-height: clamp(160px, 22vmin, 270px);
+  padding: clamp(20px, 2.6vmin, 36px) clamp(20px, 2.2vw, 32px);
+  gap: clamp(8px, 1.08vmin, 14px);
+  transition: transform .22s var(--press), background .28s, border-color .28s, box-shadow .28s;
+  position: relative; overflow: hidden;
+}
+@media (hover:hover) and (pointer:fine) {
+  .step[data-step="4"] .t-card:hover {
+    background: var(--softer); border-color: var(--line-strong); transform: translateY(-3px);
+    box-shadow: 0 0 32px rgba(201,169,110,.10), 0 8px 32px -12px rgba(201,169,110,.22), inset 0 0 18px rgba(201,169,110,.05);
+  }
+  .step[data-step="4"] .t-card.selected:hover { transform: translateY(-3px); }
+}
+.step[data-step="4"] .t-card.selected {
+  background: var(--softer); border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(201,169,110,.22), 0 0 32px rgba(201,169,110,.18), 0 24px 56px -18px rgba(201,169,110,.42), inset 0 0 28px rgba(201,169,110,.07);
+}
+.step[data-step="4"] .t-card.selected .label { color: var(--gold); text-shadow: 0 0 22px rgba(201,169,110,.3); }
+.step[data-step="4"] .t-card.selected::after { animation: sheen .85s var(--ease-out) forwards; }
+.t-card__icon {
+  display: flex; align-items: center; justify-content: center;
+  width: clamp(36px, 5vmin, 52px); height: clamp(36px, 5vmin, 52px);
+  position: relative; z-index: 2; transition: filter .28s var(--ease-out), transform .22s var(--ease-out);
+}
+.t-card__icon svg { width: 100%; height: 100%; opacity: .72; transition: opacity .28s; filter: drop-shadow(0 0 4px rgba(201,169,110,.18)); }
+@media (hover:hover) and (pointer:fine) {
+  .step[data-step="4"] .t-card:hover .t-card__icon svg { opacity: .92; filter: drop-shadow(0 0 8px rgba(201,169,110,.45)); }
+}
+.step[data-step="4"] .t-card.selected .t-card__icon svg { opacity: 1; filter: drop-shadow(0 0 10px rgba(201,169,110,.6)); }
+.step[data-step="4"] .t-card.selected .t-card__icon { transform: translateY(-1px); }
+.t-card__check {
+  position: absolute; top: clamp(10px, 1.26vmin, 16px); right: clamp(10px, 1.26vmin, 16px); z-index: 4;
+  width: clamp(20px, 2.52vmin, 28px); height: clamp(20px, 2.52vmin, 28px); border-radius: 50%;
+  border: 1px solid var(--line-strong); background: rgba(20,18,16,.7);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(.55);
+  transition: opacity .22s var(--ease-out), transform .26s var(--ease-out), background .22s, border-color .22s; pointer-events: none;
+}
+.t-card__check svg { width: 60%; height: 60%; display: block; }
+.step[data-step="4"] .t-card.selected .t-card__check {
+  opacity: 1; transform: scale(1); background: rgba(201,169,110,.15); border-color: var(--gold); box-shadow: 0 0 12px rgba(201,169,110,.45);
+}
+.step[data-step="4"] .t-card:active { transform: scale(.97); }
+.step[data-step="4"] .t-card .meta { transition: color .28s; }
+.step[data-step="4"] .t-card.selected .meta { color: rgba(201,169,110,.6); }
+@media (prefers-reduced-motion: reduce) {
+  .t-card__check { transition: none !important; }
+  .step[data-step="4"] .t-card.selected .t-card__check { opacity: 1; transform: scale(1); }
+  .step[data-step="4"] .t-card.selected .t-card__icon svg { filter: none; }
+}
+
+/* ===== STEP 5 — Budget slider ===== */
+.step[data-step="5"] .budget-display { margin-top: var(--gap-md); display: flex; flex-direction: column; align-items: center; gap: var(--gap-xs); }
+.b5-num-wrap {
+  display: inline-flex; align-items: baseline; gap: clamp(6px, 0.72vmin, 10px);
+  filter: drop-shadow(0 0 clamp(18px, 2.88vmin, 42px) rgba(201,169,110,.28));
+}
+.b5-rupee {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300;
+  font-size: clamp(1.5rem, 4.32vmin, 3.6rem); line-height: 1; color: var(--gold); opacity: .82;
+  letter-spacing: 0; align-self: flex-end; padding-bottom: .08em;
+}
+.step[data-step="5"] .budget-num {
+  text-shadow: 0 0 clamp(20px, 2.88vmin, 44px) rgba(201,169,110,.55), 0 0 clamp(50px, 6.48vmin, 90px) rgba(201,169,110,.22), 0 0 2px rgba(232,205,135,.35);
+}
+.b5-slider-wrap { position: relative; width: min(92vw, 860px); max-width: 100%; gap: 0; margin-top: var(--gap-lg); }
+.b5-ticks {
+  display: flex; justify-content: space-between; align-items: flex-end; width: 100%;
+  height: clamp(10px, 1.3vmin, 18px); padding: 0 clamp(18px, 2.16vmin, 24px); margin-bottom: clamp(4px, 0.5vmin, 7px); pointer-events: none;
+}
+.b5-tick { width: 1px; height: clamp(5px, 0.58vmin, 8px); background: var(--line-strong); border-radius: 1px; opacity: .55; flex: 0 0 auto; }
+.b5-tick-mid { height: clamp(8px, 0.94vmin, 13px); opacity: .80; background: var(--gold); box-shadow: 0 0 6px rgba(201,169,110,.6); }
+.step[data-step="5"] .slider {
+  background: linear-gradient(90deg, var(--gold-deep) 0%, var(--gold) calc(var(--pct, 30%) * .65), var(--gold-light) var(--pct, 30%), rgba(201,169,110,.14) var(--pct, 30%) 100%);
+  background-clip: content-box; height: clamp(4px, 0.54vmin, 7px);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.35), inset 0 -1px 1px rgba(255,255,255,.04);
+}
+.step[data-step="5"] .slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: clamp(44px, 5.04vmin, 58px); height: clamp(44px, 5.04vmin, 58px);
+  border-radius: 50%; background: linear-gradient(160deg, #f0d88a 0%, var(--gold) 45%, var(--gold-deep) 100%);
+  border: clamp(2.5px, 0.36vmin, 4px) solid #141210;
+  box-shadow: 0 clamp(6px, 0.86vmin, 12px) clamp(20px, 2.88vmin, 40px) rgba(201,169,110,.65), 0 0 0 clamp(4px, 0.5vmin, 7px) rgba(201,169,110,.12);
+  cursor: grab; transition: box-shadow .2s var(--ease-out), transform .15s var(--ease-out);
+}
+.step[data-step="5"] .slider::-webkit-slider-thumb:active {
+  cursor: grabbing; transform: scale(1.10);
+  box-shadow: 0 clamp(8px, 1.08vmin, 16px) clamp(28px, 3.6vmin, 52px) rgba(201,169,110,.80), 0 0 0 clamp(6px, 0.72vmin, 10px) rgba(201,169,110,.20);
+}
+.step[data-step="5"] .slider::-moz-range-thumb {
+  width: clamp(44px, 5.04vmin, 58px); height: clamp(44px, 5.04vmin, 58px); border-radius: 50%;
+  background: linear-gradient(160deg, #f0d88a 0%, var(--gold) 45%, var(--gold-deep) 100%); border: clamp(2.5px, 0.36vmin, 4px) solid #141210;
+  box-shadow: 0 clamp(6px, 0.86vmin, 12px) clamp(20px, 2.88vmin, 40px) rgba(201,169,110,.65), 0 0 0 clamp(4px, 0.5vmin, 7px) rgba(201,169,110,.12);
+  cursor: grab; transition: box-shadow .2s var(--ease-out), transform .15s var(--ease-out);
+}
+.step[data-step="5"] .slider::-moz-range-thumb:active {
+  cursor: grabbing; transform: scale(1.10);
+  box-shadow: 0 clamp(8px, 1.08vmin, 16px) clamp(28px, 3.6vmin, 52px) rgba(201,169,110,.80), 0 0 0 clamp(6px, 0.72vmin, 10px) rgba(201,169,110,.20);
+}
+.step[data-step="5"] .slider:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 8px; border-radius: 999px; }
+.b5-slider-labels {
+  width: 100%; display: flex; justify-content: space-between; margin-top: clamp(6px, 0.72vmin, 10px);
+  font-family: 'JetBrains Mono', monospace; font-size: clamp(10px, 1.01vmin, 12px); letter-spacing: .28em; color: var(--slate); text-transform: uppercase; position: relative;
+}
+.b5-slider-labels::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--line); transform: translateY(-50%); pointer-events: none; z-index: 0; }
+.b5-slider-labels span { position: relative; z-index: 1; background: var(--black); padding: 0 clamp(6px, 0.72vmin, 10px); }
+.b5-slider-labels span:first-child { padding-left: 0; }
+.b5-slider-labels span:last-child { padding-right: 0; }
+.step[data-step="5"] .cta .ico svg { width: clamp(14px, 1.66vmin, 20px); height: auto; opacity: .78; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .b5-slider-wrap { margin-top: var(--gap-md); }
+  .b5-ticks { height: clamp(8px, 2.2vh, 14px); margin-bottom: 3px; }
+  .step[data-step="5"] .budget-display { margin-top: var(--gap-sm); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .step[data-step="5"] .slider::-webkit-slider-thumb { transition: none; }
+  .step[data-step="5"] .slider::-moz-range-thumb { transition: none; }
+}
+
+/* ===== STEP 6 — Purpose & Timeline ===== */
+.step[data-step="6"] .s6-prompt {
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300;
+  font-size: clamp(1.2rem, 2.3vmin, 2.08rem); color: var(--cream); opacity: .88; letter-spacing: .01em; line-height: 1.3;
+}
+.step[data-step="6"] .s6-prompt b {
+  color: var(--gold); font-weight: 400; font-style: normal;
+  background-image: linear-gradient(var(--gold), var(--gold)); background-size: 100% 1px; background-position: 0 100%; background-repeat: no-repeat; padding-bottom: 1px;
+}
+.step[data-step="6"] .s6-chip {
+  background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(5px, 0.65vmin, 8px); min-height: clamp(80px, 12vmin, 148px);
+  padding: clamp(14px, 1.73vmin, 22px) clamp(10px, 1.3vmin, 18px); position: relative; overflow: hidden; text-align: center;
+  transition: transform .22s var(--press), background .25s, border-color .28s, box-shadow .28s;
+}
+.step[data-step="6"] .s6-chip::before, .step[data-step="6"] .s6-chip::after {
+  content: ""; position: absolute; width: clamp(9px, 1.15vmin, 14px); height: clamp(9px, 1.15vmin, 14px);
+  border-color: var(--gold-deep); border-style: solid; opacity: 0; transition: opacity .3s var(--ease-out), border-color .3s; pointer-events: none;
+}
+.step[data-step="6"] .s6-chip::before { top: clamp(5px, .7vmin, 8px); left: clamp(5px, .7vmin, 8px); border-width: 1px 0 0 1px; border-radius: 2px 0 0 0; }
+.step[data-step="6"] .s6-chip::after { bottom: clamp(5px, .7vmin, 8px); right: clamp(5px, .7vmin, 8px); border-width: 0 1px 1px 0; border-radius: 0 0 2px 0; }
+.step[data-step="6"] .s6-icon { display: flex; align-items: center; justify-content: center; color: var(--gold-deep); transition: color .3s var(--ease-out), transform .3s var(--ease-out); flex: 0 0 auto; }
+.step[data-step="6"] .s6-icon svg { width: clamp(16px, 2.16vmin, 26px); height: clamp(16px, 2.16vmin, 26px); display: block; }
+.step[data-step="6"] .s6-chip .label {
+  font-family: 'Cinzel', serif; font-weight: 500; font-size: clamp(1rem, 2.02vmin, 1.8rem); letter-spacing: .06em; color: var(--cream); line-height: 1.05; position: relative; z-index: 2; transition: color .3s var(--ease-out);
+}
+.step[data-step="6"] .s6-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: clamp(8px, 0.79vmin, 10px); letter-spacing: .22em; color: var(--slate); text-transform: uppercase; position: relative; z-index: 2; transition: color .3s var(--ease-out); line-height: 1;
+}
+.step[data-step="6"] .s6-chip--time { min-height: clamp(72px, 10.8vmin, 134px); }
+@media (hover: hover) and (pointer: fine) {
+  .step[data-step="6"] .s6-chip:hover { border-color: var(--line-strong); background: var(--softer); transform: translateY(-2px); box-shadow: 0 8px 28px -10px rgba(201, 169, 110, .18), 0 0 0 1px rgba(201, 169, 110, .08); }
+  .step[data-step="6"] .s6-chip:hover .s6-icon { color: var(--gold); transform: translateY(-1px) scale(1.06); }
+  .step[data-step="6"] .s6-chip:hover::before, .step[data-step="6"] .s6-chip:hover::after { opacity: .55; }
+  .step[data-step="6"] .s6-chip:hover .label { color: var(--gold-light); }
+  .step[data-step="6"] .s6-chip:hover .s6-sub { color: var(--gold-deep); }
+  .step[data-step="6"] .s6-chip.selected:hover { transform: translateY(-2px); }
+}
+.step[data-step="6"] .s6-chip:active { transform: scale(.97); }
+.step[data-step="6"] .s6-chip.selected {
+  background: var(--softer); border-color: var(--gold);
+  box-shadow: 0 0 0 clamp(2px, .36vmin, 2.88px) rgba(201, 169, 110, .12), 0 0 32px -8px rgba(201, 169, 110, .38), 0 18px 48px -16px rgba(201, 169, 110, .3);
+}
+.step[data-step="6"] .s6-chip.selected .label { color: var(--gold); }
+.step[data-step="6"] .s6-chip.selected .s6-sub { color: var(--gold-deep); }
+.step[data-step="6"] .s6-chip.selected .s6-icon { color: var(--gold); }
+.step[data-step="6"] .s6-chip.selected::before, .step[data-step="6"] .s6-chip.selected::after { opacity: .8; border-color: var(--gold); }
+.step[data-step="6"] .s6-divider { display: flex; align-items: center; justify-content: center; gap: clamp(10px, 1.4vmin, 18px); width: min(48vmin, 420px); margin: var(--gap-md) auto; }
+.step[data-step="6"] .s6-divider span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line)); }
+.step[data-step="6"] .s6-divider span:last-child { background: linear-gradient(90deg, var(--line), transparent); }
+.step[data-step="6"] .s6-divider i { display: block; width: 4px; height: 4px; background: var(--gold-deep); transform: rotate(45deg); box-shadow: 0 0 8px rgba(201, 169, 110, .55); flex: 0 0 auto; }
+@media (min-width: 480px) { .step[data-step="6"] #intentRow { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 700px) { .step[data-step="6"] #timelineRow { grid-template-columns: repeat(5, 1fr); } }
+@media (prefers-reduced-motion: reduce) {
+  .step[data-step="6"] .s6-chip, .step[data-step="6"] .s6-chip::before, .step[data-step="6"] .s6-chip::after, .step[data-step="6"] .s6-icon, .step[data-step="6"] .s6-chip .label, .step[data-step="6"] .s6-chip .s6-sub { transition: none !important; }
+}
+
+/* ===== STEP 7 — Family & Must-haves ===== */
+.step[data-step="7"] .s7-family-row { display: flex; align-items: center; justify-content: center; gap: clamp(24px, 5.4vmin, 72px); margin-top: var(--gap-md); }
+.step[data-step="7"] .s7-fbtn {
+  position: relative; width: clamp(56px, 8.28vmin, 118px); height: clamp(56px, 8.28vmin, 118px); min-width: 44px; min-height: 44px;
+  border-radius: 50%; background: rgba(20, 18, 16, 0.72); border: 1px solid var(--line-strong); color: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(201, 169, 110, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 28px -10px rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  transition: transform 0.15s var(--press), background 0.22s, border-color 0.22s, box-shadow 0.22s, color 0.22s; overflow: hidden;
+}
+.step[data-step="7"] .s7-fbtn::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 220deg, transparent 0 55%, rgba(255, 240, 200, 0.18) 68%, rgba(255, 240, 200, 0.10) 78%, transparent 88% 100%);
+  -webkit-mask: radial-gradient(circle, transparent 0 83%, #000 89%); mask: radial-gradient(circle, transparent 0 83%, #000 89%); opacity: 0.9;
+}
+.step[data-step="7"] .s7-fbtn:active {
+  transform: scale(0.91); background: rgba(201, 169, 110, 0.15); border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(201, 169, 110, 0.20), 0 0 24px rgba(201, 169, 110, 0.25), 0 4px 14px -6px rgba(0, 0, 0, 0.5);
+}
+.step[data-step="7"] .s7-fbtn[disabled] { opacity: 0.28; pointer-events: none; border-color: var(--line); box-shadow: none; }
+@media (hover: hover) and (pointer: fine) {
+  .step[data-step="7"] .s7-fbtn:not([disabled]):hover {
+    border-color: var(--line-strong); background: rgba(201, 169, 110, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(201, 169, 110, 0.12), 0 12px 36px -12px rgba(201, 169, 110, 0.30), 0 4px 14px -6px rgba(0, 0, 0, 0.5); color: var(--gold-light);
+  }
+}
+.step[data-step="7"] .s7-counter-wrap { display: flex; flex-direction: column; align-items: center; gap: clamp(4px, 0.72vmin, 9px); }
+.step[data-step="7"] .s7-fnum {
+  font-family: 'Cinzel', serif; font-weight: 500; font-size: clamp(4.5rem, 13vmin, 11rem); line-height: 0.92; letter-spacing: 0.02em;
+  color: var(--gold-light); min-width: clamp(108px, 15vmin, 216px); text-align: center;
+  text-shadow: 0 0 40px rgba(232, 205, 135, 0.55), 0 0 90px rgba(201, 169, 110, 0.28); transition: text-shadow 0.3s var(--ease-out), color 0.2s;
+}
+.step[data-step="7"] .s7-fnum.bump { animation: s7NumBump 0.26s var(--ease-out); }
+@keyframes s7NumBump {
+  0% { text-shadow: 0 0 60px rgba(232,205,135,.90), 0 0 120px rgba(201,169,110,.55); color: #fff; }
+  100%{ text-shadow: 0 0 40px rgba(232,205,135,.55), 0 0 90px rgba(201,169,110,.28); color: var(--gold-light); }
+}
+.step[data-step="7"] .s7-counter-caption { display: inline-flex; align-items: center; gap: clamp(6px, 0.72vmin, 10px); }
+.step[data-step="7"] .s7-people-icon { color: var(--slate); flex: 0 0 auto; opacity: 0.7; }
+.step[data-step="7"] .s7-pills-title {
+  margin-top: var(--gap-lg); font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300;
+  font-size: clamp(1.05rem, 1.8vmin, 1.62rem); color: var(--cream); position: relative; padding-top: clamp(14px, 1.8vmin, 24px);
+}
+.step[data-step="7"] .s7-pills-title::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: clamp(48px, 8vmin, 100px); height: 1px; background: linear-gradient(90deg, transparent, var(--line-strong), transparent); }
+.step[data-step="7"] .s7-pills-title b { color: var(--gold); font-weight: 400; font-style: normal; }
+.step[data-step="7"] .pill-opt {
+  position: relative; min-height: max(44px, clamp(44px, 4.0vmin, 56px)); height: clamp(44px, 4.0vmin, 56px); padding: 0 clamp(16px, 1.73vw, 24px);
+  border-radius: 999px; background: rgba(20, 18, 16, 0.65); border: 1px solid var(--line-strong); color: var(--cream);
+  font-family: 'Cormorant Garamond', serif; font-weight: 400; font-size: clamp(0.93rem, 1.3vmin, 1.22rem); letter-spacing: 0.02em;
+  display: inline-flex; align-items: center; justify-content: center; gap: clamp(7px, 0.72vmin, 10px);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 18px -6px rgba(0,0,0,0.4);
+  transition: transform 0.15s var(--press), background 0.22s, border-color 0.22s, color 0.22s, box-shadow 0.22s; overflow: hidden;
+}
+.step[data-step="7"] .pill-opt::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 36%, rgba(255,245,210,0.12) 50%, transparent 64%); transform: translateX(-130%); transition: transform 0s;
+}
+@media (hover: hover) and (pointer: fine) {
+  .step[data-step="7"] .pill-opt:not(.selected):hover {
+    border-color: var(--gold); color: var(--gold-light); background: rgba(201, 169, 110, 0.07);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(201,169,110,0.12), 0 6px 22px -8px rgba(201,169,110,0.22);
+  }
+  .step[data-step="7"] .pill-opt:not(.selected):hover::after { transform: translateX(130%); transition: transform 0.6s var(--ease-out); }
+}
+.step[data-step="7"] .pill-opt:active { transform: scale(0.93); }
+.step[data-step="7"] .pill-opt.selected {
+  background: linear-gradient(160deg, var(--gold-light) 0%, var(--gold) 48%, var(--gold-deep) 100%); border-color: transparent; color: #1a1208; font-weight: 500;
+  box-shadow: 0 0 0 1px rgba(201,169,110,0.30), 0 10px 32px -10px rgba(201,169,110,0.65), inset 0 1px 0 rgba(255,255,255,0.40); animation: s7PillIn 0.32s var(--ease-out);
+}
+@keyframes s7PillIn { 0% { transform: scale(0.90); } 58% { transform: scale(1.06); } 100%{ transform: scale(1); } }
+.step[data-step="7"] .pill-opt.selected .s7-pill-icon { display: inline-flex; }
+.step[data-step="7"] .pill-opt:not(.selected) .s7-pill-icon { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .step[data-step="7"] .pill-opt.selected:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(201,169,110,0.40), 0 14px 40px -10px rgba(201,169,110,0.75), inset 0 1px 0 rgba(255,255,255,0.45); }
+}
+.step[data-step="7"].active .pill-opt { animation: s7PillEntrance 0.38s var(--ease-out) both; }
+.step[data-step="7"].active .pill-opt:nth-child(1){animation-delay:.04s} .step[data-step="7"].active .pill-opt:nth-child(2){animation-delay:.08s}
+.step[data-step="7"].active .pill-opt:nth-child(3){animation-delay:.11s} .step[data-step="7"].active .pill-opt:nth-child(4){animation-delay:.14s}
+.step[data-step="7"].active .pill-opt:nth-child(5){animation-delay:.17s} .step[data-step="7"].active .pill-opt:nth-child(6){animation-delay:.20s}
+.step[data-step="7"].active .pill-opt:nth-child(7){animation-delay:.23s} .step[data-step="7"].active .pill-opt:nth-child(8){animation-delay:.26s}
+.step[data-step="7"].active .pill-opt:nth-child(9){animation-delay:.29s} .step[data-step="7"].active .pill-opt:nth-child(10){animation-delay:.32s}
+.step[data-step="7"].active .pill-opt:nth-child(11){animation-delay:.34s} .step[data-step="7"].active .pill-opt:nth-child(12){animation-delay:.36s}
+@keyframes s7PillEntrance { from { opacity: 0; transform: translateY(8px) scale(0.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .step[data-step="7"] .s7-fnum.bump, .step[data-step="7"] .pill-opt, .step[data-step="7"] .pill-opt.selected, .step[data-step="7"].active .pill-opt { animation: none !important; transform: none !important; }
+}
+
+/* ===== STEP 8 — Done finale ===== */
+.step[data-step="8"] .inner { position: relative; }
+.done-ring-wrap {
+  position: relative; width: clamp(160px, 21vmin, 268px); height: clamp(160px, 21vmin, 268px);
+  display: flex; align-items: center; justify-content: center; margin-bottom: var(--gap-md); flex-shrink: 0;
+}
+.done-halo {
+  position: absolute; inset: -28%; border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(201, 169, 110, 0.22) 0%, rgba(201, 169, 110, 0.10) 38%, transparent 70%);
+  animation: doneHaloPulse 3.2s ease-in-out 0.4s infinite alternate; pointer-events: none;
+}
+@keyframes doneHaloPulse { from { opacity: 0.7; transform: scale(0.96); } to { opacity: 1.0; transform: scale(1.04); } }
+.done-sparks { position: absolute; inset: -20%; width: 140%; height: 140%; pointer-events: none; overflow: visible; }
+.sp line { stroke: var(--gold-light); stroke-width: 1.6; stroke-linecap: round; opacity: 0; }
+.sp1 line { animation: sparkIn .5s var(--press) 1.6s forwards, sparkPulse 2.4s ease-in-out 2.2s infinite alternate; }
+.sp2 line { animation: sparkIn .5s var(--press) 1.85s forwards, sparkPulse 2.8s ease-in-out 2.5s infinite alternate; }
+.sp3 line { animation: sparkIn .5s var(--press) 1.7s forwards, sparkPulse 2.6s ease-in-out 2.3s infinite alternate; }
+.sp4 line { animation: sparkIn .5s var(--press) 2.0s forwards, sparkPulse 3.0s ease-in-out 2.7s infinite alternate; }
+.sp5 line { animation: sparkIn .5s var(--press) 1.95s forwards, sparkPulse 2.5s ease-in-out 2.6s infinite alternate; }
+@keyframes sparkIn { to { opacity: 0.75; } }
+@keyframes sparkPulse { from { opacity: 0.40; transform: scale(0.85); } to { opacity: 0.90; transform: scale(1.15); } }
+.step[data-step="8"] .check-ring {
+  width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 50%, rgba(201, 169, 110, 0.28) 0%, rgba(201, 169, 110, 0.12) 50%, transparent 75%); position: relative; margin-bottom: 0;
+}
+.step[data-step="8"] .check-ring::before {
+  content: ""; position: absolute; inset: 10%; border-radius: 50%; border: 1px solid rgba(201, 169, 110, 0.18); pointer-events: none; opacity: 0; animation: doneInnerRingIn 0.8s var(--press) 0.9s forwards;
+}
+@keyframes doneInnerRingIn { to { opacity: 1; } }
+.step[data-step="8"] .check-ring svg { width: 92%; height: 92%; filter: drop-shadow(0 0 10px rgba(201, 169, 110, 0.55)) drop-shadow(0 0 4px rgba(201, 169, 110, 0.35)); }
+.step[data-step="8"] .check-ring circle { stroke: var(--gold-light); stroke-width: 3.5; }
+.step[data-step="8"] .check-ring path { stroke: #f0dfa0; stroke-width: 9; filter: drop-shadow(0 0 6px rgba(232, 205, 135, 0.8)); }
+.step[data-step="8"] .token-chip {
+  background: linear-gradient(160deg, #f0dfa0 0%, var(--gold-light) 22%, var(--gold) 55%, var(--gold-deep) 82%, #6a4e1a 100%);
+  box-shadow: 0 0 0 1px rgba(201, 169, 110, 0.35), 0 8px 24px -8px rgba(201, 169, 110, 0.55), 0 24px 64px -20px rgba(201, 169, 110, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.40), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  position: relative; overflow: hidden; padding-top: clamp(18px, 1.87vmin, 26px); padding-bottom: clamp(18px, 1.87vmin, 26px);
+}
+.step[data-step="8"] .token-chip::before {
+  content: ""; position: absolute; left: clamp(88px, 9.8vmin, 134px); top: 20%; bottom: 20%; width: 1px;
+  background: repeating-linear-gradient(to bottom, rgba(26, 18, 8, 0.30) 0px, rgba(26, 18, 8, 0.30) 4px, transparent 4px, transparent 8px); pointer-events: none;
+}
+.step[data-step="8"] .token-chip::after {
+  background: linear-gradient(112deg, transparent 38%, rgba(255, 255, 255, 0.50) 48%, rgba(255, 248, 200, 0.30) 54%, transparent 64%);
+}
+.step[data-step="8"] .token-chip .lbl { opacity: 0.72; line-height: 1; }
+.step[data-step="8"] .token-chip .val { letter-spacing: 0.08em; }
+.step[data-step="8"] .token-chip .dot { width: clamp(8px, 0.86vmin, 9px); height: clamp(8px, 0.86vmin, 9px); opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) {
+  .done-halo { animation: none; opacity: 0.85; }
+  .sp line { animation: none; opacity: 0.55; }
+  .step[data-step="8"] .check-ring::before { animation: none; opacity: 1; }
+}
+:root[data-theme="light"] .done-halo { background: radial-gradient(circle, rgba(139, 108, 44, 0.18) 0%, transparent 70%); }
+:root[data-theme="light"] .done-sparks .sp line { stroke: var(--gold); }
+:root[data-theme="light"] .step[data-step="8"] .check-ring::before { border-color: rgba(139, 108, 44, 0.22); }
+
+</style>
+</head>
+<body>
+
+<div class="viewport">
+  <div class="stage" id="stage">
+
+    <!-- ambient (cinematic depth: base wash → drifting aura → vignette → grain) -->
+    <div class="filmbase"></div>
+    <div class="glow"></div>
+    <div class="aura"></div>
+    <div class="starfield" id="starfield"></div>
+    <div class="vignette"></div>
+    <div class="grain"></div>
+
+    <!-- INTRO background deco (behind content): eclipse + topographic field -->
+    <div class="intro-bg" aria-hidden="true">
+      <!-- Volumetric light shaft pouring down a receding golden corridor, clipped to the ring -->
+      <div class="beam">
+        <div class="corridor"><svg class="corridor-svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+<defs><linearGradient id="corr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3e2bb" stop-opacity="0.42"/><stop offset="0.27" stop-color="#caa86a" stop-opacity="0.20"/><stop offset="0.6" stop-color="#6f5732" stop-opacity="0.10"/><stop offset="1" stop-color="#1c150b" stop-opacity="0"/></linearGradient></defs>
+<rect x="0" y="0" width="1000" height="1000" fill="url(#corr)"/>
+<g class="corr-ribs">
+<line x1="500" y1="140" x2="-220" y2="1000" stroke-opacity="0.087"/>
+<line x1="500" y1="140" x2="-40" y2="1000" stroke-opacity="0.165"/>
+<line x1="500" y1="140" x2="120" y2="1000" stroke-opacity="0.235"/>
+<line x1="500" y1="140" x2="210" y2="1000" stroke-opacity="0.274"/>
+<line x1="500" y1="140" x2="300" y2="1000" stroke-opacity="0.313"/>
+<line x1="500" y1="140" x2="360" y2="1000" stroke-opacity="0.339"/>
+<line x1="500" y1="140" x2="420" y2="1000" stroke-opacity="0.365"/>
+<line x1="500" y1="140" x2="470" y2="1000" stroke-opacity="0.387"/>
+<line x1="500" y1="140" x2="500" y2="1000" stroke-opacity="0.4"/>
+<line x1="500" y1="140" x2="530" y2="1000" stroke-opacity="0.387"/>
+<line x1="500" y1="140" x2="580" y2="1000" stroke-opacity="0.365"/>
+<line x1="500" y1="140" x2="640" y2="1000" stroke-opacity="0.339"/>
+<line x1="500" y1="140" x2="700" y2="1000" stroke-opacity="0.313"/>
+<line x1="500" y1="140" x2="790" y2="1000" stroke-opacity="0.274"/>
+<line x1="500" y1="140" x2="880" y2="1000" stroke-opacity="0.235"/>
+<line x1="500" y1="140" x2="1040" y2="1000" stroke-opacity="0.165"/>
+<line x1="500" y1="140" x2="1220" y2="1000" stroke-opacity="0.087"/>
+</g>
+<g class="corr-steps">
+<line x1="499.3" y1="141.8" x2="500.7" y2="141.8" stroke-opacity="0.099"/>
+<line x1="497.2" y1="146.8" x2="502.8" y2="146.8" stroke-opacity="0.181"/>
+<line x1="493.9" y1="154.9" x2="506.1" y2="154.9" stroke-opacity="0.118"/>
+<line x1="489.4" y1="166.1" x2="510.6" y2="166.1" stroke-opacity="0.212"/>
+<line x1="483.6" y1="180.4" x2="516.4" y2="180.4" stroke-opacity="0.137"/>
+<line x1="476.6" y1="197.6" x2="523.4" y2="197.6" stroke-opacity="0.244"/>
+<line x1="468.3" y1="217.8" x2="531.7" y2="217.8" stroke-opacity="0.156"/>
+<line x1="458.9" y1="241.0" x2="541.1" y2="241.0" stroke-opacity="0.275"/>
+<line x1="448.3" y1="267.0" x2="551.7" y2="267.0" stroke-opacity="0.174"/>
+<line x1="436.5" y1="296.0" x2="563.5" y2="296.0" stroke-opacity="0.306"/>
+<line x1="423.6" y1="327.8" x2="576.4" y2="327.8" stroke-opacity="0.193"/>
+<line x1="409.4" y1="362.6" x2="590.6" y2="362.6" stroke-opacity="0.338"/>
+<line x1="394.1" y1="400.2" x2="605.9" y2="400.2" stroke-opacity="0.212"/>
+<line x1="377.6" y1="440.6" x2="622.4" y2="440.6" stroke-opacity="0.369"/>
+<line x1="360.0" y1="483.9" x2="640.0" y2="483.9" stroke-opacity="0.231"/>
+<line x1="341.3" y1="530.1" x2="658.7" y2="530.1" stroke-opacity="0.4"/>
+<line x1="321.3" y1="579.0" x2="678.7" y2="579.0" stroke-opacity="0.249"/>
+<line x1="300.3" y1="630.8" x2="699.7" y2="630.8" stroke-opacity="0.431"/>
+<line x1="278.1" y1="685.3" x2="721.9" y2="685.3" stroke-opacity="0.268"/>
+<line x1="254.7" y1="742.7" x2="745.3" y2="742.7" stroke-opacity="0.463"/>
+<line x1="230.2" y1="802.8" x2="769.8" y2="802.8" stroke-opacity="0.287"/>
+<line x1="204.6" y1="865.8" x2="795.4" y2="865.8" stroke-opacity="0.494"/>
+<line x1="177.9" y1="931.5" x2="822.1" y2="931.5" stroke-opacity="0.306"/>
+<line x1="150.0" y1="1000.0" x2="850.0" y2="1000.0" stroke-opacity="0.525"/>
+</g>
+<ellipse class="corr-core" cx="500" cy="140" rx="120" ry="96" fill="#ffeec4"/>
+</svg></div>
+        <div class="rays"><svg class="rays-svg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+<polygon class="ray" points="500,150 73,1109 141,1137" opacity="0.054"/>
+<polygon class="ray" points="500,150 228,1164 336,1187" opacity="0.075"/>
+<polygon class="ray" points="500,150 336,1187 482,1200" opacity="0.09"/>
+<polygon class="ray" points="500,150 537,1199 610,1194" opacity="0.092"/>
+<polygon class="ray" points="500,150 682,1184 789,1159" opacity="0.073"/>
+<polygon class="ray" points="500,150 859,1137 993,1077" opacity="0.05"/>
+</svg></div>
+        <span class="beam-core"></span>
+      </div>
+      <!-- (rings + shine removed by request) -->
+      <!-- (side thread filaments removed — kept composition to a clean circle) -->
+      <!-- Floating dust motes + diamond sparkles (JS-filled) -->
+      <div class="motes" id="motes"></div>
+      <div class="sparkles" id="sparkles"></div>
+      <!-- Particles drawn in from all around the screen toward the centre (JS-filled) -->
+      <div class="influx" id="influx"></div>
+    </div>
+
+    <!-- FORM-STEP backdrop (steps 1-8): gold ring + flare + soft glow + silk waves + sparkles -->
+    <div class="form-bg" aria-hidden="true">
+      <span class="form-glow"></span>
+      <span class="form-ring"></span>
+      <span class="form-flare"></span>
+      <!-- (silk waves removed) -->
+      <div class="form-motes" id="formMotes"></div>
+      <div class="form-sparkles" id="formSparkles"></div>
+      <!-- particles drawn in from all around the screen toward the centre (like the intro) -->
+      <div class="form-influx" id="formInflux"></div>
+    </div>
+
+    <!-- progress rail -->
+    <div class="rail"><div class="rail-fill" id="railFill"></div></div>
+
+    <!-- top chrome bar -->
+    <header class="topbar">
+      <div class="identity">
+        <img src="assets/logo-mark.png" alt=""/>
+        <div class="lbl"><b>the UNIVERSE</b><span class="sfx">&nbsp;&middot;&nbsp;Reception</span></div>
+      </div>
+      <div class="stepmeta">
+        <div class="num">STEP <b id="stepNum">01</b> / 09</div>
+        <button class="pill" id="exitBtn">Exit</button>
+      </div>
+    </header>
+
+    <!-- steps -->
+    <main class="steps" id="steps">
+
+      <!-- 0: Welcome -->
+      <section class="step" data-step="0">
+        <div class="inner">
+          <div class="welcome-mark">
+            <!-- The original UNIVERSE brand mark, revealed cinematically (not redrawn). -->
+            <img class="mark-img" src="assets/logo-mark.png" alt="the UNIVERSE"/>
+            <span class="mark-shine" aria-hidden="true"></span>
+          </div>
+          <div class="eyebrow">Venus Group &middot; Nehru Nagar, Ahmedabad</div>
+          <h1 class="h1">Welcome to <span class="it">the</span><br/>UNIVERSE</h1>
+          <div class="intro-divider" aria-hidden="true"><span></span><i></i><span></span></div>
+          <p class="sub">A private moment to share what you are imagining for home.<br/>Take your time &mdash; this only takes a minute.</p>
+          <div class="cta-wrap begin-wrap"><button class="cta begin-cta" data-action="next"><span class="bt">Begin</span><span class="arr">&rarr;</span></button><div class="begin-stream" id="beginStream" aria-hidden="true"></div><span class="glow-line" aria-hidden="true"></span></div>
+          <div class="press-enter" aria-hidden="true">Press Enter to continue</div>
+        </div>
+      </section>
+
+      <!-- 1: Phone -->
+      <section class="step" data-step="1">
+  <div class="inner">
+    <div class="eyebrow">A way to reach you</div>
+    <h1 class="h1 smaller">What&rsquo;s your <span class="it">phone</span>?</h1>
+    <p class="sub">We&rsquo;ll send a 4-digit code to verify. Used only for this visit.</p>
+    <div class="phone-row">
+      <div class="cc-chip">
+        <span class="flag">🇮🇳</span>
+        <span>+91</span>
+        <span class="cc-chevron" aria-hidden="true">
+          <svg width="10" height="7" viewBox="0 0 10 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 1L5 5.5L9 1"/>
+          </svg>
+        </span>
+      </div>
+      <span class="field-ico">
+        <span class="field-ico__icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 4a1 1 0 0 1 1-1h2.28a.5.5 0 0 1 .48.35l.92 3.2a.5.5 0 0 1-.13.5L6.3 8.3a8.5 8.5 0 0 0 3.4 3.4l1.25-1.25a.5.5 0 0 1 .5-.13l3.2.92a.5.5 0 0 1 .35.48V14a1 1 0 0 1-1 1h-1C6.16 15 3 11.84 3 8V7V4Z"/>
+          </svg>
+        </span>
+        <input class="bigInput" id="phoneInput" inputmode="numeric" placeholder="00000 00000" aria-label="Phone number"/>
+      </span>
+    </div>
+    <div class="cta-wrap">
+      <button class="cta" id="phoneNext" disabled>
+        <span class="ico">
+          <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 2L7.5 9.5M15 2L9.5 15.5L7.5 9.5M15 2L1.5 7L7.5 9.5"/>
+          </svg>
+        </span>
+        Send code <span class="arr">&rarr;</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+      <!-- 2: OTP -->
+      <section class="step" data-step="2">
+  <div class="inner">
+
+    <!-- eyebrow with optional shield icon -->
+    <div class="eyebrow otp-eyebrow">
+      <svg class="otp-shield" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 1.5L2 5v5.5c0 4.418 3.358 8.55 8 9.5 4.642-.95 8-5.082 8-9.5V5L10 1.5Z"
+              stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M7 11l2 2 4-4" stroke="currentColor" stroke-width="1.2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Verify it&rsquo;s you
+    </div>
+
+    <h1 class="h1 smaller">Enter the <span class="it">4-digit</span> code</h1>
+    <p class="sub">Sent to <b id="otpPhone">+91 00000 00000</b>. It auto-continues when complete.</p>
+
+    <div class="otp-row" id="otpRow">
+      <div class="otp-cell" data-i="0"></div>
+      <div class="otp-cell" data-i="1"></div>
+      <div class="otp-cell" data-i="2"></div>
+      <div class="otp-cell" data-i="3"></div>
+    </div>
+
+    <div class="keypad" id="keypad"></div>
+
+    <div class="tip">Tip &middot; use <b>1234</b> for demo</div>
+  </div>
+</section>
+
+      <!-- 3: Name + Email -->
+      <section class="step" data-step="3">
+  <div class="inner">
+    <div class="eyebrow">Tell us who you are</div>
+    <h1 class="h1 smaller">Your <span class="it">name</span> &amp; email</h1>
+    <p class="sub">So we can address you properly &mdash; and follow up only if you&rsquo;d like.</p>
+    <div class="field-stack">
+
+      <label class="field-ico" aria-label="Full name field">
+        <span class="field-ico__icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="9" cy="5.5" r="3" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2.5 15.5c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <input class="bigInput" id="nameInput"
+               maxlength="40"
+               placeholder="Full name"
+               aria-label="Full name"
+               autocomplete="name"
+               spellcheck="false"/>
+      </label>
+
+      <label class="field-ico" aria-label="Email address field">
+        <span class="field-ico__icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="4" width="14" height="10" rx="2" stroke="#c9a96e" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M2 6.5l6.28 4.2a1.5 1.5 0 001.44 0L16 6.5" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <input class="bigInput" id="emailInput"
+               type="email"
+               maxlength="60"
+               placeholder="email@example.com"
+               aria-label="Email address"
+               autocomplete="email"
+               inputmode="email"
+               spellcheck="false"/>
+      </label>
+
+    </div>
+    <div class="cta-wrap">
+      <button class="cta" id="nameNext" disabled>
+        <span class="ico">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="9" cy="5.5" r="3" stroke="#1a1208" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2.5 15.5c0-3.314 2.91-6 6.5-6s6.5 2.686 6.5 6" stroke="#1a1208" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M11.5 13.5l2 2 2-2" stroke="#1a1208" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        Continue
+        <span class="arr">&rarr;</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+      <!-- 4: Typology -->
+      <section class="step" data-step="4">
+  <div class="inner">
+    <div class="eyebrow">Step into the layout</div>
+    <h1 class="h1 smaller">What home are you <span class="it">imagining</span>?</h1>
+    <p class="sub">Pick the closest fit. You can refine details with our team later.</p>
+    <div class="cards-row" id="typologyRow">
+
+      <!-- 3 BHK -->
+      <button class="card t-card" data-val="3 BHK">
+        <span class="t-card__check" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="2,6 5,9.5 10,3" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="t-card__icon" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="8" width="14" height="11" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="22" y="8" width="14" height="11" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="4" y="23" width="32" height="9" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="13" y1="23" x2="13" y2="32" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="22" y1="19" x2="22" y2="23" stroke="#c9a96e" stroke-width="1" stroke-linecap="round" stroke-opacity="0.55"/>
+          </svg>
+        </span>
+        <div class="label">3 BHK</div>
+        <div class="meta">Compact &middot; Spacious living</div>
+      </button>
+
+      <!-- 4 BHK -->
+      <button class="card t-card" data-val="4 BHK">
+        <span class="t-card__check" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="2,6 5,9.5 10,3" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="t-card__icon" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="6" width="14" height="12" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="22" y="6" width="14" height="12" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="4" y="22" width="14" height="12" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="22" y="22" width="14" height="12" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="18" y1="12" x2="22" y2="12" stroke="#c9a96e" stroke-width="1" stroke-linecap="round" stroke-opacity="0.45"/>
+            <line x1="18" y1="28" x2="22" y2="28" stroke="#c9a96e" stroke-width="1" stroke-linecap="round" stroke-opacity="0.45"/>
+            <line x1="12" y1="18" x2="12" y2="22" stroke="#c9a96e" stroke-width="1" stroke-linecap="round" stroke-opacity="0.45"/>
+            <line x1="28" y1="18" x2="28" y2="22" stroke="#c9a96e" stroke-width="1" stroke-linecap="round" stroke-opacity="0.45"/>
+          </svg>
+        </span>
+        <div class="label">4 BHK</div>
+        <div class="meta">Family &middot; Generous</div>
+      </button>
+
+      <!-- 4 BHK Premium -->
+      <button class="card t-card" data-val="4 BHK Premium">
+        <span class="t-card__check" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polyline points="2,6 5,9.5 10,3" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="t-card__icon" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="20" y1="3" x2="20" y2="8" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="13" y1="6" x2="15" y2="9" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round"/>
+            <line x1="27" y1="6" x2="25" y2="9" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="11" y="9" width="18" height="27" rx="1" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="15" y="13" width="4" height="3" rx="0.5" stroke="#c9a96e" stroke-width="1" stroke-opacity="0.7"/>
+            <rect x="21" y="13" width="4" height="3" rx="0.5" stroke="#c9a96e" stroke-width="1" stroke-opacity="0.7"/>
+            <rect x="15" y="20" width="4" height="3" rx="0.5" stroke="#c9a96e" stroke-width="1" stroke-opacity="0.7"/>
+            <rect x="21" y="20" width="4" height="3" rx="0.5" stroke="#c9a96e" stroke-width="1" stroke-opacity="0.7"/>
+            <path d="M17 36 L17 30 Q20 27.5 23 30 L23 36" stroke="#c9a96e" stroke-width="1" stroke-opacity="0.55" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <div class="label">4 BHK Premium</div>
+        <div class="meta">Signature &middot; Top floors</div>
+      </button>
+
+    </div>
+  </div>
+</section>
+
+      <!-- 5: Budget -->
+      <section class="step" data-step="5">
+  <div class="inner">
+    <div class="eyebrow">Comfort, not commitment</div>
+    <h1 class="h1 smaller">Your <span class="it">budget</span> envelope?</h1>
+    <p class="sub">Slide to set a comfortable range &mdash; we&rsquo;ll work within it.</p>
+
+    <div class="budget-display">
+      <div class="b5-num-wrap">
+        <span class="b5-rupee">&#8377;</span><span class="budget-num" id="budgetNum">3.00 Cr</span>
+      </div>
+      <div class="budget-cap" id="budgetCap">Approximate &middot; all-inclusive</div>
+    </div>
+
+    <div class="slider-wrap b5-slider-wrap">
+      <div class="b5-ticks" aria-hidden="true">
+        <span class="b5-tick"></span><span class="b5-tick"></span><span class="b5-tick"></span>
+        <span class="b5-tick"></span><span class="b5-tick"></span><span class="b5-tick b5-tick-mid"></span>
+        <span class="b5-tick"></span><span class="b5-tick"></span><span class="b5-tick"></span>
+        <span class="b5-tick"></span><span class="b5-tick"></span>
+      </div>
+      <input type="range" min="15000000" max="100000000" step="500000" value="30000000"
+             class="slider" id="budgetSlider" aria-label="Budget in rupees"/>
+      <div class="slider-labels b5-slider-labels">
+        <span>1.5 Cr</span>
+        <span>10 Cr</span>
+      </div>
+    </div>
+
+    <div class="cta-wrap">
+      <button class="cta" data-action="next">
+        <span class="ico">
+          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M10 2L3 8.5l7 9.5 7-9.5L10 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M3 8.5h14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        Continue <span class="arr">&rarr;</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+      <!-- 6: Purpose + Timeline -->
+      <section class="step" data-step="6">
+  <div class="inner">
+    <div class="eyebrow">A little about your plan</div>
+    <h1 class="h1 smaller">Purpose &amp; <span class="it">timeline</span></h1>
+
+    <!-- Group 1: Intent -->
+    <div class="group s6-group" style="margin-top:var(--gap-md)">
+      <h3 class="s6-prompt">This home is <b>primarily</b> for&hellip;</h3>
+      <div class="opts" id="intentRow">
+
+        <button class="card small s6-chip" data-val="To live in">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H5a1 1 0 01-1-1V10.5z"/>
+              <path d="M9 22V12h6v10"/>
+            </svg>
+          </span>
+          <div class="label">To live in</div>
+          <span class="s6-sub">Owner-occupied</span>
+        </button>
+
+        <button class="card small s6-chip" data-val="Investment">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+              <polyline points="16 7 22 7 22 13"/>
+            </svg>
+          </span>
+          <div class="label">Investment</div>
+          <span class="s6-sub">Asset &amp; returns</span>
+        </button>
+
+        <button class="card small s6-chip" data-val="Both">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 3v9l5 3"/>
+              <path d="M7 12h5"/>
+            </svg>
+          </span>
+          <div class="label">Both</div>
+          <span class="s6-sub">Live &amp; grow wealth</span>
+        </button>
+
+      </div>
+    </div>
+
+    <div class="s6-divider" aria-hidden="true"><span></span><i></i><span></span></div>
+
+    <!-- Group 2: Timeline -->
+    <div class="group s6-group">
+      <h3 class="s6-prompt">You&rsquo;re looking to <b>move in</b>&hellip;</h3>
+      <div class="opts" id="timelineRow">
+
+        <button class="card small s6-chip s6-chip--time" data-val="0-3 months">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </span>
+          <div class="label">0&ndash;3 mo</div>
+          <span class="s6-sub">Ready now</span>
+        </button>
+
+        <button class="card small s6-chip s6-chip--time" data-val="3-6 months">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <path d="M8 14h4l2 2"/>
+            </svg>
+          </span>
+          <div class="label">3&ndash;6 mo</div>
+          <span class="s6-sub">Near term</span>
+        </button>
+
+        <button class="card small s6-chip s6-chip--time" data-val="6-12 months">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="13" r="7"/>
+              <polyline points="12 10 12 13 14 15"/>
+              <path d="M7 4l-1.5-1.5M17 4l1.5-1.5"/>
+            </svg>
+          </span>
+          <div class="label">6&ndash;12 mo</div>
+          <span class="s6-sub">Planning ahead</span>
+        </button>
+
+        <button class="card small s6-chip s6-chip--time" data-val="1-2 years">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+          </span>
+          <div class="label">1&ndash;2 yrs</div>
+          <span class="s6-sub">Long horizon</span>
+        </button>
+
+        <button class="card small s6-chip s6-chip--time" data-val="Just exploring">
+          <span class="s6-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <line x1="11" y1="8" x2="11" y2="14"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+          </span>
+          <div class="label">Exploring</div>
+          <span class="s6-sub">Just curious</span>
+        </button>
+
+      </div>
+    </div>
+
+    <div class="cta-wrap">
+      <button class="cta" data-action="next">
+        <span class="ico">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 10h12M11 5l5 5-5 5"/>
+          </svg>
+        </span>
+        Continue
+      </button>
+    </div>
+
+  </div>
+</section>
+
+      <!-- 7: Family + Must-haves -->
+      <section class="step" data-step="7">
+  <div class="inner">
+    <div class="eyebrow">Make it feel like yours</div>
+    <h1 class="h1 smaller">Family &amp; <span class="it">must-haves</span></h1>
+
+    <!-- Counter -->
+    <div class="family-row s7-family-row">
+      <button class="fbtn s7-fbtn" id="famMinus" aria-label="Fewer people">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+          <line x1="5" y1="11" x2="17" y2="11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <div class="s7-counter-wrap">
+        <div class="fnum s7-fnum" id="famNum">3</div>
+        <div class="s7-counter-caption">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="s7-people-icon">
+            <circle cx="9" cy="7" r="3.5"/>
+            <path d="M2 21c0-4 3-7 7-7s7 3 7 7"/>
+            <circle cx="19" cy="8" r="2.5"/>
+            <path d="M19 14c2.5 0 4.5 2 4.5 5"/>
+          </svg>
+          <span class="budget-cap">people in your home</span>
+        </div>
+      </div>
+
+      <button class="fbtn s7-fbtn" id="famPlus" aria-label="More people">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+          <line x1="11" y1="5" x2="11" y2="17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="5" y1="11" x2="17" y2="11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Must-haves label -->
+    <div class="pills-title s7-pills-title">Pick what <b>matters most</b> &mdash; tap any that apply</div>
+
+    <!-- Pills (JS-rendered into #pillsRow) -->
+    <div class="pills" id="pillsRow"></div>
+
+    <!-- CTA -->
+    <div class="continue-row">
+      <button class="cta" data-action="next">
+        <span class="ico">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </span>
+        Continue
+        <span class="arr">&rarr;</span>
+      </button>
+    </div>
+
+  </div>
+</section>
+
+      <!-- 8: Done -->
+      <section class="step" data-step="8">
+  <div class="inner">
+
+    <!-- Glowing check ring with sparkle accents -->
+    <div class="done-ring-wrap" aria-hidden="true">
+
+      <div class="done-halo"></div>
+
+      <svg class="done-sparks" viewBox="0 0 340 340" aria-hidden="true">
+        <g class="sp sp1"><line x1="170" y1="12"  x2="170" y2="24"/><line x1="164" y1="18"  x2="176" y2="18"/></g>
+        <g class="sp sp2"><line x1="312" y1="90"  x2="312" y2="102"/><line x1="306" y1="96"  x2="318" y2="96"/></g>
+        <g class="sp sp3"><line x1="38"  y1="104" x2="38"  y2="116"/><line x1="32"  y1="110" x2="44"  y2="110"/></g>
+        <g class="sp sp4"><line x1="298" y1="238" x2="298" y2="250"/><line x1="292" y1="244" x2="304" y2="244"/></g>
+        <g class="sp sp5"><line x1="60"  y1="246" x2="60"  y2="258"/><line x1="54"  y1="252" x2="66"  y2="252"/></g>
+      </svg>
+
+      <div class="check-ring">
+        <svg viewBox="0 0 280 280" aria-hidden="true">
+          <circle cx="140" cy="140" r="120"/>
+          <path d="M85 142 L125 182 L200 102"/>
+        </svg>
+      </div>
+
+    </div><!-- /done-ring-wrap -->
+
+    <div class="eyebrow">You&rsquo;re all set</div>
+    <div class="done-name">Welcome, <span class="it" id="doneName">friend</span>.</div>
+    <p class="sub" style="margin-top:var(--gap-sm)">A host will be with you shortly. Please show this token at the desk &mdash; we&rsquo;ll bring you in.</p>
+
+    <div class="token-chip">
+      <span class="lbl">Your Token</span>
+      <span class="val"><span id="tokLetter">A</span><span class="dot"></span><span id="tokNumber">47</span></span>
+    </div>
+
+    <button class="reset-link" id="resetBtn">Reset for next visitor</button>
+
+  </div>
+</section>
+
+    </main><!-- /steps -->
+
+    <!-- INTRO foreground UI (edges only): timeline, rails, footer, frame -->
+    <div class="intro-ui" aria-hidden="true">
+      <div class="intro-frame"></div>
+      <div class="timeline" id="timeline"></div>
+
+      <div class="rail-left">
+        <span class="rail-cap">Follow Us</span>
+        <span class="rail-line"></span>
+        <div class="rail-soc">
+          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"/></svg></a>
+          <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-.95 1.83-1.95 3.77-1.95 4.03 0 4.78 2.5 4.78 5.75V21h-4v-5.3c0-1.26-.02-2.9-1.77-2.9-1.77 0-2.04 1.38-2.04 2.8V21H9z"/></svg></a>
+          <a href="#" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.8l-5.32-6.96L4.3 22H1l8-9.14L1.5 2h6.97l4.8 6.36L18.244 2zm-1.19 18h1.88L7.03 3.9H5.02L17.054 20z"/></svg></a>
+        </div>
+      </div>
+
+      <div class="rail-right">
+        <span class="rail-cap">A World Beyond Ordinary</span>
+        <span class="rail-line"></span>
+        <span class="rail-star"></span>
+      </div>
+
+      <div class="intro-foot">
+        <span class="copy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 21V8l5-3v16M14 21V4l6 3v14M3 21h18"/></svg>
+          &copy; 2025 Venus Group. All Rights Reserved.
+        </span>
+        <span class="links"><a href="#">Privacy Policy</a> &middot; <a href="#">Terms &amp; Conditions</a></span>
+      </div>
+    </div>
+
+
+    <!-- bottom chrome bar -->
+    <footer class="botbar">
+      <button class="pill backbtn" id="backBtn">&larr;&nbsp;&nbsp;Back</button>
+    </footer>
+
+  </div><!-- /stage -->
+</div><!-- /viewport -->
+
+<script>
+/* ============================================================
+   Starfield
+   ============================================================ */
+(function stars(){
+  const el=document.getElementById('starfield');
+  const N=14;
+  for(let i=0;i<N;i++){
+    const s=document.createElement('i');
+    s.style.left=Math.random()*100+'%';
+    s.style.top=Math.random()*100+'%';
+    s.style.animationDelay=(Math.random()*6)+'s';
+    s.style.transform=`scale(${0.6+Math.random()*1.4})`;
+    el.appendChild(s);
+  }
+})();
+
+/* ============================================================
+   State
+   ============================================================ */
+let recState = {
+  step: 0,
+  data: {
+    phone:'', otp:'', name:'', email:'',
+    typology:null, budget:30000000,
+    intent:null, timeline:null,
+    family:3, mustHaves:[]
+  }
+};
+const TOTAL_STEPS = 9; // 0..8
+
+const MUST_HAVES = [
+  'North-facing','Park view','High floor','Vaastu compliant',
+  'Modular kitchen','Pool access','Quiet zone','Premium clubhouse',
+  'Servant quarters','Wraparound balcony','Sunrise side','East-facing'
+];
+
+/* ============================================================
+   Elements
+   ============================================================ */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+
+const stepsEls = $$('.step');
+const railFill = $('#railFill');
+const stepNum  = $('#stepNum');
+const backBtn  = $('#backBtn');
+const exitBtn  = $('#exitBtn');
+
+/* ============================================================
+   Signature intro logo animation (step 0)
+   Plays once on entry; re-triggers on return to step 0 after reset.
+   Honors reduced-motion (static logo, no animation).
+   ============================================================ */
+const step0El = $('.step[data-step="0"]');
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+let introDoneT=null;
+function playIntro(){
+  if(!step0El) return;
+  clearTimeout(introDoneT);
+  step0El.classList.remove('intro-play','intro-done','intro-static');
+  if(prefersReduced.matches){
+    step0El.classList.add('intro-static');
+    return;
+  }
+  // restart the CSS-driven draw/sweep/bloom from frame zero
+  void step0El.offsetWidth;
+  step0El.classList.add('intro-play');
+  // after the bloom settles, hand off to the perpetual gentle breath
+  introDoneT=setTimeout(()=>{ step0El.classList.add('intro-done'); }, 4900);
+}
+// if the user flips reduced-motion mid-session, re-resolve on step 0
+prefersReduced.addEventListener?.('change',()=>{ if(recState.step===0) playIntro(); });
+
+/* ============================================================
+   Step navigation
+   ============================================================ */
+function go(n){
+  if(n<0) n=0;
+  if(n>TOTAL_STEPS-1) n=TOTAL_STEPS-1;
+  recState.step=n;
+  stepsEls.forEach(el=>{
+    const on = (+el.dataset.step===n);
+    el.classList.toggle('active', on);
+    if(on) el.scrollTop = 0;
+  });
+  // progress
+  railFill.style.width = (n/(TOTAL_STEPS-1)*100)+'%';
+  stepNum.textContent = String(n+1).padStart(2,'0');
+  // back btn visible from 1..7 (hide on welcome 0 and done 8)
+  backBtn.classList.toggle('show', n>=1 && n<=7);
+  // intro deco (eclipse, rails, timeline, footer) only on the welcome screen
+  document.body.classList.toggle('show-intro', n===0);
+  document.body.classList.toggle('show-form', n>=1 && n<=8);
+  // per-step entry hooks
+  if(n===0){ playIntro(); }
+  else if(step0El){ step0El.classList.remove('intro-play','intro-done','intro-static'); clearTimeout(introDoneT); }
+  if(n===2) renderOTP();
+  if(n===5) renderBudget();
+  if(n===7){ renderFamily(); renderPills(); }
+  if(n===8) renderDone();
+  // focus the input so the (on-screen) keyboard rises to the field
+  if(n===1) setTimeout(()=>{ const el=$('#phoneInput'); if(el){ el.focus(); el.scrollIntoView({block:'center'}); } }, 360);
+  if(n===3) setTimeout(()=>{ const el=$('#nameInput'); if(el){ el.focus(); el.scrollIntoView({block:'center'}); } }, 360);
+  // RealDesk: in-page flow — report each step as a view (single page-load otherwise)
+  try{ if(window.RDA) RDA.track('step_view', ['welcome','phone','otp','identity','typology','budget','purpose','family','done'][n]||('step-'+n), n); }catch(e){}
+}
+function next(){ go(recState.step+1); }
+function back(){ go(recState.step-1); }
+
+document.addEventListener('click',(e)=>{
+  const t=e.target.closest('[data-action="next"]');
+  if(t) next();
+});
+backBtn.addEventListener('click',back);
+exitBtn.addEventListener('click',()=>{ if(confirm('Exit reception?')) reset(); });
+
+/* ---- Intro: build the top progress timeline (01..09) ---- */
+(function buildTimeline(){
+  const tl=document.getElementById('timeline');
+  if(!tl) return;
+  let html='';
+  for(let i=0;i<TOTAL_STEPS;i++){
+    if(i>0) html+='<span class="tl-bar"></span>';
+    html+=`<span class="tl-item${i===0?' on':''}"><span class="tl-dot"></span><span class="tl-num">${String(i+1).padStart(2,'0')}</span></span>`;
+  }
+  tl.innerHTML=html;
+})();
+
+/* ---- Intro: floating dust motes (rising in the beam) + diamond sparkles ---- */
+(function buildIntroDeco(){
+  const motes=document.getElementById('motes');
+  if(motes){
+    const N=window.matchMedia('(max-width:820px)').matches?32:58;
+    let h='';
+    for(let i=0;i<N;i++){
+      const x=(31+Math.random()*38).toFixed(1);     // spread across the ring interior
+      const y=(16+Math.random()*68).toFixed(1);
+      const s=(1.3+Math.random()*3.2).toFixed(1);
+      const o=(0.24+Math.random()*0.54).toFixed(2);
+      const d=(7+Math.random()*9).toFixed(1);
+      const delay=(-Math.random()*13).toFixed(1);
+      const rise=(90+Math.random()*150).toFixed(0);
+      h+=`<span class="mote" style="left:${x}%;top:${y}%;--s:${s}px;--o:${o};--d:${d}s;--delay:${delay}s;--rise:${rise}px"></span>`;
+    }
+    motes.innerHTML=h;
+  }
+  const sp=document.getElementById('sparkles');
+  if(sp){
+    // [x%, y%, sizePx, durS] — placed to echo the reference comp
+    const stars=[[24,38,22,4.5],[20.5,60,12,5.6],[16,47,9,6.2],[30.5,30,7,5.0],
+      [52,12,8,4.2],[72.5,10,13,5.4],[88,25,16,4.8],[90.5,38,11,6.0],
+      [84,70,18,5.2],[95,55,9,6.6],[12,55,8,5.8],[78,82,10,4.6]];
+    sp.innerHTML=stars.map(([x,y,s,d],i)=>
+      `<span class="spark" style="--x:${x}%;--y:${y}%;--s:${s}px;--d:${d}s;--delay:${(-i*0.6).toFixed(1)}s"></span>`).join('');
+  }
+  // particle stream: emitted along the BEGIN button's top semicircle, floating up to the light
+  const stream=document.getElementById('beginStream');
+  if(stream){
+    const N=window.matchMedia('(max-width:820px)').matches?22:40;
+    const R=window.matchMedia('(max-width:820px)').matches?58:72; // ~button radius (px)
+    let h='';
+    for(let i=0;i<N;i++){
+      const p=(N===1)?0:(-1+2*i/(N-1));            // -1..1 across the arc
+      const pj=Math.max(-1,Math.min(1,p+(Math.random()-0.5)*0.16));
+      const xPct=(50+pj*44).toFixed(1);            // start x across the button top
+      const y0=(R*Math.sqrt(Math.max(0,1-pj*pj))).toFixed(0); // top-arc height (px above centre)
+      const dx=(-pj*52+(Math.random()-0.5)*18).toFixed(0);    // converge toward centre as they rise
+      const hRise=(42+Math.random()*20).toFixed(0);           // vh travelled (reaches the light)
+      const s=(2.2+Math.random()*3).toFixed(1);
+      const o=(0.45+Math.random()*0.5).toFixed(2);
+      const d=(5+Math.random()*3.5).toFixed(1);
+      const delay=(-Math.random()*8).toFixed(1);
+      h+=`<span class="bdot" style="--x:${xPct}%;--y0:${y0}px;--dx:${dx}px;--h:${hRise}vh;--s:${s}px;--o:${o};--d:${d}s;--delay:${delay}s"></span>`;
+    }
+    stream.innerHTML=h;
+  }
+  // inflow: particles drawn from all around the screen edges toward the centre
+  const influx=document.getElementById('influx');
+  if(influx){
+    const N=window.matchMedia('(max-width:820px)').matches?50:92;
+    let h='';
+    for(let i=0;i<N;i++){
+      const ang=Math.random()*Math.PI*2;
+      const rad=56+Math.random()*30;              // start near/beyond the screen edge
+      const sx=(Math.cos(ang)*rad).toFixed(1);     // vw offset from centre
+      const sy=(Math.sin(ang)*rad).toFixed(1);     // vh offset from centre
+      const s=(2.2+Math.random()*3.4).toFixed(1);
+      const o=(0.45+Math.random()*0.5).toFixed(2);
+      const d=(5+Math.random()*4).toFixed(1);
+      const delay=(-Math.random()*9).toFixed(1);
+      h+=`<span class="inflow" style="--sx:${sx}vw;--sy:${sy}vh;--s:${s}px;--o:${o};--d:${d}s;--delay:${delay}s"></span>`;
+    }
+    influx.innerHTML=h;
+  }
+})();
+
+/* ---- Form steps: scattered diamond sparkles in the backdrop ---- */
+(function buildFormDeco(){
+  const fs=document.getElementById('formSparkles');
+  if(!fs) return;
+  // [x%, y%, sizePx, durS] — echo the reference (a few each side, scattered)
+  const stars=[[8,30,9,5.2],[12,58,14,4.6],[6,74,8,6.0],[18,44,7,5.6],
+    [92,26,12,4.8],[88,52,16,5.4],[94,68,9,6.2],[82,80,8,5.0],
+    [50,8,7,4.4],[30,16,6,5.8],[70,14,8,6.4]];
+  fs.innerHTML=stars.map(([x,y,s,d],i)=>
+    `<span class="spark" style="--x:${x}%;--y:${y}%;--s:${s}px;--d:${d}s;--delay:${(-i*0.7).toFixed(1)}s"></span>`).join('');
+  // subtle particles surrounding the central field area
+  const fm=document.getElementById('formMotes');
+  if(fm){
+    const N=window.matchMedia('(max-width:820px)').matches?9:16;
+    let h='';
+    for(let i=0;i<N;i++){
+      // loose band around the centre column where the fields sit (avoid dead centre)
+      const ang=Math.random()*Math.PI*2;
+      const rad=22+Math.random()*30;                 // % from centre — wider spread
+      const x=(50+Math.cos(ang)*rad*1.6).toFixed(1);  // wider horizontally
+      const y=(52+Math.sin(ang)*rad).toFixed(1);
+      const s=(1.3+Math.random()*2).toFixed(1);
+      const o=(0.16+Math.random()*0.28).toFixed(2);
+      const d=(6+Math.random()*5).toFixed(1);
+      const delay=(-Math.random()*9).toFixed(1);
+      const dx=((Math.random()-0.5)*22).toFixed(0);
+      const dy=((Math.random()-0.5)*22).toFixed(0);
+      h+=`<span class="fmote" style="--x:${x}%;--y:${y}%;--s:${s}px;--o:${o};--d:${d}s;--delay:${delay}s;--dx:${dx}px;--dy:${dy}px"></span>`;
+    }
+    fm.innerHTML=h;
+  }
+  // converging inflow — particles drawn in from all around the screen to the centre (intro-style)
+  const fi=document.getElementById('formInflux');
+  if(fi){
+    const N=window.matchMedia('(max-width:820px)').matches?20:34;
+    let h='';
+    for(let i=0;i<N;i++){
+      const ang=Math.random()*Math.PI*2;
+      const rad=50+Math.random()*34;                 // start near/beyond the screen edge
+      const sx=(Math.cos(ang)*rad).toFixed(1);        // vw offset from centre
+      const sy=(Math.sin(ang)*rad*0.72).toFixed(1);   // vh offset (flatter, screen is wide)
+      const s=(1.8+Math.random()*2.6).toFixed(1);
+      const o=(0.26+Math.random()*0.32).toFixed(2);
+      const d=(5.5+Math.random()*4.5).toFixed(1);
+      const delay=(-Math.random()*10).toFixed(1);
+      h+=`<span class="inflow" style="--sx:${sx}vw;--sy:${sy}vh;--s:${s}px;--o:${o};--d:${d}s;--delay:${delay}s"></span>`;
+    }
+    fi.innerHTML=h;
+  }
+})();
+
+/* ---- Intro: press Enter to begin (welcome screen only) ---- */
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='Enter' && recState.step===0){ e.preventDefault(); next(); }
+});
+
+/* ============================================================
+   Step 1 — Phone
+   ============================================================ */
+const phoneInput = $('#phoneInput');
+const phoneNext  = $('#phoneNext');
+phoneInput.addEventListener('input',()=>{
+  let v=phoneInput.value.replace(/\D/g,'').slice(0,10);
+  // pretty: 5 5
+  let pretty=v;
+  if(v.length>5) pretty=v.slice(0,5)+' '+v.slice(5);
+  phoneInput.value=pretty;
+  recState.data.phone=v;
+  phoneNext.disabled = v.length!==10;
+});
+phoneNext.addEventListener('click',()=>{
+  $('#otpPhone').textContent='+91 '+recState.data.phone.slice(0,5)+' '+recState.data.phone.slice(5);
+  next();
+});
+
+/* ============================================================
+   Step 2 — OTP + keypad
+   ============================================================ */
+function renderOTP(){
+  recState.data.otp='';
+  paintOTP();
+  // build keypad if empty
+  const kp=$('#keypad');
+  if(!kp.children.length){
+    const keys=['1','2','3','4','5','6','7','8','9','','0','del'];
+    keys.forEach(k=>{
+      if(k===''){ const sp=document.createElement('div'); sp.setAttribute('aria-hidden','true'); kp.appendChild(sp); return; }
+      const b=document.createElement('button');
+      if(k==='del'){
+        b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 7H9.5L3 12l6.5 5H21V7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M16 10l-4 4m0-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+        b.classList.add('del');
+        b.setAttribute('aria-label','Delete');
+      } else {
+        b.textContent = k;
+      }
+      b.addEventListener('click',()=>onKey(k));
+      kp.appendChild(b);
+    });
+  }
+}
+function onKey(k){
+  if(k==='del'){
+    recState.data.otp = recState.data.otp.slice(0,-1);
+  } else if(recState.data.otp.length<4){
+    recState.data.otp += k;
+  }
+  paintOTP();
+  if(recState.data.otp.length===4){
+    setTimeout(()=>{
+      // demo accepts any 4 digits, emphasize 1234
+      next();
+    }, 280);
+  }
+}
+function paintOTP(){
+  const cells=$$('.otp-cell');
+  cells.forEach((c,i)=>{
+    const ch = recState.data.otp[i] || '';
+    const had = c.dataset.ch || '';
+    // wrap digit in a span so we can pop just the glyph (not the caret)
+    if(ch){
+      c.innerHTML = '<span class="digit">'+ch+'</span>';
+      if(ch!==had){ // newly entered → fill-pop
+        c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+      }
+    } else {
+      c.innerHTML = (i===recState.data.otp.length) ? '<span class="caret"></span>' : '';
+      c.classList.remove('pop');
+    }
+    c.dataset.ch = ch;
+    c.classList.toggle('filled', !!ch);
+    c.classList.toggle('active', i===recState.data.otp.length);
+  });
+}
+
+/* ============================================================
+   Step 3 — Name + Email
+   ============================================================ */
+const nameInput=$('#nameInput'), emailInput=$('#emailInput'), nameNext=$('#nameNext');
+function checkName(){
+  const ok = nameInput.value.trim().length>=2 && /\S+@\S+\.\S+/.test(emailInput.value.trim());
+  nameNext.disabled=!ok;
+  recState.data.name = nameInput.value.trim();
+  recState.data.email= emailInput.value.trim();
+}
+nameInput.addEventListener('input',checkName);
+emailInput.addEventListener('input',checkName);
+nameNext.addEventListener('click',next);
+
+/* ============================================================
+   Step 4 — Typology
+   ============================================================ */
+$$('#typologyRow .card').forEach(c=>{
+  c.addEventListener('click',()=>{
+    $$('#typologyRow .card').forEach(x=>x.classList.remove('selected'));
+    c.classList.add('selected');
+    recState.data.typology=c.dataset.val;
+    setTimeout(next, 320);
+  });
+});
+
+/* ============================================================
+   Step 5 — Budget
+   ============================================================ */
+const slider=$('#budgetSlider'), budgetNum=$('#budgetNum');
+function fmtCr(v){
+  const cr = v/10000000;
+  return cr.toFixed(2)+' Cr';
+}
+function renderBudget(){
+  slider.value=recState.data.budget;
+  budgetNum.textContent=fmtCr(recState.data.budget);
+  const pct = ((slider.value-slider.min)/(slider.max-slider.min))*100;
+  slider.style.setProperty('--pct',pct+'%');
+}
+let budgetBumpT=null;
+slider.addEventListener('input',()=>{
+  recState.data.budget = +slider.value;
+  budgetNum.textContent=fmtCr(slider.value);
+  const pct = ((slider.value-slider.min)/(slider.max-slider.min))*100;
+  slider.style.setProperty('--pct',pct+'%');
+  // the number reacts as the slider moves: a tiny live scale that
+  // relaxes back when motion stops. transform-only, GPU.
+  budgetNum.style.setProperty('--budget-scale','1.05');
+  clearTimeout(budgetBumpT);
+  budgetBumpT=setTimeout(()=>budgetNum.style.setProperty('--budget-scale','1'),120);
+});
+
+/* ============================================================
+   Step 6 — Intent + Timeline
+   ============================================================ */
+function wireGroup(rowSel, key){
+  $$(rowSel+' .card').forEach(c=>{
+    c.addEventListener('click',()=>{
+      $$(rowSel+' .card').forEach(x=>x.classList.remove('selected'));
+      c.classList.add('selected');
+      recState.data[key]=c.dataset.val;
+      maybeAdvanceStep6();
+    });
+  });
+}
+wireGroup('#intentRow','intent');
+wireGroup('#timelineRow','timeline');
+function maybeAdvanceStep6(){
+  if(recState.data.intent && recState.data.timeline){
+    setTimeout(next, 360);
+  }
+}
+
+/* ============================================================
+   Step 7 — Family + must-haves
+   ============================================================ */
+const famMinus=$('#famMinus'), famPlus=$('#famPlus'), famNum=$('#famNum');
+function renderFamily(){
+  famNum.textContent=recState.data.family;
+  famMinus.disabled=recState.data.family<=1;
+  famPlus.disabled =recState.data.family>=10;
+}
+famMinus.addEventListener('click',()=>{ recState.data.family=Math.max(1,recState.data.family-1); renderFamily(); });
+famPlus .addEventListener('click',()=>{ recState.data.family=Math.min(10,recState.data.family+1); renderFamily(); });
+
+function renderPills(){
+  const wrap = $('#pillsRow');
+  if(wrap.children.length) return;
+
+  const ICONS = {
+    'North-facing':    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><polyline points="6 8 12 2 18 8"/></svg>',
+    'Park view':       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>',
+    'High floor':      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>',
+    'Vaastu compliant':'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    'Modular kitchen':  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M6 7V4"/><path d="M12 7V4"/><path d="M18 7V4"/></svg>',
+    'Pool access':      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 17c1.5-1 3-1 4.5 0S10 18 11.5 17 14 16 15.5 17 18 18 19.5 17 22 16 22 17"/><path d="M2 21c1.5-1 3-1 4.5 0S10 22 11.5 21 14 20 15.5 21 18 22 19.5 21 22 20 22 21"/><circle cx="12" cy="9" r="3"/><path d="M12 12v4"/></svg>',
+    'Quiet zone':       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+    'Premium clubhouse':'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+    'Servant quarters': '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="10" width="18" height="12" rx="1"/><path d="M3 10l9-7 9 7"/></svg>',
+    'Wraparound balcony':'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="14" width="20" height="6" rx="1"/><path d="M6 14V9"/><path d="M12 14V9"/><path d="M18 14V9"/><path d="M3 9h18"/></svg>',
+    'Sunrise side':     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v2M4.22 4.22l1.42 1.42M2 12h2m16 0h2M6.34 17.66A8 8 0 1117.66 6.34"/><path d="M2 17h20"/><path d="M8 17a4 4 0 018 0"/></svg>',
+    'East-facing':      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="16 6 22 12 16 18"/></svg>',
+  };
+
+  const SPARKLE = `<span class="s7-pill-icon" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><path d="M10 0 L11.5 8.5 L20 10 L11.5 11.5 L10 20 L8.5 11.5 L0 10 L8.5 8.5 Z"/></svg></span>`;
+
+  MUST_HAVES.forEach(label => {
+    const b = document.createElement('button');
+    b.className = 'pill-opt';
+    b.setAttribute('aria-pressed', 'false');
+
+    const iconSvg = ICONS[label] || '';
+    b.innerHTML = (iconSvg ? `<span class="s7-pill-licon" aria-hidden="true">${iconSvg}</span>` : '') +
+                  SPARKLE +
+                  `<span class="s7-pill-label">${label}</span>`;
+
+    b.addEventListener('click', () => {
+      const i = recState.data.mustHaves.indexOf(label);
+      if (i >= 0) {
+        recState.data.mustHaves.splice(i, 1);
+        b.classList.remove('selected');
+        b.setAttribute('aria-pressed', 'false');
+      } else {
+        recState.data.mustHaves.push(label);
+        b.classList.add('selected');
+        b.setAttribute('aria-pressed', 'true');
+      }
+    });
+
+    wrap.appendChild(b);
+  });
+}
+
+/* ============================================================
+   Step 8 — Done
+   ============================================================ */
+function renderDone(){
+  const first = (recState.data.name||'friend').split(' ')[0];
+  $('#doneName').textContent=first.toLowerCase();
+  // token: first letter of first name + random 2-digit
+  const letter = (first[0]||'A').toUpperCase();
+  const num = Math.floor(10 + Math.random()*89);
+  $('#tokLetter').textContent=letter;
+  $('#tokNumber').textContent=num;
+  // RealDesk: a visitor completed onboarding and a desk token was issued
+  try{ if(window.RDA) RDA.track('checkin', letter+num, 1, { typology: recState.data.typology, budget: recState.data.budget, intent: recState.data.intent }); }catch(e){}
+  // restart check animation by re-attaching
+  const ring=$('.check-ring svg');
+  if(ring){
+    const clone=ring.cloneNode(true);
+    ring.parentNode.replaceChild(clone, ring);
+  }
+}
+$('#resetBtn').addEventListener('click',reset);
+
+function reset(){
+  recState = {
+    step:0,
+    data:{ phone:'', otp:'', name:'', email:'', typology:null, budget:30000000, intent:null, timeline:null, family:3, mustHaves:[] }
+  };
+  // clear UI
+  phoneInput.value=''; phoneNext.disabled=true;
+  nameInput.value=''; emailInput.value=''; nameNext.disabled=true;
+  $$('#typologyRow .card, #intentRow .card, #timelineRow .card').forEach(c=>c.classList.remove('selected'));
+  $$('#pillsRow .pill-opt').forEach(p=>{ p.classList.remove('selected'); p.setAttribute('aria-pressed','false'); });
+  recState.data.mustHaves=[];
+  window.recState = recState;
+  go(0);
+}
+
+/* ============================================================
+   Boot
+   ============================================================ */
+go(0);
+
+/* expose for debugging / future integration */
+window.recState = recState;
+</script>
+
+<script>
+/* PWA service-worker registration — installable, offline kiosk */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+
+<!-- RealDesk Analytics — offline-first kiosk usage tracking -->
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech"
+        data-slug="gre-universe" data-token="rdk_45ea53a3784bad4706ed223b9c2903ff4d48adb26f4524b2" data-label=""></script>
+
+</body>
+</html>

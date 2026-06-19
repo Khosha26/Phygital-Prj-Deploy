@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Embassy Citadel — Threshold</title>
+
+<!--
+  INTRO v15 — Wordmark Materialization
+  · Onyx void · bronze "nib" sweeps L→R revealing the real Embassy Citadel
+    wordmark via mask · sheen sweep · eyebrow + tagline + sub stagger in
+    · bronze hold-to-enter pad (1200ms) · bronze veil → home.html
+-->
+
+<link rel="manifest" href="manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Citadel" />
+<meta name="theme-color" content="#0E0C09" />
+
+<link rel="preload" as="document" href="home.html" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --onyx: #0E0C09; --onyx-700: #1A1814; --onyx-500: #2A2620;
+    --bone: #F4F2ED; --paper: #FCFAF4;
+    --gold-100: #E8CFA1; --gold-200: #D9B97A; --gold-300: #C9A567;
+    --gold-400: #B89968; --gold-500: #946F38; --gold-600: #6E5A37;
+    --taupe-400: #A89B86;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--onyx); color: var(--bone);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+    touch-action: none; overscroll-behavior: none; overflow: hidden;
+    position: fixed; inset: 0;
+  }
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; pointer-events: none; }
+
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: radial-gradient(ellipse 80% 60% at 50% 45%, var(--onyx-700) 0%, var(--onyx) 70%, #050403 100%);
+  }
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1440px; height: 900px;
+    transform-origin: center center;
+    transform: translate(-50%, -50%) scale(1);
+    overflow: hidden; will-change: transform;
+    -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  }
+
+  .grain {
+    position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.82 0 0 0 0 0.50 0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.05; mix-blend-mode: screen;
+  }
+  .vignette {
+    position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, transparent 0%, transparent 55%, rgba(0,0,0,0.55) 100%);
+    opacity: 0; animation: fadeIn 800ms ease forwards;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  .motes { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+  .mote {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%;
+    background: var(--gold-200); opacity: 0.16; bottom: -10px;
+    animation: moteRise linear infinite; filter: blur(0.6px);
+  }
+  @keyframes moteRise {
+    0%   { transform: translate(0, 0); opacity: 0; }
+    8%   { opacity: 0.18; }
+    92%  { opacity: 0.10; }
+    100% { transform: translate(var(--drift, 20px), calc(-100vh - 80px)); opacity: 0; }
+  }
+
+  .corner {
+    position: absolute; z-index: 8;
+    font-family: 'Inter', sans-serif; font-weight: 400; font-size: 9px;
+    letter-spacing: 0.45em; text-transform: uppercase; color: var(--bone);
+    opacity: 0; animation: fadeIn 900ms ease 200ms forwards;
+  }
+  .corner.tl { top: 38px; left: 44px; }
+  .corner.tr { top: 38px; right: 44px;
+    display: flex; align-items: center; gap: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .corner.tr .live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--gold-300);
+    box-shadow: 0 0 8px rgba(217,185,122,0.6);
+    animation: livePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.18); }
+  }
+  .corner.bl { bottom: 38px; left: 44px; font-size: 8.5px; letter-spacing: 0.5em; }
+  .corner.br { bottom: 38px; right: 44px; font-size: 8.5px; letter-spacing: 0.5em; }
+  .corner .em { color: var(--gold-200); }
+  /* Hold final opacity AFTER fade-in (no longer 1 — keep restrained) */
+  .corner.tl, .corner.tr { animation: fadeInTo55 900ms ease 200ms forwards; }
+  .corner.bl, .corner.br { animation: fadeInTo40 900ms ease 200ms forwards; }
+  @keyframes fadeInTo55 { from { opacity: 0; } to { opacity: 0.55; } }
+  @keyframes fadeInTo40 { from { opacity: 0; } to { opacity: 0.40; } }
+
+  /* ── Wordmark stage ─────────────────────────────────────────────── */
+  .word-stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 700px; height: 360px;
+    transform: translate(-50%, -54%);
+    z-index: 5; pointer-events: none;
+  }
+  .word-eyebrow {
+    position: absolute; top: -4px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif; font-weight: 400; font-size: 9.5px;
+    letter-spacing: 0.55em; text-transform: uppercase; color: var(--gold-200);
+    opacity: 0;
+    animation: textIn 1000ms cubic-bezier(0.22, 1, 0.36, 1) 2800ms forwards;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .word-eyebrow::before, .word-eyebrow::after {
+    content: ''; width: 22px; height: 1px; background: var(--gold-200); opacity: 0.55;
+  }
+  @keyframes textIn {
+    from { opacity: 0; transform: translate(-50%, 6px); }
+    to   { opacity: 0.85; transform: translate(-50%, 0); }
+  }
+
+  .wordmark {
+    position: absolute; left: 0; right: 0; top: 36px;
+    height: 160px; color: var(--bone);
+    filter: drop-shadow(0 0 22px rgba(217,185,122,0.18));
+    -webkit-mask-image: linear-gradient(90deg,
+       #000 0%, #000 calc(var(--reveal, 0) * 1%),
+       transparent calc(var(--reveal, 0) * 1%), transparent 100%);
+            mask-image: linear-gradient(90deg,
+       #000 0%, #000 calc(var(--reveal, 0) * 1%),
+       transparent calc(var(--reveal, 0) * 1%), transparent 100%);
+    animation: revealSweep 1900ms cubic-bezier(0.65, 0.05, 0.36, 1) 350ms forwards;
+  }
+  .wordmark svg { width: 100%; height: 100%; display: block; }
+  @keyframes revealSweep { from { --reveal: 0; } to { --reveal: 100; } }
+
+  .sheen {
+    position: absolute; left: 0; right: 0; top: 36px;
+    height: 160px; pointer-events: none;
+    background: linear-gradient(105deg,
+      transparent 30%, rgba(255, 230, 170, 0.42) 47%,
+      rgba(255, 230, 170, 0.66) 50%, rgba(255, 230, 170, 0.42) 53%,
+      transparent 70%);
+    background-size: 220% 100%; background-position: -120% 0;
+    mix-blend-mode: screen; opacity: 0;
+    animation: sheenSweep 1300ms cubic-bezier(0.22, 1, 0.36, 1) 2400ms forwards;
+  }
+  @keyframes sheenSweep {
+    0%   { opacity: 0;    background-position: -120% 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0;    background-position: 220% 0; }
+  }
+
+  .nib {
+    position: absolute; left: 0; top: 36px;
+    width: 4px; height: 160px;
+    transform: translateX(calc(var(--nib-x, 0) * 1px - 2px));
+    background: linear-gradient(180deg,
+       transparent 0%, rgba(232, 207, 161, 0.85) 18%,
+       var(--gold-200) 50%, rgba(232, 207, 161, 0.85) 82%, transparent 100%);
+    box-shadow:
+       0 0 18px rgba(232, 207, 161, 0.85),
+       0 0 38px rgba(217, 185, 122, 0.55),
+       0 0 70px rgba(217, 185, 122, 0.25);
+    border-radius: 2px; opacity: 0;
+    animation: nibSweep 1900ms cubic-bezier(0.65, 0.05, 0.36, 1) 350ms forwards;
+    pointer-events: none;
+  }
+  @keyframes nibSweep {
+    0%   { opacity: 0;    --nib-x: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { opacity: 0;    --nib-x: 700; }
+  }
+  .nib-flare {
+    position: absolute; right: -10px; top: 36px;
+    width: 80px; height: 160px;
+    background: radial-gradient(ellipse 60% 70% at 50% 50%, rgba(232, 207, 161, 0.45), transparent 70%);
+    opacity: 0;
+    animation: flareIn 700ms ease 2150ms forwards, flareOut 1100ms ease 2700ms forwards;
+    pointer-events: none;
+  }
+  @keyframes flareIn  { from { opacity: 0; } to { opacity: 0.85; } }
+  @keyframes flareOut { from { opacity: 0.85; } to { opacity: 0; } }
+
+  .tagline {
+    position: absolute; left: 50%; top: 226px;
+    transform: translateX(-50%);
+    font-family: 'Cormorant Garamond', serif; font-weight: 400;
+    font-style: italic; font-size: 30px;
+    color: var(--bone); letter-spacing: 0.08em; text-transform: uppercase;
+    opacity: 0;
+    animation: textInBone 1100ms cubic-bezier(0.22, 1, 0.36, 1) 3000ms forwards;
+    white-space: nowrap;
+  }
+  @keyframes textInBone {
+    from { opacity: 0; transform: translate(-50%, 6px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .sub {
+    position: absolute; left: 50%; top: 276px;
+    transform: translateX(-50%);
+    font-family: 'Cormorant Garamond', serif; font-weight: 300;
+    font-style: italic; font-size: 15px;
+    color: var(--gold-200); letter-spacing: 0.04em;
+    opacity: 0;
+    animation: textInGold 1100ms cubic-bezier(0.22, 1, 0.36, 1) 3300ms forwards;
+    white-space: nowrap;
+  }
+  @keyframes textInGold {
+    from { opacity: 0; transform: translate(-50%, 6px); }
+    to   { opacity: 0.85; transform: translate(-50%, 0); }
+  }
+
+  /* ── Hold pad ───────────────────────────────────────────────────── */
+  .pad-wrap {
+    position: absolute; bottom: 84px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    opacity: 0;
+    animation: textInBone 900ms cubic-bezier(0.22, 1, 0.36, 1) 3700ms forwards;
+    pointer-events: auto;
+  }
+  .pad {
+    position: relative; width: 64px; height: 64px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%,
+        var(--gold-200) 0%, var(--gold-400) 40%, var(--gold-600) 100%);
+    cursor: pointer;
+    box-shadow:
+      0 12px 28px rgba(217, 185, 122, 0.22),
+      0 0 0 1px rgba(217, 185, 122, 0.40),
+      inset 0 -8px 18px rgba(74, 61, 36, 0.55),
+      inset 0 6px 12px rgba(255, 230, 170, 0.30);
+    display: grid; place-items: center;
+    transition: transform 220ms ease;
+    overflow: visible;
+    -webkit-appearance: none; appearance: none; border: none;
+    animation: padPulse 2.4s ease-in-out infinite;
+    padding: 0;
+  }
+  @keyframes padPulse {
+    0%, 100% { box-shadow:
+      0 12px 28px rgba(217, 185, 122, 0.22),
+      0 0 0 1px rgba(217, 185, 122, 0.40),
+      0 0 0  0px rgba(217, 185, 122, 0.0),
+      inset 0 -8px 18px rgba(74, 61, 36, 0.55),
+      inset 0 6px 12px rgba(255, 230, 170, 0.30); }
+    50%      { box-shadow:
+      0 16px 36px rgba(217, 185, 122, 0.30),
+      0 0 0 1px rgba(217, 185, 122, 0.55),
+      0 0 0 10px rgba(217, 185, 122, 0.10),
+      inset 0 -8px 18px rgba(74, 61, 36, 0.55),
+      inset 0 6px 12px rgba(255, 230, 170, 0.30); }
+  }
+  .pad.is-holding { transform: scale(1.04); animation: holdingPulse 400ms ease-in-out infinite; }
+  @keyframes holdingPulse {
+    0%, 100% { transform: scale(1.04); }
+    50%      { transform: scale(1.06); }
+  }
+  .pad-glyph { width: 22px; height: 22px; color: var(--onyx-700); opacity: 0.55; }
+  .pad-glyph svg { width: 100%; height: 100%; }
+  .pad-ring { position: absolute; inset: -8px; transform: rotate(-90deg); pointer-events: none; }
+  .pad-ring svg { width: 100%; height: 100%; }
+  .pad-ring circle {
+    fill: none; stroke: var(--gold-200); stroke-width: 1.4; stroke-linecap: round;
+    stroke-dasharray: 251.327;     /* 2*PI*40 */
+    stroke-dashoffset: 251.327;
+    transition: stroke-dashoffset 1200ms linear;
+    filter: drop-shadow(0 0 6px rgba(217,185,122,0.6));
+  }
+  .pad-ring.is-on circle { stroke-dashoffset: 0; }
+  .pad-label {
+    font-family: 'Inter', sans-serif; font-weight: 500; font-size: 9.5px;
+    letter-spacing: 0.55em; text-transform: uppercase; color: var(--bone); opacity: 0.55;
+  }
+
+  .veil {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 88%, var(--gold-100) 0%, var(--gold-300) 35%, var(--paper) 70%, var(--bone) 100%);
+    opacity: 0; pointer-events: none; z-index: 99;
+    transition: opacity 620ms ease-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wordmark, .nib, .sheen, .nib-flare { animation: none; }
+    .wordmark { -webkit-mask-image: none; mask-image: none; opacity: 1; }
+    .word-eyebrow, .tagline, .sub, .pad-wrap, .corner { animation-duration: 200ms; }
+    .pad { animation: none; }
+    .mote { display: none; }
+  }
+</style>
+
+<script>
+  // Stage scaler (Living Tree contract)
+  (function () {
+    const W = 1440, H = 900;
+    const STAGE_ASPECT = W / H;
+    const COVER_THRESHOLD = 0.97;
+    function scale() {
+      const wrap = document.getElementById('stage-wrap');
+      const stage = document.getElementById('stage');
+      if (!wrap || !stage) return;
+      let vw = wrap.clientWidth, vh = wrap.clientHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const va = vw / vh;
+      const squarish = va > 1 && va < STAGE_ASPECT * COVER_THRESHOLD;
+      const s = squarish ? Math.max(vw / W, vh / H) : Math.min(vw / W, vh / H);
+      const t = 'translate(-50%, -50%) scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+</head>
+<body>
+
+<!-- Embassy Citadel original wordmark — defined once, referenced via <use> -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage">
+    <div class="grain"></div>
+    <div class="vignette"></div>
+    <div class="motes" id="motes"></div>
+
+    <div class="corner tl">EMBASSY&nbsp;CITADEL</div>
+    <div class="corner tr">
+      Worli&nbsp;·&nbsp;Mumbai
+      <span class="live-dot"></span>
+      <span id="clock">00:00&nbsp;IST</span>
+    </div>
+    <div class="corner bl">Threshold&nbsp;·&nbsp;<span class="em">No.&nbsp;01</span></div>
+
+    <div class="word-stage">
+      <div class="word-eyebrow">Embassy&nbsp;Citadel</div>
+      <div class="wordmark">
+        <svg viewBox="0 0 1000 500"><use href="#ec-wordmark" /></svg>
+      </div>
+      <div class="sheen"></div>
+      <div class="nib"></div>
+      <div class="nib-flare"></div>
+      <div class="tagline">A&nbsp;World&nbsp;Unto&nbsp;Itself</div>
+      <div class="sub">The world changes at the door.</div>
+    </div>
+
+    <div class="pad-wrap">
+      <button class="pad" id="pad" type="button" aria-label="Hold to enter">
+        <span class="pad-glyph" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
+            <path d="M12 5c-3.86 0-7 3.14-7 7v3"/>
+            <path d="M12 8.5c-1.9 0-3.5 1.6-3.5 3.5v3.5"/>
+            <path d="M12 12c-.83 0-1.5.67-1.5 1.5V18"/>
+            <path d="M12 5c3.86 0 7 3.14 7 7v2"/>
+          </svg>
+        </span>
+        <span class="pad-ring" id="padRing" aria-hidden="true">
+          <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="40" /></svg>
+        </span>
+      </button>
+      <div class="pad-label">Hold&nbsp;to&nbsp;Enter</div>
+    </div>
+
+    <div class="veil"></div>
+  </div>
+</div>
+
+<script>
+  // Dust motes
+  const motesEl = document.getElementById('motes');
+  for (let i = 0; i < 16; i++) {
+    const m = document.createElement('span');
+    m.className = 'mote';
+    m.style.left = (4 + Math.random() * 92) + '%';
+    m.style.animationDuration = (18 + Math.random() * 18) + 's';
+    m.style.animationDelay    = (-Math.random() * 32) + 's';
+    m.style.setProperty('--drift', ((Math.random() - 0.5) * 100) + 'px');
+    m.style.width = m.style.height = (2 + Math.random() * 3) + 'px';
+    m.style.opacity = (0.08 + Math.random() * 0.14);
+    motesEl.appendChild(m);
+  }
+
+  // Hold-to-Enter
+  const HOLD_MS = 1200;
+  const pad  = document.getElementById('pad');
+  const ring = document.getElementById('padRing');
+  let holdTimer = null;
+  function startHold(e) {
+    e.preventDefault();
+    if (holdTimer) return;
+    pad.classList.add('is-holding');
+    ring.classList.add('is-on');
+    holdTimer = setTimeout(commit, HOLD_MS + 20);
+  }
+  function cancelHold() {
+    if (!holdTimer) return;
+    clearTimeout(holdTimer);
+    holdTimer = null;
+    pad.classList.remove('is-holding');
+    ring.classList.remove('is-on');
+  }
+  function commit() {
+    holdTimer = null;
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = 'home.html'; }, 600);
+  }
+  pad.addEventListener('pointerdown', startHold);
+  pad.addEventListener('pointerup',   cancelHold);
+  pad.addEventListener('pointerleave',cancelHold);
+  pad.addEventListener('pointercancel',cancelHold);
+  window.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && !holdTimer) {
+      e.preventDefault();
+      pad.classList.add('is-holding');
+      ring.classList.add('is-on');
+      holdTimer = setTimeout(commit, HOLD_MS + 20);
+    }
+  });
+  window.addEventListener('keyup', e => {
+    if (e.key === 'Enter' || e.key === ' ') cancelHold();
+  });
+
+  // Live clock
+  function tickClock() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    document.getElementById('clock').textContent = hh + ':' + mm + ' IST';
+  }
+  tickClock();
+  setInterval(tickClock, 30000);
+</script>
+</body>
+</html>

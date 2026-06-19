@@ -1,0 +1,13 @@
+# Drag-and-drop deploy: drop THIS folder (the one containing index.html).
+# No [build] publish dir on purpose — that can make Netlify resolve the wrong
+# root and return "Page not found". The dropped folder's root IS the site root.
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/api/projects.json"
+  [headers.values]
+    Cache-Control = "no-cache"

@@ -1,0 +1,46 @@
+{
+  "_note": "Screens in traversal order (single-page flow rendered by data-step, not DOM order). New front: customer details + hierarchical source tagging. Superseded screens (old source #step-11, cp #step-13, phone #step-1, otp #step-2, identity #step-3) remain in the DOM but are out of the active flow.",
+  "screens": [
+    { "key": "welcome",   "title": "Welcome",            "file": "index.html#step-0" },
+    { "key": "details",   "title": "Customer details (name + number + email)", "file": "index.html#step-14" },
+    { "key": "source-tag","title": "Source tagging (source → sub-source)",      "file": "index.html#step-15" },
+    { "key": "profile",   "title": "Occupation & Company","file": "index.html#step-4" },
+    { "key": "typology",  "title": "Typology + Carpet Area","file": "index.html#step-5" },
+    { "key": "leadcat",   "title": "Residential or Commercial","file": "index.html#step-6" },
+    { "key": "budget",    "title": "Budget",             "file": "index.html#step-7" },
+    { "key": "purpose",   "title": "Purpose & Timeline", "file": "index.html#step-8" },
+    { "key": "family",    "title": "Family & Must-haves","file": "index.html#step-9" },
+    { "key": "contact",   "title": "Address & Contact",   "file": "index.html#step-10" },
+    { "key": "done",      "title": "Done · Token Issued","file": "index.html#step-12" }
+  ],
+  "buttons": [
+    { "label": "BEGIN",            "target": "phone" },
+    { "label": "Continue (phone)", "target": "otp" },
+    { "label": "OTP keypad",       "target": "identity" },
+    { "label": "Continue (name)",  "target": "typology" },
+    { "label": "Select typology",  "target": "budget" },
+    { "label": "Continue (budget)","target": "purpose" },
+    { "label": "Purpose / timeline chips", "target": "family" },
+    { "label": "Must-have pills",  "target": "done" },
+    { "label": "New check-in (reset)", "target": "welcome" },
+    { "label": "Exit reception",   "target": "welcome" }
+  ],
+  "assets": [
+    "assets/logo-mark.png",
+    "icons/icon-512.png",
+    "icons/icon-512-maskable.png",
+    "icons/icon-192.png",
+    "icons/icon-192-maskable.png",
+    "icons/apple-touch-icon.png",
+    "icons/favicon-32.png"
+  ],
+  "custom_events": [
+    { "type": "step_view",    "note": "fired on every in-page step change (single-page flow)" },
+    { "type": "cp_open",      "note": "channel-partner selector opened" },
+    { "type": "cp_select",    "note": "an existing channel partner was tagged to the walk-in" },
+    { "type": "cp_add",       "note": "a new channel partner was registered via Venus Partner Program" },
+    { "type": "cp_clear",     "note": "walk-in proceeded with no channel partner" },
+    { "type": "details_done", "note": "walk-in CRM qualification step completed (lead category, area, occupation, source…)" },
+    { "type": "checkin",      "note": "fired when a visitor completes onboarding and a desk token is issued; value = token; meta carries full lead profile" }
+  ]
+}

@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>The Universe · Sales Suite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+
+<!-- PWA / install metadata -->
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#fff8ec"/>
+<meta name="background-color" content="#fff8ec"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Universe"/>
+<meta name="application-name" content="Universe"/>
+<meta name="format-detection" content="telephone=no"/>
+
+<!-- Icons -->
+<link rel="icon" type="image/png" sizes="192x192" href="assets/brand/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="assets/brand/icon-512.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="assets/brand/apple-touch-icon.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="assets/brand/icon-512.png"/>
+
+<!-- Fonts (locally bundled for offline use) -->
+<link rel="stylesheet" href="assets/fonts/fonts.css"/>
+
+<link rel="stylesheet" href="app/styles.css"/>
+<link rel="stylesheet" href="assets/vendor/leaflet/leaflet.css"/>
+<style>
+/* RESPONSIVE: the 2560×1600 design canvas scales to fit ANY viewport / device
+   aspect ratio (16:10 tablet = exact fill; 16:9 TV, 4:3 iPad, ultrawide =
+   centred with a clean premium surround; no fake device bezel). */
+html, body, #root { background: #0e0c0a; }
+.tablet-frame {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #0e0c0a;
+  overflow: hidden;   /* clip any full-bleed content that overflows the canvas */
+  /* respect notches / rounded display corners */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
+}
+.tablet-bezel {
+  width: 2560px; height: 1600px;
+  flex-shrink: 0;
+  background: var(--ivory);
+  border-radius: 0;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+}
+.tablet-bezel.bezel-tight { border-radius: 0; box-shadow: none; }
+
+/* Landscape sales kiosk — gently ask for landscape on portrait devices. */
+.rotate-hint { display: none; }
+@media (orientation: portrait) {
+  .rotate-hint {
+    display: flex; position: fixed; inset: 0; z-index: 99998;
+    flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+    background: #0e0c0a; color: #ead7a8; text-align: center; padding: 0 40px;
+  }
+}
+.rotate-hint .ring {
+  width: 74px; height: 74px; border-radius: 50%;
+  border: 1.5px solid rgba(232,215,168,0.5);
+  display: flex; align-items: center; justify-content: center;
+  animation: rotateHintSpin 3.4s ease-in-out infinite;
+}
+@keyframes rotateHintSpin { 0%,100%{transform:rotate(-12deg)} 50%{transform:rotate(102deg)} }
+/* Route transitions — opacity-only so they don't fight the in-screen
+   transforms (cluster slides, page-curls) and don't introduce a vertical
+   "wobble" flicker on entry. */
+.transition-in  { animation: routeIn 280ms ease both; }
+.transition-out { opacity: 0; transition: opacity 220ms ease; }
+@keyframes routeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* HOME twin-tower backdrop — painted at VIEWPORT level (fills the whole screen
+   incl. the letterbox, so there's no top/bottom cut at any aspect). Held at 25%
+   so it reads as a faint architectural wash. On entry it "develops" in: rises
+   from blur + a touch of scale, then a very slow continuous drift keeps it
+   alive without distracting. */
+.home-backdrop {
+  position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none;
+  animation: homeTowerDrift 46s ease-in-out infinite;
+}
+.home-backdrop img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 42%;
+  opacity: 0.25;
+  animation: homeTowerIn 2000ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes homeTowerIn {
+  0%   { opacity: 0;    filter: blur(22px); transform: scale(1.07); }
+  55%  { opacity: 0.25; }
+  100% { opacity: 0.25; filter: blur(0);    transform: scale(1); }
+}
+@keyframes homeTowerDrift {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50%      { transform: translateX(-1.1%) scale(1.02); }
+}
+
+/* ── Safari / cross-device hardening: kiosk is fixed, no rubber-band, no zoom,
+      uses dynamic viewport units so iOS toolbars never crop the canvas. ── */
+html, body {
+  height: 100%; min-height: 100svh; margin: 0; padding: 0;
+  position: fixed; inset: 0; overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+.tablet-frame { width: 100%; height: 100%; min-height: 100svh; }
+img { -webkit-user-drag: none; user-select: none; }
+
+/* ── "Download the experience" first-run screen (installed PWA / production).
+      Hidden in dev + once cached; only [data-pwa="gate"] reveals it. ── */
+.pwa-gate {
+  position: fixed; inset: 0; z-index: 100000; display: none;
+  align-items: center; justify-content: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: #0b0a08; color: #f4ecda; isolation: isolate;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+[data-pwa="gate"] .pwa-gate { display: flex; }
+.pwa-gate::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: #0b0a08 url('assets/brand/screen-bg.jpg') center/cover no-repeat;
+  opacity: 0.5;
+}
+.pwa-gate::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(120% 90% at 50% 38%, rgba(11,10,8,0.30), rgba(11,10,8,0.86) 78%);
+}
+.pwa-gate.pwa-done { opacity: 0; transform: scale(1.015); transition: opacity .72s ease, transform .72s cubic-bezier(.22,1,.36,1); pointer-events: none; }
+.pwa-card { width: min(640px, 86vw); text-align: center; display: flex; flex-direction: column; align-items: center;
+  animation: pwaIn 900ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes pwaIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.pwa-logo { width: clamp(150px, 21vw, 232px); height: auto; margin-bottom: 30px;
+  filter: drop-shadow(0 10px 36px rgba(0,0,0,0.55)); }
+.pwa-kicker { font: 600 clamp(10px,1.3vw,13px)/1 'JetBrains Mono', monospace; letter-spacing: 0.34em;
+  color: #c9a05e; text-transform: uppercase; margin-bottom: 18px; }
+.pwa-title { font: 300 clamp(30px,5vw,56px)/1.04 'Cormorant', 'Cinzel', serif; letter-spacing: -0.01em; color: #fbf4e3; }
+.pwa-desc { font-size: clamp(14px,1.7vw,18px); line-height: 1.6; color: rgba(244,236,218,0.74);
+  max-width: 30em; margin: 18px auto 34px; }
+.pwa-btn {
+  appearance: none; border: none; cursor: pointer;
+  font: 700 clamp(13px,1.6vw,16px)/1 'JetBrains Mono', monospace; letter-spacing: 0.18em; text-transform: uppercase;
+  color: #1a130a; padding: clamp(16px,2vw,21px) clamp(34px,5vw,52px); border-radius: 999px;
+  background: linear-gradient(180deg, #ead7a8 0%, #c9a05e 100%);
+  box-shadow: 0 16px 44px rgba(201,160,94,0.32), inset 0 1px 0 rgba(255,255,255,0.5);
+  transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s ease;
+}
+.pwa-btn:hover { transform: translateY(-2px); box-shadow: 0 22px 56px rgba(201,160,94,0.42), inset 0 1px 0 rgba(255,255,255,0.5); }
+.pwa-btn:active { transform: scale(0.97); }
+.pwa-progress { display: none; width: min(440px, 78vw); margin: 6px auto 0; }
+.pwa-track { height: 7px; border-radius: 999px; background: rgba(244,236,218,0.14); overflow: hidden; }
+.pwa-bar { height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, #c9a05e, #ead7a8); box-shadow: 0 0 16px rgba(201,160,94,0.5);
+  transition: width .28s cubic-bezier(.22,1,.36,1); }
+.pwa-meta { display: flex; justify-content: space-between; margin-top: 14px;
+  font: 600 clamp(11px,1.4vw,13px)/1 'JetBrains Mono', monospace; letter-spacing: 0.14em; color: rgba(244,236,218,0.7); }
+.pwa-meta #pwa-pct { color: #ead7a8; }
+.pwa-skip { margin-top: 26px; font: 500 12px/1 'JetBrains Mono', monospace; letter-spacing: 0.16em;
+  color: rgba(244,236,218,0.42); cursor: pointer; text-transform: uppercase; }
+.pwa-skip:hover { color: rgba(244,236,218,0.7); }
+</style>
+</head>
+<body>
+<!-- Decide PWA mode BEFORE paint so the download screen never flashes in dev. -->
+<script>
+(function(){
+  var qs = new URLSearchParams(location.search);
+  if (qs.get('pwa') === 'reset') { try { localStorage.removeItem('universe-cache-version'); } catch(e){} }
+  var forced = qs.has('pwa') && qs.get('pwa') !== '0';
+  var h = location.hostname, isLocal = h==='localhost'||h==='127.0.0.1'||/^192\.168\./.test(h)||h==='';
+  var standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone===true;
+  var dl=false; try{ dl = localStorage.getItem('universe-cache-version')==='universe-v7'; }catch(e){}
+  document.documentElement.setAttribute('data-pwa', (isLocal && !standalone && !forced) ? 'dev' : (dl ? 'ready' : 'gate'));
+})();
+</script>
+<div id="root"></div>
+
+<!-- Branded "Download the experience" first-run screen (installed PWA / production) -->
+<div id="pwa-gate" class="pwa-gate">
+  <div class="pwa-card">
+    <img class="pwa-logo" src="assets/brand/universe-logo-transparent.png" alt="The Universe"/>
+    <div class="pwa-kicker">Venus Group · Ahmedabad</div>
+    <div class="pwa-title">Download the experience</div>
+    <div class="pwa-desc">Save the full sales suite to this device for an instant, offline-smooth presentation. One download, then it runs beautifully without any network.</div>
+    <button id="pwa-btn" class="pwa-btn">Download Experience</button>
+    <div id="pwa-progress" class="pwa-progress">
+      <div class="pwa-track"><div id="pwa-bar" class="pwa-bar"></div></div>
+      <div class="pwa-meta"><span id="pwa-pct">0%</span><span id="pwa-status">Preparing…</span></div>
+    </div>
+    <div id="pwa-skip" class="pwa-skip">Skip for now</div>
+  </div>
+</div>
+
+<div class="rotate-hint" aria-hidden="true">
+  <div class="ring"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#ead7a8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2.5"/><path d="M9 19h6"/></svg></div>
+  <div style="font-family:'Cinzel',serif;font-size:22px;letter-spacing:0.26em;text-transform:uppercase">Rotate to landscape</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.2em;color:rgba(232,215,168,0.6)">The Universe is best experienced in landscape</div>
+</div>
+
+<!-- Service worker registration — must run as plain JS (not type=text/babel)
+     so it attaches before window 'load' could fire under Babel parse delay. -->
+<!-- PWA controller: dev tears down SW (edits always show); production/installed
+     registers the offline SW + drives the "Download Experience" precache. -->
+<script src="app/pwa-download.js"></script>
+
+<script src="assets/vendor/react.development.js"></script>
+<script src="assets/vendor/react-dom.development.js"></script>
+<script src="assets/vendor/leaflet/leaflet.js"></script>
+<script src="assets/vendor/babel.min.js"></script>
+
+<script src="app/plate-data.js"></script>
+<script type="text/babel" src="app/data.jsx"></script>
+<script type="text/babel" src="app/utils.jsx"></script>
+<script type="text/babel" src="app/fx.jsx"></script>
+<script type="text/babel" src="app/session.jsx"></script>
+<script type="text/babel" src="app/screens/_header.jsx"></script>
+<script type="text/babel" src="app/screens/splash.jsx"></script>
+<script type="text/babel" src="app/screens/home.jsx"></script>
+<script type="text/babel" src="app/screens/explore.jsx"></script>
+<script type="text/babel" src="app/screens/story.jsx"></script>
+<script type="text/babel" src="app/screens/location.jsx"></script>
+<script type="text/babel" src="app/screens/masterplan.jsx"></script>
+<script type="text/babel" src="app/screens/masterplan-explorer.jsx"></script>
+<script type="text/babel" src="app/screens/floorselect.jsx"></script>
+<script type="text/babel" src="app/screens/floorplate.jsx"></script>
+<script type="text/babel" src="app/screens/unitdetail.jsx"></script>
+<script type="text/babel" src="app/screens/residences.jsx"></script>
+<script type="text/babel" src="app/screens/amenities.jsx"></script>
+<script type="text/babel" src="app/screens/gallery.jsx"></script>
+<script type="text/babel" src="app/screens/tools.jsx"></script>
+<script type="text/babel" src="app/screens/booking.jsx"></script>
+<script type="text/babel" src="app/screens/inventory.jsx"></script>
+<script type="text/babel" src="app/screens/_dock.jsx"></script>
+<script type="text/babel" src="app/screens/_tools-float.jsx"></script>
+<script type="text/babel" src="app/screens/saver.jsx"></script>
+
+<script type="text/babel">
+const SAVER_IDLE_MS = 150000;  // 2.5 min of no input → tablet screensaver
+
+function App() {
+  const [route] = useRoute();
+  const { route: shown, phase } = useRouteTransition(route);
+  const { scale, tight, W: CANVAS_W, H: CANVAS_H } = useFitScale(2560, 1600);
+  const [saverOn, setSaverOn] = React.useState(false);
+  useIdleTrigger(SAVER_IDLE_MS, () => setSaverOn(true), !saverOn);
+
+  // Feed the live journey tracker: every screen change is recorded against the
+  // active session (time on screen + visit counts) for the mini-CRM report.
+  React.useEffect(() => {
+    if (window.UNI_SESSION) window.UNI_SESSION.trackScreen(shown.path);
+  }, [shown.path]);
+
+  let Screen = Splash;
+  if (shown.path === 'home')       Screen = Home;
+  else if (shown.path === 'explore')    Screen = Explore;
+  else if (shown.path === 'story')      Screen = Story;
+  else if (shown.path === 'location')   Screen = Location;
+  else if (shown.path === 'masterplan') Screen = MasterPlan;
+  else if (shown.path === 'masterplan-explorer') Screen = PlanExplorerScreen;
+  else if (shown.path === 'floors')     Screen = FloorSelect;
+  else if (shown.path === 'floor')      Screen = FloorPlate;
+  else if (shown.path === 'unit')       Screen = UnitDetail;
+  else if (shown.path === 'residences') Screen = Residences;
+  else if (shown.path === 'amenities')  Screen = Amenities;
+  else if (shown.path === 'gallery')    Screen = Gallery;
+  else if (shown.path === 'tools')      Screen = Tools;
+  else if (shown.path === 'inventory')  Screen = Inventory;
+  else if (shown.path === 'booking')    Screen = Booking;
+
+  // Surround colour = the active screen's own base background, so the
+  // letterbox area on off-ratio displays blends seamlessly (no visible bars,
+  // no side cuts — content is always scaled-to-contain, never cropped).
+  const SURROUND = {
+    home:'var(--ivory)', explore:'var(--ivory)', story:'var(--ivory)',
+    masterplan:'var(--ivory)', 'masterplan-explorer':'#eae3d6', floors:'var(--ivory)', floor:'var(--ivory)',
+    unit:'var(--ivory)', amenities:'var(--ivory)', gallery:'var(--ivory)',
+    tools:'var(--ivory)', inventory:'var(--ivory)', booking:'var(--ivory)',
+    location:'#ece6dc', residences:'#f3eddc', splash:'#f3eddc',
+  };
+  const surround = SURROUND[shown.path] || 'var(--ivory)';
+
+  // Shared cream architectural-sketch backdrop on every INSIDE screen (all
+  // except the intro/splash and home). Painted at VIEWPORT level on the frame
+  // with cover → never cuts at any edge / aspect ratio; the bezel goes
+  // transparent so the same backdrop shows continuously through the canvas and
+  // the letterbox. Intro/home keep their own opaque backgrounds.
+  // IMMERSIVE screens (live map / full-bleed plan) paint their OWN edge-to-edge
+  // background and must NOT get the shared cream sketch backdrop — otherwise its
+  // texture shows as a mismatched band in the letterbox. They use a flat surround
+  // that matches their own canvas edge, so the fill is seamless at any aspect.
+  const IMMERSIVE = shown.path === 'location' || shown.path === 'masterplan-explorer';
+  const INSIDE = !IMMERSIVE && shown.path !== 'splash' && shown.path !== 'splash-dark' && shown.path !== 'home';
+  // The 3D Block-Massing screen paints ONE continuous radial at the VIEWPORT level
+  // (frame), with a transparent bezel, so the letterbox and the canvas interior are
+  // literally the same layer — no top/bottom seam at any aspect ratio. The outer
+  // colour is matched to the 3D ground grey so the bottom blends into the ground too.
+  const isMassingScreen = shown.path === 'masterplan-explorer';
+  // vertical sky→ground gradient in viewport space: top = 3D sky tone, bottom =
+  // 3D ground grey, so both letterbox bands blend into the scene (no seam).
+  const MASSING_BG = 'linear-gradient(180deg, #e8e5de 0%, #e4e1da 44%, #dad8d1 74%, #d1cfcb 92%, #cdcbc7 100%)';
+  // Floor-selector shows a full-bleed cream sketch; paint the letterbox the SAME
+  // cream as the drawing's edges so there's no top/bottom seam at any aspect.
+  const isFloorSelect = shown.path === 'floors';
+  // Floor plate shows a full-screen plan on flat cream; match the letterbox so
+  // there's no top/bottom seam at any aspect (same trick as the selector).
+  const isFloorPlan = shown.path === 'floor';
+  // HOME paints the twin-tower drawing at the VIEWPORT level (frame) with cover,
+  // toned to ~50% over warm cream so it reads as a soft architectural wash. Like
+  // the other inside screens, the bezel goes transparent so the SAME backdrop
+  // fills the canvas and the letterbox continuously — edge to edge, no top/bottom
+  // cut at ANY aspect ratio (16:10 tablet, 4:3 iPad, 16:9 TV, ultrawide).
+  // HOME: the building is a real <img> (HomeBackdrop) so its entrance can be
+  // animated; the frame itself is just warm cream behind it.
+  const isHome = shown.path === 'home';
+  const frameBg = isMassingScreen
+    ? MASSING_BG
+    : isHome
+        ? 'rgb(247,242,233)'
+    : isFloorSelect
+        ? '#fcf5eb'
+        : isFloorPlan
+            ? '#fbeedb'
+            : (INSIDE
+            ? 'rgb(245,239,231) url("assets/brand/screen-bg.jpg") center center / cover no-repeat'
+            : surround);
+  const bezelBg = isMassingScreen ? 'transparent' : isHome ? 'transparent' : (INSIDE ? 'transparent' : (IMMERSIVE ? surround : 'var(--ivory)'));
+  // The live-map & 3D-plan screens let their backdrop bleed past the 2560×1600
+  // canvas to fill the letterbox on any aspect ratio → allow the bezel to
+  // overflow for them so the bled content shows in the letterbox area.
+  const bezelOverflow = (shown.path === 'location' || shown.path === 'masterplan-explorer') ? 'visible' : undefined;
+
+  return (
+    <div className="tablet-frame" style={{background: frameBg, transition:'background 360ms ease'}}>
+      {isHome && (
+        <div className="home-backdrop" key="home-backdrop" aria-hidden="true">
+          <img src="assets/building-twin.jpg" alt=""
+            onError={(ev)=>{ ev.currentTarget.style.opacity=0; }}/>
+        </div>
+      )}
+      <div className={"tablet-bezel" + (tight ? " bezel-tight" : "")} style={{width: CANVAS_W, height: CANVAS_H, transform:`scale(${scale})`, transformOrigin:'center', background: bezelBg, overflow: bezelOverflow}}>
+        <div key={shown.path + (shown.params||[]).join('-')} className={phase==='in' ? 'transition-in' : 'transition-out'} style={{position:'absolute',inset:0}}>
+          <Screen/>
+        </div>
+        {shown.path !== 'splash' && shown.path !== 'splash-dark' && <FloatingDock/>}
+        <FloatingTools/>
+      </div>
+      {saverOn && <ScreenSaver onDismiss={() => setSaverOn(false)}/>}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+
+<!-- RealDesk analytics — offline-durable usage tracking (IndexedDB buffer, syncs when online) -->
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech"
+        data-slug="the-universe-venus" data-token="rdk_01ee0b38d122ac63fd123afdcf4f50ffd0267160d0b65996" data-label=""></script>
+<script>
+/* per-screen page_view for the hash-routed SPA (rda.js auto-tracks button clicks already) */
+(function () {
+  function route(){ return ((location.hash || '').replace(/^#\/?/, '').split(/[?\/]/)[0]) || 'splash'; }
+  function fire(){ if (window.RDA) { try { window.RDA.track('page_view', route(), 1, {}); } catch (e) {} } }
+  addEventListener('hashchange', fire);
+  var t = setInterval(function () { if (window.RDA) { clearInterval(t); fire(); } }, 200);
+  setTimeout(function () { clearInterval(t); }, 8000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+/* The Universe · Sales Suite — global styles */
+
+:root {
+  /* === LIGHT THEME — bright white substrate, dark-beige hero accents =====
+     Page bg is pure white, primary type is near-black, dark-beige (--tile)
+     is the new primary surface for nav tiles & cards, gold reserved for
+     accents, --night for inverted callouts.                                */
+  --ivory:      #ffffff;
+  --ivory-2:    #fafaf6;
+  --ivory-3:    #f3f0e6;
+  --ink:        #0a0a0a;
+  --graphite:   #2a2a2a;
+  --slate:      rgba(10,10,10,0.55);
+  --muted:      rgba(10,10,10,0.42);
+  --line:       rgba(10,10,10,0.10);
+  --line-soft:  rgba(10,10,10,0.05);
+
+  /* gold + dark-beige scale */
+  --gold:       #c9a05e;
+  --gold-deep:  #b08a3f;
+  --gold-soft:  #ead7a8;
+  --gold-glow:  rgba(201,160,94,0.42);
+  --tile:       #8b6f3d;     /* dark beige — primary surface for nav tiles */
+  --tile-deep:  #6f5829;     /* deeper beige for inner detail shadows */
+  --tile-light: #a98e5d;     /* lighter beige for highlights */
+  --on-tile:    #faf6e8;     /* light cream — text/icons on dark beige */
+
+  /* Venus parent-brand red */
+  --venus-red:      #d63b50;
+  --venus-red-soft: rgba(214,59,80,0.12);
+
+  /* status */
+  --available:      #4a8b52;
+  --available-soft: rgba(74,139,82,0.18);
+  --sold:           #b85547;
+  --sold-soft:      rgba(184,85,71,0.16);
+  --hold:           #c9a05e;
+
+  /* inverted dark surface for high-contrast cards */
+  --night:    #131c2a;
+  --night-2:  #1a2434;
+  --night-3:  #243044;
+
+  /* convenience semantic aliases */
+  --page-bg:  var(--ivory);
+  --page-fg:  var(--ink);
+  --surface:  var(--ivory-2);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  height: 100%;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Always show the system cursor — the custom cursor decorator was
+     hiding the only visible cursor on first load. */
+  cursor: auto;
+}
+
+#root {
+  position: fixed;
+  inset: 0;
+  background: var(--ivory);
+}
+
+/* type rules */
+.serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-feature-settings: 'liga','dlig';
+}
+.display {
+  font-family: 'Cinzel', 'Cormorant Garamond', serif;
+  font-feature-settings: 'liga';
+}
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+.eyebrow {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--slate);
+  font-weight: 500;
+}
+.eyebrow.gold  { color: var(--gold-deep); }
+.eyebrow.light { color: rgba(245,241,232,0.6); }
+.eyebrow.red   { color: var(--venus-red); }
+
+em { font-style: italic; }
+
+/* tablet upscaled inputs — sized for the 2560×1600 design space */
+.tablet-bezel input,
+.tablet-bezel select,
+.tablet-bezel textarea {
+  font-size: 24px;
+  font-family: inherit;
+  padding: 22px 26px;
+  border-radius: 12px;
+  min-height: 76px;
+  border: 1px solid var(--line);
+  background: var(--ivory-2);
+  color: var(--ink);
+}
+.tablet-bezel input:focus,
+.tablet-bezel select:focus,
+.tablet-bezel textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: var(--ivory-3);
+}
+.tablet-bezel textarea { min-height: 150px; padding: 22px 26px; }
+.tablet-bezel input[type="checkbox"],
+.tablet-bezel input[type="radio"] {
+  min-height: 0; padding: 0; width: 30px; height: 30px;
+}
+.tablet-bezel ::placeholder { font-size: 22px; opacity: 0.55; }
+.tablet-bezel button { min-height: 56px; }
+
+/* utility */
+.flex { display: flex; }
+.center { display: flex; align-items: center; justify-content: center; }
+.col { display: flex; flex-direction: column; }
+.gap-1 { gap: 4px; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .gap-4 { gap: 16px; }
+.gap-6 { gap: 24px; } .gap-8 { gap: 32px; } .gap-10 { gap: 40px; }
+
+button { font-family: inherit; cursor: pointer; }
+img { -webkit-user-drag: none; pointer-events: none; }
+
+/* scrollbars hidden but functional */
+.scroll {
+  overflow: auto;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* horizontal marquee — used for tenant logos */
+@keyframes marqueeX {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: flex; gap: 90px; align-items: center;
+  width: max-content;
+  animation: marqueeX 40s linear infinite;
+}

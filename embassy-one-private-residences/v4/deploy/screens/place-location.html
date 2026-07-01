@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Address · Location</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  PLACE · LOCATION — rebuilt to match the approved reference
+  (ChatGPT Image Jun 15 2026, 05_14_01) exactly.
+  ──────────────────────────────────────────────────────────────────────
+  · FULL-VIEWPORT Leaflet map. Two basemaps with a SATELLITE | VECTOR toggle
+    top-right; default = VECTOR (warm parchment-toned Carto Voyager).
+  · Chrome floats over: RETURN pill + "Gateway to the North" (dark ink in
+    vector view, light in satellite), translucent left rail, coord corner.
+  · Label-pill markers (dark pill + colour dot, labels always on). The site
+    marker = black rounded tile + gold tower glyph + "Embassy ONE Private Residences"
+    pill + "Four Seasons" sub-pill.
+  · Selecting any POI draws a CURVED gold connector from the project to the
+    pin (quadratic arc, draw-in, arrowhead, midpoint distance chip).
+  · Legend = category filters. Places-nearby list = clickable rows.
+
+  ⚠ DISTANCES ARE BROCHURE-STYLE ESTIMATES — confirm before publishing.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    /* deck palette — ink-navy + bone */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#e9e1d4; --bone-2:#f2ece0; --paper:#faf8f4;
+    --taupe:#6e5c58; --champ:#c9b79c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#1b2230; --on-light-dim:#6b6f78;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette (reskin) */
+    --parch:#e9e1d4; --muted:#6b6f78; --faint:#9a9aa0;
+    --gold:#b3a184; --gold-d:#857a66; --gold-l:#c9b79c; --gold-lt:#c9b79c; --sage:#9da585; --water:#8aa0a8; --line:#d8d0c2;
+    --glass:rgba(245,240,232,.82);
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a; --on-navy:#ece8e0; --on-navy-dim:#9aa1ad; --brass:#c9b79c;
+    --ease:cubic-bezier(.23,1,.32,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--on-dark); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; background:var(--ink);
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+
+  /* faint architectural line-drawing of the real ONE tower — anchored bottom-LEFT
+     so it tucks into the empty corner behind the glass rail and never sits over the
+     live map's pins (which cluster centre/upper). Whisper-faint, non-interactive.
+     BONE variant + screen blend for the dark ink ground. */
+  body::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:1;
+    background:url(../assets/renders/exterior/tower-outline-bone.webp) no-repeat left -4% bottom;
+    background-size:auto 82%; opacity:.06; mix-blend-mode:screen}
+
+  /* ── MAP fills the entire viewport ───────────────────────────── */
+  #map{position:fixed; inset:0; width:100vw; height:100vh; z-index:0; background:var(--ink)}
+
+  /* per-view tile toning. BLUE = deep navy (dark_nolabels toned navy); VECTOR = warm voyager; SATELLITE = sepia. */
+  body.view-blue .leaflet-tile-pane{filter:brightness(.7) saturate(1.1) hue-rotate(200deg)}
+  /* subtle navy tint over the dark tiles so they read #0c1018–#11151f, not neutral grey */
+  body.view-blue #map::after{content:""; position:absolute; inset:0; z-index:399; pointer-events:none;
+    background:rgba(12,16,24,.42); mix-blend-mode:multiply}
+  body.view-vec .leaflet-tile-pane{filter:sepia(.05) saturate(.88) brightness(1.03) contrast(.97)}   /* neutral bone-light brand tone */
+  body.view-sat .leaflet-tile-pane{filter:sepia(.5) hue-rotate(-8deg) saturate(.72) brightness(1.05) contrast(1.03)}
+  /* VECTOR = light warm map → dark text in the header so it reads */
+  body.view-vec .head .eyebrow{color:var(--gold-d); text-shadow:0 1px 9px rgba(255,250,240,.75)}
+  body.view-vec .head h1{color:var(--ink); text-shadow:0 1px 12px rgba(255,250,240,.8)}
+  body.view-vec .head .lede{color:var(--muted); text-shadow:0 1px 9px rgba(255,250,240,.7)}
+  .leaflet-container{background:var(--ink); font-family:"Jost",sans-serif; outline:none}
+  .leaflet-control-zoom{display:none!important}
+  .leaflet-control-zoom a{background:rgba(28,23,18,.88)!important; color:var(--gold-l)!important; border-color:rgba(201,183,156,.3)!important; width:32px;line-height:32px;height:32px}
+  .leaflet-control-zoom a:hover{background:rgba(45,38,30,.95)!important; color:#fff!important}
+  .leaflet-bottom.leaflet-right{margin-bottom:54px}
+  .leaflet-control-attribution{background:rgba(18,22,33,.55)!important; color:#9aa1ad!important; font-size:8px!important; padding:1px 6px!important}
+  .leaflet-control-attribution a{color:var(--champ)!important}
+
+  /* soft vignette so chrome reads on either basemap */
+  .wash{position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 50%, transparent 58%, rgba(18,22,33,.12))}
+
+  /* ── TOP-LEFT: return + title ────────────────────────────────── */
+  .topscrim{position:fixed; top:0; left:0; right:0; z-index:780; pointer-events:none;
+    height:clamp(118px,17vh,190px); opacity:0; transition:opacity .4s;
+    background:linear-gradient(180deg, rgba(12,16,24,.5) 0%, rgba(12,16,24,.24) 42%, transparent 100%)}
+  body.view-sat .topscrim{opacity:1}
+  .topbar{position:fixed; top:0; left:0; right:0; z-index:800;
+    padding:clamp(16px,2.4vh,32px) clamp(20px,3vw,54px) 0;
+    display:flex; flex-direction:column; gap:clamp(8px,1.4vh,16px)}
+  .topbar > *{pointer-events:auto}
+  .back{align-self:flex-start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:var(--ink); border:1px solid var(--line-dark);
+    color:var(--on-dark); font-weight:500; font-size:clamp(9px,1.15vh,13px); letter-spacing:.32em;
+    text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.6), 0 8px 18px -8px rgba(12,16,24,.28), 0 0 10px rgba(201,183,156,.55);
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:hover{ background:var(--ink-2); border-color:var(--champ);
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.72), 0 10px 22px -8px rgba(12,16,24,.32), 0 0 14px rgba(201,183,156,.72); }
+  .back:active{ transform:scale(.97); }
+  .back svg{width:15px;height:15px;display:block; stroke:var(--champ)}
+  .head .eyebrow{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500;
+    font-size:clamp(10px,1.3vh,14px); letter-spacing:.18em; text-transform:uppercase; color:var(--gold-lt);
+    margin-bottom:clamp(2px,.5vh,5px); text-shadow:0 2px 12px rgba(6,9,16,.6)}
+  .head h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1.03;
+    font-size:clamp(26px,4.4vh,50px); letter-spacing:.05em; text-transform:uppercase; color:var(--on-navy);
+    text-shadow:0 2px 16px rgba(6,9,16,.6)}
+  /* lede: bone text on navy, narrowed so it never overlaps the left rail */
+  .head .lede{font-family:"Jost",sans-serif; font-weight:300; line-height:1.55; color:var(--on-navy-dim);
+    font-size:clamp(10.5px,1.3vh,13.5px); letter-spacing:.01em; max-width:clamp(230px,26vw,360px);
+    margin-top:clamp(7px,1.2vh,13px); text-shadow:0 2px 12px rgba(6,9,16,.55)}
+  body.view-sat .head .eyebrow{color:#c9b79c; text-shadow:0 2px 12px rgba(0,0,0,.5)}
+  body.view-sat .head h1{color:#fbf8f4; text-shadow:0 2px 16px rgba(0,0,0,.5)}
+  body.view-sat .head .lede{color:#efe6d6; text-shadow:0 2px 12px rgba(0,0,0,.5)}
+
+  /* ── SATELLITE | VECTOR toggle (top-right) ───────────────────── */
+  /* Recipe B — deck ink-navy smoky glass (light champagne text) */
+  .viewtoggle{position:fixed; top:clamp(16px,2.4vh,32px); right:clamp(20px,3vw,54px); z-index:800;
+    display:flex; padding:4px; gap:3px; border-radius:999px;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,183,156,.20);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+  .vt{display:inline-flex; align-items:center; gap:8px; border:0; cursor:pointer; background:none;
+    color:#c9b79c; font-family:"Jost",sans-serif; font-weight:400; font-size:clamp(9px,1.1vh,12.5px);
+    letter-spacing:.26em; text-transform:uppercase; padding:8px 17px; border-radius:999px;
+    transition:background .3s, color .3s}
+  .vt svg{width:15px;height:15px;display:block;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .vt.on{background:rgba(233,225,212,.94); color:#1b2230; box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+  .vt:not(.on):hover{color:#ece8e0}
+
+  /* ── LEFT RAIL (translucent parchment) ───────────────────────── */
+  .rail{position:fixed; left:clamp(14px,1.9vw,26px); z-index:500;
+    top:clamp(200px,30vh,272px); bottom:clamp(14px,2vh,26px);
+    width:clamp(216px,20vw,286px); display:flex; flex-direction:column;
+    pointer-events:none; min-height:0}
+  .rail > .shell{pointer-events:auto}
+  /* Recipe B — deck ink-navy smoky glass (light text inside: legend / detail / list) */
+  .shell{flex:1 1 auto; min-height:0; display:flex; flex-direction:column; position:relative; color:var(--on-dark);
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,183,156,.20); border-radius:18px; overflow:hidden;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    outline:1px solid rgba(201,183,156,.20); outline-offset:-4px}
+
+  /* legend = category filters — clear 2-column toggle buttons (matches the master-plan filters) */
+  .legend{display:grid; grid-template-columns:1fr 1fr; gap:7px; padding:clamp(11px,1.5vh,16px) clamp(13px,1.3vw,18px) clamp(9px,1.2vh,13px)}
+  .lh{grid-column:1 / -1; font-size:9.5px; letter-spacing:.42em; text-transform:uppercase; color:var(--champ); margin-bottom:3px}
+  .leg{display:inline-flex; align-items:center; gap:6px; cursor:pointer; border:1px solid var(--line-dark); border-radius:11px;
+    padding:6px 8px; width:100%; min-width:0; margin:0; text-align:left; font:inherit;
+    background:linear-gradient(155deg, rgba(30,38,56,.5), rgba(16,21,33,.42)); -webkit-backdrop-filter:blur(12px) saturate(1.12); backdrop-filter:blur(12px) saturate(1.12);
+    box-shadow:0 2px 7px -3px rgba(6,9,16,.4), inset 0 1px 0 rgba(236,232,224,.08);
+    transition:background .2s,border-color .2s,opacity .2s,color .2s,box-shadow .2s,transform .12s}
+  .leg:last-of-type{grid-column:1 / -1}
+  .leg .sw{width:10px;height:10px;flex:0 0 auto;border-radius:50%}
+  .leg.l-site .sw{background:#1b2230;box-shadow:0 0 0 2px var(--gold)}
+  .leg.l-neighbourhood .sw{background:var(--gold-l)}
+  .leg.l-landmark .sw{background:#d8cdbb}
+  .leg.l-water .sw{background:#9fc0cc}
+  .leg.l-connectivity .sw{background:transparent;border:1.6px solid var(--gold)}
+  .leg span{font-size:clamp(8px,.92vh,10px); font-weight:500; letter-spacing:.03em; text-transform:uppercase; color:var(--on-dark); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .leg:hover{background:linear-gradient(155deg, rgba(40,50,72,.62), rgba(22,28,44,.5)); transform:translateY(-1px)} .leg:active{transform:translateY(0) scale(.97)}
+  .leg.off{opacity:1; background:linear-gradient(155deg, rgba(18,23,35,.42), rgba(12,15,23,.34)); border-color:var(--line-dark); box-shadow:none}
+  .leg.off span{color:var(--on-dark-dim)} .leg.off .sw{opacity:.4}
+
+  /* detail block (selected POI) */
+  .detail{border-top:1px solid rgba(201,183,156,.24); padding:clamp(9px,1.2vh,14px) clamp(13px,1.3vw,18px) clamp(8px,1.1vh,12px); flex:0 0 auto}
+  .detail .ik{font-size:9.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--champ); transition:opacity .35s}
+  .detail h2{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(14px,1.9vh,20px); line-height:1.05; margin:5px 0 0; color:var(--on-dark); transition:opacity .35s}
+  .detail p{font-weight:300; color:var(--on-dark-dim); line-height:1.55; font-size:clamp(10.5px,1.25vh,13px); margin-top:clamp(6px,1vh,11px); transition:opacity .35s}
+  .detail .dist{margin-top:clamp(8px,1.1vh,12px); font-size:10.5px; letter-spacing:.2em; color:var(--champ); text-transform:uppercase; min-height:13px}
+  .detail.swap .ik,.detail.swap h2,.detail.swap p,.detail.swap .dist{opacity:0}
+
+  /* POI list (scrollable) */
+  .listhead{padding:clamp(12px,1.6vh,16px) clamp(15px,1.5vw,21px) 7px; border-top:1px solid rgba(201,183,156,.24); flex:0 0 auto}
+  .listhead .lh{margin:0}
+  .list{flex:1 1 auto; min-height:48px; overflow-y:auto; overflow-x:hidden; padding:0 clamp(8px,1vw,12px) clamp(9px,1.3vh,14px);
+    scrollbar-width:thin; scrollbar-color:var(--gold-l) transparent}
+  .list::-webkit-scrollbar{width:6px}
+  .list::-webkit-scrollbar-track{background:transparent}
+  .list::-webkit-scrollbar-thumb{background:var(--gold-l); border-radius:3px}
+  .row{display:grid; grid-template-columns:13px 1fr auto; align-items:center; column-gap:12px;
+    padding:10px 10px; border-radius:9px; cursor:pointer; border-bottom:1px solid rgba(201,183,156,.13);
+    transition:background .22s, transform .22s, box-shadow .22s; text-align:left; width:100%; border-left:0;border-right:0;border-top:0;
+    background:none; font:inherit; color:inherit}
+  .row:last-child{border-bottom:0}
+  .row:hover{background:rgba(201,183,156,.1); transform:translateX(2px)}
+  .row.sel{background:linear-gradient(100deg, rgba(201,183,156,.34), rgba(201,183,156,.14));
+    box-shadow:inset 0 0 0 1px rgba(201,183,156,.5), 0 3px 10px -4px rgba(120,90,30,.3); border-bottom-color:transparent}
+  .row .cdot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+  .row.c-site .cdot{background:#1b2230;box-shadow:0 0 0 2px var(--gold)}
+  .row.c-neighbourhood .cdot{background:var(--gold-l)}
+  .row.c-landmark .cdot{background:#d8cdbb}
+  .row.c-water .cdot{background:#9fc0cc}
+  .row.c-connectivity .cdot{background:transparent;border:1.5px solid var(--gold)}
+  .row .nm{min-width:0; display:flex; flex-direction:column; gap:2px}
+  .row .nm b{font-weight:500; font-size:clamp(10.5px,1.2vh,12.5px); letter-spacing:.02em; color:var(--on-dark);
+    line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row .nm small{font-weight:400; font-size:8px; letter-spacing:.22em; text-transform:uppercase; color:var(--on-dark-dim)}
+  .row .meta{font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--champ);
+    white-space:nowrap; font-variant-numeric:tabular-nums; text-align:right}
+  .row.hide{display:none}
+
+  /* ── COORDINATE corner (bottom-right) ────────────────────────── */
+  .meta-corner{position:fixed; right:clamp(14px,1.9vw,26px); bottom:clamp(12px,1.8vh,22px); z-index:500;
+    pointer-events:none; font-size:clamp(8px,1vh,11px); letter-spacing:.34em; text-transform:uppercase;
+    color:#ece8e0; text-shadow:0 1px 7px rgba(0,0,0,.6); border-radius:999px; padding:8px 17px;
+    /* Recipe B — deck ink-navy smoky glass */
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    border:1px solid rgba(201,183,156,.20);
+    backdrop-filter:blur(16px) saturate(1.12); -webkit-backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+
+  /* ── MARKERS ─────────────────────────────────────────────────── */
+  .mk{position:relative; display:flex; align-items:center; gap:7px; transform:translate(-7px,-7px); cursor:pointer;
+    filter:drop-shadow(0 3px 6px rgba(12,16,24,.5)); transition:opacity .5s var(--ease)}
+  .mk.solo{opacity:0; pointer-events:none}   /* hidden while another POI is focused */
+  .mk .dot{position:relative; width:13px; height:13px; border-radius:50%; flex:0 0 auto;
+    box-shadow:0 0 0 2px rgba(12,16,24,.85), 0 0 0 4px rgba(201,183,156,.35); transition:transform .25s}
+  .mk .dot::after{content:""; position:absolute; inset:0; border-radius:50%; z-index:-1;
+    box-shadow:0 0 0 0 rgba(201,183,156,.5); animation:poiPulse 3s ease-out infinite}
+  .mk:hover .dot{transform:scale(1.22)}
+  .mk .lbl{font-size:11.5px; letter-spacing:.02em; color:#ece8e0; white-space:nowrap; font-weight:400;
+    background:rgba(18,22,33,.78); padding:3px 10px; border-radius:11px; border:1px solid rgba(201,183,156,.45);
+    box-shadow:0 2px 8px -3px rgba(12,16,24,.6); transition:color .25s,border-color .25s,background .25s}
+  .mk:hover .lbl, .mk.sel .lbl{color:#fbf8f4; border-color:var(--gold-l); background:rgba(26,32,48,.9)}
+  .mk.cat-neighbourhood .dot{background:#c9b79c}
+  .mk.cat-landmark .dot{background:#d8cdbb}
+  .mk.cat-water .dot{background:#8fc4dc} .mk.cat-water .lbl{color:#e2f2f8}
+  .mk.cat-connectivity .dot{background:#1b2230; border:2px solid #c9b79c; box-shadow:0 0 0 2px rgba(12,16,24,.7)}
+  .mk.hide{display:none}
+  .mk.sel .dot{transform:scale(1.3)}
+  .mk.sel .dot::after{animation:poiPulseStrong 1.5s ease-out infinite}
+  @keyframes poiPulse{0%{box-shadow:0 0 0 0 rgba(201,183,156,.5)} 70%,100%{box-shadow:0 0 0 11px rgba(201,183,156,0)}}
+  @keyframes poiPulseStrong{0%{box-shadow:0 0 0 0 rgba(201,183,156,.85)} 70%,100%{box-shadow:0 0 0 18px rgba(201,183,156,0)}}
+
+  /* the site marker — black tile + gold tower + label + Four Seasons sub-pill */
+  .mk.site{transform:translate(-19px,-19px); align-items:flex-start}
+  .mk.site .tilewrap{position:relative; width:38px; height:38px; flex:0 0 auto}
+  .mk.site .ring{position:absolute; left:-5px; top:-5px; width:48px; height:48px; border-radius:13px;
+    background:rgba(201,183,156,.3); animation:sitePulse 3.4s ease-in-out infinite}
+  .mk.site .tile{position:relative; width:38px; height:38px; border-radius:11px;
+    background:radial-gradient(circle at 36% 30%, #2a3242, #121621); border:1.6px solid var(--champ);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 3px rgba(201,183,156,.28), 0 6px 14px -4px rgba(12,16,24,.7)}
+  .mk.site .tile svg{width:19px;height:19px}
+  .mk.site .stack{display:flex; flex-direction:column; align-items:flex-start; gap:5px; margin-top:1px}
+  .mk.site .lbl{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:16px; letter-spacing:.02em; color:#fbf8f4;
+    background:rgba(18,22,33,.82); border-color:rgba(201,183,156,.55); padding:4px 13px; border-radius:13px}
+  .mk.site .sub{font-size:9.5px; letter-spacing:.22em; text-transform:uppercase; color:#c9b79c; font-weight:400;
+    background:rgba(18,22,33,.7); border:1px solid rgba(201,183,156,.38); border-radius:999px; padding:2px 10px;
+    box-shadow:0 2px 8px -3px rgba(12,16,24,.6)}
+  .mk.site.sel .ring{animation-duration:2.2s}
+  @keyframes sitePulse{0%,100%{transform:scale(1);opacity:.65} 50%{transform:scale(1.32);opacity:0}}
+
+  /* ── CURVED CONNECTOR (SVG overlay pane) ─────────────────────── */
+  .leaflet-pane.eo-connector-pane{z-index:450; pointer-events:none}
+  #connector{position:absolute; left:0; top:0; overflow:visible; pointer-events:none}
+  #connector .glow{stroke:#b9a888; stroke-width:6; fill:none; stroke-linecap:round; opacity:.3; filter:blur(3px)}
+  #connector .core{stroke:#c9b79c; stroke-width:1.7; fill:none; stroke-linecap:round;
+    filter:drop-shadow(0 0 3px rgba(201,183,156,.7))}
+  #connector .draw{stroke-dasharray:var(--len); stroke-dashoffset:var(--len);
+    transition:stroke-dashoffset .8s var(--ease)}
+  #connector .draw.in{stroke-dashoffset:0}
+  #connector .arrow{fill:#c9b79c; opacity:0; transition:opacity .4s ease .5s; filter:drop-shadow(0 0 3px rgba(201,183,156,.7))}
+  #connector .arrow.in{opacity:1}
+  #connector .nubA{fill:#c9b79c; opacity:0; transition:opacity .4s ease .15s}
+  #connector .nubA.in{opacity:.95}
+  #connchip{position:absolute; z-index:455; pointer-events:none; transform:translate(-50%,-50%);
+    font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:#ece8e0; white-space:nowrap;
+    background:rgba(18,22,33,.8); border:1px solid rgba(201,183,156,.6); border-radius:999px;
+    padding:3px 11px; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    box-shadow:0 2px 10px rgba(12,16,24,.5);
+    opacity:0; transition:opacity .4s ease .35s; font-variant-numeric:tabular-nums}
+  #connchip.in{opacity:1}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .9s var(--ease) forwards}
+  @keyframes fin{to{opacity:1;transform:none}}
+
+  .sheet-grip{display:none}   /* shown only as a bottom-sheet handle on phone portrait */
+
+  /* narrow / portrait — rail becomes a bottom sheet */
+  @media (max-aspect-ratio:3/4){
+    .rail{top:auto; left:0; right:0; bottom:0; width:auto; max-height:46vh}
+    .shell{border-radius:16px 16px 0 0}
+    .viewtoggle{top:auto; bottom:calc(46vh + 12px)}
+  }
+
+  /* ── SURVIVAL KIT: gate hover styles so iOS sticky-hover never flickers ── */
+  @media (hover:none){
+    .back:hover{background:var(--navy)!important; border-color:rgba(201,183,156,.5)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important}
+    .leg:hover{background:rgba(201,183,156,.15); transform:none}
+    .row:hover{background:none; transform:none}
+    .vt:not(.on):hover{color:#c9b79c}
+    .mk:hover .dot{transform:none}
+    .mk:hover .lbl{color:#ece8e0; border-color:rgba(201,183,156,.45); background:rgba(18,22,33,.78)}
+  }
+
+  /* ── PHONE PORTRAIT: compact, collapsible bottom sheet so the map stays usable ── */
+  @media (max-width:560px) and (max-aspect-ratio:3/4){
+    /* header: narrow + scale so it never overlaps the right-side pins */
+    .head h1{font-size:clamp(24px,7.5vw,34px)}
+    .head .lede{max-width:min(70vw,300px); font-size:11px; -webkit-line-clamp:3; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden}
+    .topbar{padding-right:clamp(96px,28vw,140px)}  /* keep title clear of the Map/Dark toggle */
+
+    /* sheet: shorter by default, with a grab handle + collapse toggle */
+    .rail{max-height:42vh}
+    .rail.collapsed{max-height:none; height:auto}
+    .shell{padding-top:6px}
+    /* drag/handle affordance */
+    .sheet-grip{display:flex; align-items:center; justify-content:center; padding:8px 0 4px; cursor:pointer; flex:0 0 auto;
+      -webkit-tap-highlight-color:transparent}
+    .sheet-grip::before{content:""; width:42px; height:5px; border-radius:999px; background:rgba(135,102,50,.45)}
+    .rail.collapsed .legend,.rail.collapsed .detail,.rail.collapsed .listhead,.rail.collapsed .list{display:none}
+    .rail.collapsed .shell{padding-bottom:env(safe-area-inset-bottom,0)}
+
+    /* legend buttons: ≥44px touch targets */
+    .legend{gap:8px; padding:6px clamp(13px,4vw,18px) 10px}
+    .leg{min-height:44px; padding:8px 10px}
+    .leg span{font-size:11px}
+    .lh{font-size:9px}
+
+    /* list rows: ≥44px, comfortable */
+    .row{padding:11px 10px; min-height:46px}
+    .list{min-height:60px}
+    .detail{padding:10px clamp(13px,4vw,18px)}
+
+    /* toggle: comfortable tap target, sits above the sheet */
+    .viewtoggle{bottom:calc(42vh + 12px); right:clamp(12px,4vw,20px)}
+    .vt{padding:10px 14px; min-height:44px}
+
+    /* meta-corner: hide on tiny phones (collides with the sheet); not essential chrome */
+    .meta-corner{display:none}
+  }
+  /* very short phone landscape — keep rail as a narrower side panel, never a sheet */
+  @media (max-height:430px) and (min-aspect-ratio:3/2){
+    .rail{top:clamp(96px,22vh,140px); width:clamp(190px,30vw,240px)}
+    .head .lede{display:none}
+    .head h1{font-size:clamp(20px,5.4vh,30px)}
+  }
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:var(--navy)!important; border:1px solid rgba(201,183,156,.5)!important; color:var(--on-navy)!important; font-family:"Jost",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(6px)!important; backdrop-filter:blur(6px)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  .back:hover{background:var(--navy-2)!important; border-color:var(--gold-lt)!important; box-shadow:0 10px 24px -10px rgba(6,9,16,.6)!important}
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:var(--gold-lt)!important}
+</style>
+</head>
+<body class="view-blue">
+  <!-- ── MAP ─────────────────────────────────────────────────────── -->
+  <div id="map"></div>
+  <div class="wash"></div>
+
+  <!-- ── TOP-LEFT scrim + return + title ─────────────────────────── -->
+  <div class="topscrim"></div>
+  <div class="topbar">
+    <button class="back" id="back" aria-label="Return">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return
+    </button>
+    <div class="head fadein">
+      <p class="eyebrow">Gateway to</p>
+      <h1>The North</h1>
+      <p class="lede">At Mekhri Circle, where the city&rsquo;s most established neighbourhoods meet and where its next chapter begins. Minutes from the centres of power, removed from the noise.</p>
+    </div>
+  </div>
+
+  <!-- ── SATELLITE | VECTOR | BLUE toggle ─────────────────────────── -->
+  <div class="viewtoggle fadein" style="animation-delay:.1s">
+    <button class="vt" data-view="vec" aria-label="Map view">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M4 14h16M9 4v16M14 4v16"/></svg>Map
+    </button>
+    <button class="vt on" data-view="blue" aria-label="Dark view">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 2.6 14.6 0 17M12 3.5c-2.6 2.4-2.6 14.6 0 17"/></svg>Dark
+    </button>
+  </div>
+
+  <!-- ── LEFT RAIL ───────────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="shell fadein" style="animation-delay:.15s">
+      <div class="sheet-grip" id="sheetGrip" role="button" aria-label="Collapse panel"></div>
+      <div class="legend">
+        <div class="lh">Explore the address</div>
+        <button class="leg l-site"          data-cat="site"><span class="sw"></span><span>The Address</span></button>
+        <button class="leg l-neighbourhood" data-cat="neighbourhood"><span class="sw"></span><span>Neighbourhoods</span></button>
+        <button class="leg l-landmark"      data-cat="landmark"><span class="sw"></span><span>Landmarks</span></button>
+        <button class="leg l-water"         data-cat="water"><span class="sw"></span><span>Lakes &amp; Green</span></button>
+        <button class="leg l-connectivity"  data-cat="connectivity"><span class="sw"></span><span>Connectivity</span></button>
+      </div>
+
+      <div class="detail" id="detail">
+        <div class="ik" id="ik">THE ADDRESS</div>
+        <h2 id="ih">Embassy ONE Private Residences</h2>
+        <p id="ip">Two private acres within an eight-acre landmark — premier offices, hospitality and a Four Seasons hotel beyond the gate.</p>
+        <div class="dist" id="idist"></div>
+      </div>
+
+      <div class="listhead"><div class="lh">Places nearby</div></div>
+      <div class="list" id="list"></div>
+    </div>
+  </aside>
+
+  <!-- ── COORDINATE corner ───────────────────────────────────────── -->
+  <div class="meta-corner">EMBASSY ONE · MEKHRI CIRCLE · 13.02°N 77.59°E</div>
+
+  <!-- ── CONNECTOR distance chip ─────────────────────────────────── -->
+  <div id="connchip"></div>
+
+<script>
+  // ── ANCHORS — distances are brochure estimates (CONFIRM) ──
+  var ANCHORS=[
+    {id:"eo",   cat:"site",          name:"Embassy ONE Private Residences", ll:[13.0196,77.5854], ik:"THE ADDRESS",       line:"Two private acres within an eight-acre landmark — premier offices, hospitality and a Four Seasons hotel beyond the gate.", dist:""},
+    {id:"fs",   cat:"landmark",      name:"Four Seasons",            ll:[13.0188,77.5862], ik:"WITHIN THE DEVELOPMENT", line:"The international standard for hospitality — and a global vocabulary of address — at your doorstep.", dist:"Within the development"},
+    {id:"mekri",cat:"connectivity",  name:"Mekhri Circle",            ll:[13.0098,77.5806], ik:"CONNECTIVITY",      line:"Where North Bangalore's arteries converge — Bellary Road to the airport, Sankey Road to the city.", dist:"≈ 3 minutes"},
+    {id:"sada", cat:"neighbourhood", name:"Sadashivanagar",          ll:[13.0066,77.5795], ik:"NEIGHBOURHOOD",      line:"Bangalore's most storied address — industrialists, judges and generational wealth for over a century.", dist:"≈ 5 minutes"},
+    {id:"mall", cat:"neighbourhood", name:"Malleshwaram",            ll:[13.0030,77.5690], ik:"NEIGHBOURHOOD",      line:"Heritage, culture and old-money Bangalore at its most refined.", dist:"≈ 5 minutes"},
+    {id:"doll", cat:"neighbourhood", name:"Dollars Colony",          ll:[13.0245,77.5760], ik:"NEIGHBOURHOOD",      line:"The contemporary power address of the city's business elite.", dist:"≈ 5 minutes"},
+    {id:"golf", cat:"landmark",      name:"Bangalore Golf Course",   ll:[12.9985,77.5905], ik:"LANDMARK",           line:"A century-old green at the city's heart — open sky, minutes from the gate.", dist:"≈ 8 minutes"},
+    {id:"wtc",  cat:"landmark",      name:"World Trade Center",      ll:[12.9897,77.5566], ik:"LANDMARK",           line:"The city's centre of commerce — Bangalore's tallest, and its business gravity.", dist:"≈ 15 minutes"},
+    {id:"hebj", cat:"connectivity",  name:"Hebbal Junction",         ll:[13.0358,77.5912], ik:"CONNECTIVITY",       line:"The gateway to the airport corridor — a clear run north on Bellary Road.", dist:"≈ 12 minutes"},
+    {id:"hebl", cat:"water",         name:"Hebbal Lake",             ll:[13.0470,77.5905], ik:"LAKES & GREEN",      line:"A northern mirror of water and birdlife, framing the skyline's edge.", dist:"≈ 5 minutes"},
+    {id:"elt",  cat:"landmark",      name:"Embassy Lake Terraces",   ll:[13.0540,77.5928], ik:"LANDMARK",           line:"Embassy's celebrated lakeside address — a peer in the city's north.", dist:""},
+    {id:"nag",  cat:"water",         name:"Nagavara Lake",           ll:[13.0430,77.6190], ik:"LAKES & GREEN",      line:"Open water to the north-east, along the ring road.", dist:""},
+    {id:"man",  cat:"landmark",      name:"Manipal Hospital",        ll:[13.0345,77.5945], ik:"LANDMARK",           line:"World-class care, close at hand to the north.", dist:"≈ 10 minutes"}
+  ];
+
+  var CAT_LABEL={site:"The Address", neighbourhood:"Neighbourhood", landmark:"Landmark", water:"Lakes & Green", connectivity:"Connectivity"};
+
+  // ── MAP ──
+  var map = L.map('map', { center:[13.0205,77.5880], zoom:14, minZoom:11, maxZoom:18,
+    zoomControl:false, attributionControl:true, scrollWheelZoom:true });
+
+  // three basemaps + a label overlay for the satellite view
+  var blueLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+    { subdomains:'abcd', maxZoom:20, attribution:'© CARTO © OpenStreetMap' });          // BLUE = deep navy (default)
+  var vecLayer  = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    { subdomains:'abcd', maxZoom:20, attribution:'© CARTO © OpenStreetMap' });          // VECTOR = real warm vector map
+  var satLayer  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:19, attribution:'Imagery © Esri' });
+  var satLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+    { maxZoom:19, opacity:.55, attribution:'© CARTO' });
+
+  function setView(v){
+    document.body.classList.toggle('view-sat',  v==='sat');
+    document.body.classList.toggle('view-vec',  v==='vec');
+    document.body.classList.toggle('view-blue', v==='blue');
+    map.removeLayer(blueLayer); map.removeLayer(vecLayer); map.removeLayer(satLayer); map.removeLayer(satLabels);
+    if(v==='sat'){ satLayer.addTo(map); satLabels.addTo(map); }
+    else if(v==='vec'){ vecLayer.addTo(map); }
+    else { blueLayer.addTo(map); }
+    document.querySelectorAll('.vt').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-view')===v); });
+    positionConnector();
+  }
+  setView('blue'); // default = deep navy dark map (deck theme)
+  var HOME_CENTER=map.getCenter(), HOME_ZOOM=map.getZoom();   // for "deselect → all pins / overview"
+  document.querySelectorAll('.vt').forEach(function(b){
+    b.addEventListener('click', function(){ setView(b.getAttribute('data-view')); });
+  });
+
+  function tower(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="#c9b79c" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 21V8.2L12 4l2.5 4.2V21"/><path d="M8.8 21h6.4"/><path d="M9.8 12.5h4.4M9.8 16.2h4.4"/><circle cx="12" cy="6.6" r="0" /></svg>'; }
+
+  var markers={}; var curSel=null;   // curSel = currently focused POI (null = none) → enables click-again-to-deselect
+  ANCHORS.forEach(function(a){
+    var html, size, anch;
+    if(a.cat==="site"){
+      html='<div class="mk site"><span class="tilewrap"><span class="ring"></span><span class="tile">'+tower()+'</span></span>'+
+           '<span class="stack"><span class="lbl">'+a.name+'</span><span class="sub">Four Seasons</span></span></div>';
+      size=[240,52]; anch=[19,19];
+    } else {
+      html='<div class="mk cat-'+a.cat+'"><span class="dot"></span><span class="lbl">'+a.name+'</span></div>';
+      size=[220,14]; anch=[7,7];
+    }
+    var icon=L.divIcon({ className:'', html:html, iconSize:size, iconAnchor:anch });
+    var m=L.marker(a.ll, { icon:icon, zIndexOffset:(a.cat==="site"?1000:0) }).addTo(map);
+    m.on('click', function(){ select(curSel===a.id ? SITE_ID : a.id, true); });
+    markers[a.id]={a:a, m:m};
+  });
+
+  // ── CURVED CONNECTOR (hand-built SVG on a custom pane) ──
+  var SITE_ID="eo";
+  map.createPane('eo-connector'); map.getPane('eo-connector').classList.add('eo-connector-pane');
+  var SVGNS="http://www.w3.org/2000/svg";
+  var connSvg=document.createElementNS(SVGNS,'svg'); connSvg.setAttribute('id','connector');
+  function mkPath(cls){ var p=document.createElementNS(SVGNS,'path'); p.setAttribute('class',cls); return p; }
+  var connGlow=mkPath('glow draw'), connCore=mkPath('core draw');
+  var nubA=document.createElementNS(SVGNS,'circle'); nubA.setAttribute('class','nubA'); nubA.setAttribute('r','3.4');
+  var arrow=mkPath('arrow'); arrow.setAttribute('d','M0 0 L-11 -5 L-7.5 0 L-11 5 Z');
+  connSvg.appendChild(connGlow); connSvg.appendChild(connCore); connSvg.appendChild(nubA); connSvg.appendChild(arrow);
+  map.getPane('eo-connector').appendChild(connSvg);
+  var connchip=document.getElementById('connchip');
+  var connTarget=null;
+
+  function quad(pa,cp,pb,t){ var u=1-t;
+    return { x:u*u*pa.x + 2*u*t*cp.x + t*t*pb.x, y:u*u*pa.y + 2*u*t*cp.y + t*t*pb.y }; }
+
+  function positionConnector(){
+    if(!connTarget || !markers[connTarget]) return;
+    var pa=map.latLngToLayerPoint(markers[SITE_ID].a.ll);
+    var pb=map.latLngToLayerPoint(markers[connTarget].a.ll);
+    var mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+    var dx=pb.x-pa.x, dy=pb.y-pa.y; var len=Math.hypot(dx,dy)||1;
+    var nx=-dy/len, ny=dx/len;                 // perpendicular unit
+    var curve=Math.min(70, len*0.24);          // arc height (always bow the same side)
+    if(nx<0){ nx=-nx; ny=-ny; }                // keep the bow consistently "up"
+    var cp={ x:mx+nx*curve, y:my+ny*curve };
+    var d='M'+pa.x+' '+pa.y+' Q'+cp.x+' '+cp.y+' '+pb.x+' '+pb.y;
+    connGlow.setAttribute('d',d); connCore.setAttribute('d',d);
+    var plen=connCore.getTotalLength ? connCore.getTotalLength() : len;
+    connGlow.style.setProperty('--len',plen); connCore.style.setProperty('--len',plen);
+    nubA.setAttribute('cx',pa.x); nubA.setAttribute('cy',pa.y);
+    // arrowhead at pb, oriented along the curve tangent (pb - cp)
+    var ang=Math.atan2(pb.y-cp.y, pb.x-cp.x)*180/Math.PI;
+    arrow.setAttribute('transform','translate('+pb.x+','+pb.y+') rotate('+ang+')');
+    // chip at the curve midpoint
+    var m05=quad(pa,cp,pb,0.5);
+    var mid=map.layerPointToContainerPoint(L.point(m05.x,m05.y));
+    connchip.style.left=mid.x+'px'; connchip.style.top=mid.y+'px';
+  }
+  function drawConnector(id){
+    if(id===SITE_ID || !markers[id]){ clearConnector(); return; }
+    var leg=document.querySelector('.leg[data-cat="'+markers[id].a.cat+'"]');
+    if(leg && leg.classList.contains('off')){ clearConnector(); return; }
+    connTarget=id;
+    var dist=markers[id].a.dist;
+    if(dist){ connchip.textContent=dist; connchip.style.display=''; }
+    else { connchip.textContent=''; connchip.style.display='none'; }
+    positionConnector();
+    connGlow.classList.remove('in'); connCore.classList.remove('in');
+    nubA.classList.remove('in'); arrow.classList.remove('in'); connchip.classList.remove('in');
+    void connSvg.getBBox;
+    requestAnimationFrame(function(){
+      connGlow.classList.add('in'); connCore.classList.add('in');
+      nubA.classList.add('in'); arrow.classList.add('in');
+      if(dist) connchip.classList.add('in');
+    });
+  }
+  function clearConnector(){
+    connTarget=null;
+    connGlow.classList.remove('in'); connCore.classList.remove('in');
+    nubA.classList.remove('in'); arrow.classList.remove('in'); connchip.classList.remove('in');
+    connGlow.removeAttribute('d'); connCore.removeAttribute('d'); arrow.removeAttribute('transform');
+  }
+  map.on('move zoom zoomanim viewreset moveend', positionConnector);
+
+  // ── DETAIL + select ──
+  var ik=document.getElementById("ik"), ih=document.getElementById("ih"), ip=document.getElementById("ip"),
+      idist=document.getElementById("idist"), detail=document.getElementById("detail");
+
+  function setMarkerSel(id){
+    for(var k in markers){
+      var el=markers[k].m.getElement();
+      if(el){ var d=el.querySelector('.mk'); if(d) d.classList.toggle('sel', k===id); }
+    }
+  }
+  function setRowSel(id){
+    document.querySelectorAll('.row').forEach(function(r){ r.classList.toggle('sel', r.getAttribute('data-id')===id); });
+  }
+  // hide every marker except the project + the selected one (smooth fade)
+  function soloMarkers(id){ for(var k in markers){ var el=markers[k].m.getElement(); if(!el) continue;
+    var d=el.querySelector('.mk'); if(d) d.classList.toggle('solo', k!==SITE_ID && k!==id); } }
+  function showAllMarkers(){ for(var k in markers){ var el=markers[k].m.getElement(); if(el){ var d=el.querySelector('.mk'); if(d) d.classList.remove('solo'); } } }
+  // animate the view to frame the project → selected pin route
+  function flyRoute(aId,bId){ var railEl=document.querySelector('.rail'); var railW=railEl?railEl.getBoundingClientRect().width:0;
+    try{ map.flyToBounds([markers[aId].a.ll, markers[bId].a.ll], { paddingTopLeft:[railW+50,180], paddingBottomRight:[80,90], duration:.95, maxZoom:15 }); }
+    catch(e){ try{ map.panTo(markers[bId].a.ll,{animate:true,duration:.7}); }catch(_){ } } }
+
+  function select(id, fly){
+    var rec=markers[id]; if(!rec) return; var a=rec.a;
+    curSel = (id===SITE_ID ? null : id);              // track focus for click-again-to-deselect
+    setMarkerSel(id); setRowSel(id);
+    if(id===SITE_ID){
+      clearConnector(); showAllMarkers();                       // deselect → every pin returns
+      if(fly){ try{ map.flyTo(HOME_CENTER, HOME_ZOOM, {duration:.85}); }catch(e){} }
+    } else {
+      drawConnector(id); soloMarkers(id);                       // hide the others, keep project + this one
+      if(fly){ flyRoute(SITE_ID, id); }                         // glide the view from project to the pin
+    }
+    detail.classList.add("swap");
+    setTimeout(function(){
+      ik.textContent=a.ik; ih.textContent=a.name; ip.textContent=a.line; idist.textContent=a.dist||"";
+      detail.classList.remove("swap");
+    },200);
+  }
+
+  // ── POI LIST ──
+  var list=document.getElementById("list");
+  ANCHORS.forEach(function(a){
+    var row=document.createElement('button');
+    row.className='row c-'+a.cat;
+    row.setAttribute('data-id', a.id);
+    row.setAttribute('data-cat', a.cat);
+    row.innerHTML='<span class="cdot"></span>'+
+      '<span class="nm"><b>'+a.name+'</b><small>'+CAT_LABEL[a.cat]+'</small></span>'+
+      '<span class="meta">'+(a.dist||'')+'</span>';
+    row.addEventListener('click', function(){ select(curSel===a.id ? SITE_ID : a.id, true); });
+    list.appendChild(row);
+  });
+
+  // ── LEGEND filter ──
+  document.querySelectorAll(".leg").forEach(function(b){
+    b.addEventListener("click", function(){
+      b.classList.toggle("off");
+      var cat=b.getAttribute("data-cat"), off=b.classList.contains("off");
+      for(var k in markers){
+        if(markers[k].a.cat===cat){
+          var el=markers[k].m.getElement();
+          if(el){ var d=el.querySelector('.mk'); if(d) d.classList.toggle('hide', off); }
+        }
+      }
+      document.querySelectorAll('.row[data-cat="'+cat+'"]').forEach(function(r){ r.classList.toggle('hide', off); });
+      if(off && connTarget && markers[connTarget] && markers[connTarget].a.cat===cat){ clearConnector(); }
+    });
+  });
+
+  // ── CLOSE ──
+  function close(){ try{ parent.postMessage("eo-screen-close","*"); }catch(e){} }
+  document.getElementById("back").addEventListener("click", close);
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"){ close(); } });
+
+  map.on('click', function(){ select(SITE_ID, true); });   // tap the empty map → deselect, all pins return
+
+  // ── phone bottom-sheet collapse (tap the grip to free the map) ──
+  (function(){ var grip=document.getElementById('sheetGrip'), rail=document.querySelector('.rail');
+    if(!grip||!rail) return;
+    grip.addEventListener('click', function(){
+      rail.classList.toggle('collapsed');
+      grip.setAttribute('aria-label', rail.classList.contains('collapsed') ? 'Expand panel' : 'Collapse panel');
+      setTimeout(function(){ try{ map.invalidateSize(); positionConnector(); }catch(e){} }, 320);
+    });
+  })();
+  // keep Leaflet sized correctly through rotation / resize (sheet height is vh-based)
+  window.addEventListener('resize', function(){ try{ map.invalidateSize(); positionConnector(); }catch(e){} });
+
+  // start with the address selected (all pins visible)
+  select("eo", false);
+  /* dev/QA: ?sel=<id> focuses a POI on load */
+  (function(){ try{ var q=new URLSearchParams(location.search);
+    var mp=q.get('map'); if(mp&&['sat','vec','blue'].indexOf(mp)>=0) setView(mp);
+    var s=q.get('sel'); if(s&&markers[s]) setTimeout(function(){ select(s,true); }, 500); }catch(e){} })();
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

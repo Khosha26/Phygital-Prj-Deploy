@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Address · Overview</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE PLACE · OVERVIEW — rebuilt to match the approved reference.
+  ──────────────────────────────────────────────────────────────────────
+  · Parchment bg + leaf filigree. Top: RETURN · "THE PLACE · OVERVIEW" · "EMBASSY ONE · NORTH TOWER".
+  · Left: "An address with nothing to prove." + ornament rule + body + image
+    card with "VIEW FULL SCREEN" (immersive overlay).
+  · Right: "THE SIX PILLARS" — 6 dark leather cards. CLOSED face, top→bottom =
+    HERO Roman numeral · pillar name · gold-circle icon (centered) · "Tap to open"
+    (bottom). TAP → icon POPS away (sharp), then the paragraph reveals slowly with
+    the Embassy florette. Tap again to close, OR it auto-flips back after 6s.
+  · Bottom stat strip: 30 · 2 · 59 · 4,149–15,124 · 8 · Ecosystem.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Embassy ONE redesign — deck palette (ink-navy + bone) */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#e9e1d4; --bone-2:#f2ece0; --paper:#faf8f4;
+    --taupe:#6e5c58; --champ:#c9b79c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#1b2230; --on-light-dim:#6b6f78;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette */
+    --parch:#e9e1d4; --muted:#6b6f78; --faint:#8c919c;
+    --gold:#c9b79c; --gold-d:#b9a583; --gold-l:#c9b79c; --gold-lt:#c9b79c; --brass:#c9b79c;
+    --line:rgba(18,22,33,.12); --leather1:#1a2030; --leather2:#121621; --green:#1b2230; --card:#f2ece0; --sage:#9da585; --water:#8aa0a8;
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a;
+    --on-navy:#ece8e0; --on-navy-dim:#9aa1ad;
+    --ease:cubic-bezier(.23,1,.32,1); --expo:cubic-bezier(.23,1,.32,1); --overshoot:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--on-dark); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  /* dark ink-navy theme (matches Bespoke Services) */
+  .bg{position:fixed; inset:0; z-index:0; background:radial-gradient(125% 95% at 50% 0%, #1a2030, #121621 62%), #121621}
+  /* faint architectural line-drawing of the real ONE tower (bone lines on dark) */
+  .bg::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-outline-bone.webp) no-repeat right -4% bottom;
+    background-size:auto 98%; opacity:.06; mix-blend-mode:screen}
+  /* subtle grain, blended */
+  .bg::before{content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:radial-gradient(rgba(236,232,224,.05) .5px, transparent .6px); background-size:3px 3px}
+  .wrap{position:fixed; inset:0; z-index:2; display:flex; flex-direction:column;
+    padding:clamp(16px,2.2vh,28px) clamp(26px,3.2vw,60px) clamp(12px,1.8vh,22px)}
+
+  /* top bar */
+  .top{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; flex:0 0 auto; gap:12px}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:var(--navy); border:1px solid rgba(236,232,224,.55); color:var(--on-navy); font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.3em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.18), 0 8px 18px -8px rgba(17,21,32,.45);
+    backdrop-filter:none; -webkit-backdrop-filter:none; transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  @media (hover:hover){ .back:hover{ background:var(--navy-2); border-color:rgba(236,232,224,.8);
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.3), 0 10px 22px -8px rgba(17,21,32,.5); } }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px; stroke:var(--gold-lt)}
+  .eyebrow{justify-self:center; font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(10px,1.4vh,16px); letter-spacing:.2em; text-transform:uppercase; color:var(--champ); white-space:nowrap}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.1vh,13px); letter-spacing:.32em; text-transform:uppercase; color:var(--on-dark-dim)}
+
+  /* body */
+  .grid{flex:1 1 auto; min-height:0; display:grid; grid-template-columns:1fr 1.6fr; gap:clamp(26px,3.2vw,62px); padding-top:clamp(12px,2vh,26px); align-items:start}
+  .left{display:flex; flex-direction:column; min-width:0}
+  .left h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1.04; color:var(--on-dark); font-size:clamp(32px,5.6vh,62px); letter-spacing:.004em}
+  .orn{display:flex; align-items:center; gap:10px; margin:clamp(14px,2.2vh,24px) 0 clamp(12px,1.8vh,20px); max-width:360px}
+  .orn i{flex:1; height:1px; background:rgba(236,232,224,.4)} .orn b{color:var(--gold); font-size:14px; letter-spacing:.2em}
+  .left .body{font-weight:300; color:var(--on-dark-dim); line-height:1.75; font-size:clamp(13px,1.7vh,18px); max-width:48ch}
+  .shot{position:relative; margin-top:clamp(16px,2.8vh,34px); border-radius:18px; overflow:hidden; height:clamp(200px,36vh,360px);
+    border:1px solid rgba(236,232,224,.6); box-shadow:0 28px 60px -28px rgba(8,11,18,.5), inset 0 0 0 4px rgba(8,11,18,.35)}
+  .shot img{width:100%; height:100%; object-fit:cover; display:block}
+  .vfs{position:absolute; left:18px; bottom:18px; z-index:3; display:inline-flex; align-items:center; gap:10px; cursor:pointer;
+    background:rgba(8,11,18,.55); border:1px solid rgba(236,232,224,.6); border-radius:8px; padding:9px 16px; color:#e6ddcb;
+    font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.24em; text-transform:uppercase; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); transition:background .25s, border-color .25s}
+  @media (hover:hover){ .vfs:hover{background:rgba(40,30,18,.7); border-color:var(--gold-l); color:#f7f4ee} }
+  .vfs svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+  /* right: six pillars */
+  .right{min-width:0; display:flex; flex-direction:column; height:100%}
+  .sphead{display:flex; align-items:center; justify-content:center; gap:16px; flex:0 0 auto;
+    font-size:clamp(10px,1.3vh,15px); letter-spacing:.42em; text-transform:uppercase; color:var(--gold-d); margin-bottom:clamp(12px,1.8vh,20px)}
+  .sphead i{height:1px; flex:1; max-width:230px; background:linear-gradient(90deg,transparent,var(--gold))} .sphead i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+  .cards{flex:1 1 auto; min-height:0; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:1fr 1fr; gap:clamp(12px,1.4vw,22px)}
+
+  .pillar{position:relative; cursor:pointer; border:0; padding:0; text-align:center; border-radius:16px; overflow:hidden;
+    background:linear-gradient(155deg, rgba(30,46,104,.62), rgba(18,30,68,.54)); color:#d8cbb8;
+    -webkit-backdrop-filter:blur(16px) saturate(1.15); backdrop-filter:blur(16px) saturate(1.15);
+    box-shadow:0 22px 50px -24px rgba(6,9,16,.6), inset 0 0 0 1px rgba(236,232,224,.34), inset 0 1px 0 rgba(236,232,224,.14);
+    outline:1px solid rgba(236,232,224,.30); outline-offset:-5px; transition:transform .4s var(--expo), box-shadow .4s}
+  .pillar::before{content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 0%, rgba(120,140,180,.12), transparent 60%),
+      repeating-linear-gradient(46deg, rgba(255,255,255,.015) 0 2px, transparent 2px 4px)}
+  @media (hover:hover){ .pillar:hover{transform:translateY(-4px); box-shadow:0 28px 54px -22px rgba(6,9,16,.82), inset 0 0 0 1px rgba(236,232,224,.7)} }
+  .pillar .inner{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:clamp(14px,2vh,26px)}
+
+  /* CLOSED face — vertical order: hero numeral · name · icon · tap-to-open */
+  .face{display:flex; flex-direction:column; align-items:center; justify-content:flex-start; height:100%; width:100%;
+    padding:clamp(14px,2.4vh,26px) clamp(8px,1.4vw,16px) clamp(12px,2vh,22px); transition:opacity .35s ease}
+  /* 1 · hero numeral */
+  .face .num{font-family:"Cormorant Garamond",serif; font-weight:500; font-size:clamp(40px,7.4vh,72px); line-height:.9;
+    letter-spacing:.02em; color:#c9b79c; flex:0 0 auto;
+    background:linear-gradient(180deg,#d8cbb8,#c9b79c 60%,#b9a583); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    transition:opacity .3s, transform .4s var(--expo)}
+  /* 2 · pillar name */
+  .face .pn{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(18px,2.6vh,30px); color:#ece8e0; line-height:1.05;
+    margin-top:clamp(6px,1.1vh,12px); transition:opacity .3s, transform .4s var(--expo)}
+  /* 3 · icon — centered in the remaining middle space */
+  .face .ico{flex:0 0 auto; width:clamp(50px,6.4vh,74px); height:clamp(50px,6.4vh,74px); border-radius:50%; border:1.4px solid rgba(236,232,224,.7);
+    display:grid; place-items:center; margin:auto 0; transition:transform .26s var(--overshoot), opacity .24s ease}
+  .face .ico svg{width:54%;height:54%;stroke:#d8cbb8;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+  /* 4 · tap-to-open — pinned to the bottom */
+  .face .tap{font-family:"Jost"; font-weight:400; font-size:clamp(10px,1.25vh,13px); letter-spacing:.18em; text-transform:uppercase; color:#b9a583;
+    flex:0 0 auto; margin-top:auto; transition:opacity .3s, transform .4s var(--expo)}
+
+  /* OPEN face (paragraph) */
+  .rev{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:clamp(10px,1.6vh,18px);
+    padding:clamp(16px,2.4vh,30px); pointer-events:none}
+  .rev .flor{flex:0 0 auto; display:block; width:38px; height:38px; opacity:0; transform:scale(.6); transition:opacity .4s ease, transform .5s var(--overshoot)}
+  .rev .flor svg{display:block; width:38px; height:38px; stroke:#c9b79c; fill:none; stroke-width:1.1; stroke-linecap:round; stroke-linejoin:round}
+  .rev p{font-weight:300; color:#ece8e0; line-height:1.6; font-size:clamp(12px,1.55vh,16.5px); max-width:30ch; opacity:0; transform:translateY(12px);
+    transition:opacity .6s ease .12s, transform .6s var(--expo) .12s}
+
+  /* OPEN state transitions */
+  .pillar.open .face .ico{transform:scale(1.5); opacity:0}             /* icon POPS away */
+  .pillar.open .face .num,.pillar.open .face .pn{opacity:0; transform:translateY(-8px)}
+  .pillar.open .face .tap{opacity:0; transform:translateY(8px)}
+  .pillar.open .face{pointer-events:none}
+  .pillar.open .rev{pointer-events:auto}
+  .pillar.open .rev .flor{opacity:1; transform:none; transition-delay:.16s}
+  .pillar.open .rev p{opacity:1; transform:none; transition-delay:.30s}  /* paragraph appears slowly, after the pop */
+
+  /* bottom stat strip */
+  .stats{flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:clamp(6px,1vw,18px); margin-top:clamp(16px,2.8vh,32px); padding-top:clamp(14px,2.2vh,22px)}
+  .stat{display:flex; flex-direction:column; align-items:center; gap:7px; flex:1 1 0; position:relative}
+  .stat + .stat::before{content:""; position:absolute; left:0; top:10%; height:64%; width:1px; background:rgba(236,232,224,.3)}
+  .stat + .stat::after{content:""; position:absolute; left:-3px; top:calc(42%); width:6px; height:6px; background:var(--gold); transform:rotate(45deg)}
+  .stat .sv{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(24px,4.4vh,46px); color:var(--on-dark); line-height:.95; white-space:nowrap}
+  .stat.wide{flex:1.8 1 0}
+  .stat.wide .sv{font-size:clamp(20px,3.4vh,38px); letter-spacing:.005em}
+  .stat .sl{font-size:clamp(9px,1.15vh,13px); letter-spacing:.24em; text-transform:uppercase; color:var(--gold-d); text-align:center}
+  .stat.eco{flex:1.3 1 0}
+  .stat.eco .ecoico{width:clamp(26px,3.4vh,40px); height:clamp(26px,3.4vh,40px)} .stat.eco .ecoico svg{width:100%;height:100%;stroke:var(--gold);fill:none;stroke-width:1.1}
+  .stat.eco .sl{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(11px,1.4vh,15px); letter-spacing:.1em; color:var(--gold-d); text-transform:none; line-height:1.18; text-align:center}
+
+  /* fullscreen image */
+  .fs{position:fixed; inset:0; z-index:60; background:rgba(8,11,18,.96); display:none; align-items:center; justify-content:center; opacity:0; transition:opacity .35s}
+  .fs.open{display:flex; opacity:1}
+  .fs img{max-width:94vw; max-height:90vh; border-radius:8px; box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .fsx{position:fixed; top:24px; right:28px; z-index:62; width:44px;height:44px;border-radius:50%; cursor:pointer; border:1px solid rgba(236,232,224,.5);
+    background:rgba(8,11,18,.7); color:var(--gold-l); display:grid; place-items:center}
+  .fsx svg{width:42%;height:42%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .8s var(--expo) forwards} @keyframes fin{to{opacity:1;transform:none}}
+
+  /* ── PORTRAIT / narrow: let the whole screen scroll, stack columns ── */
+  @media (max-aspect-ratio:1/1){
+    .wrap{overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain}
+    .grid{grid-template-columns:1fr; flex:0 0 auto; gap:clamp(20px,3vh,34px)}
+    .left h1{font-size:clamp(30px,4.4vh,52px)}
+    .right{height:auto}
+    .cards{grid-template-columns:repeat(2,1fr); grid-template-rows:repeat(3,minmax(140px,20vh))}
+    .stats{margin-top:clamp(20px,3vh,32px)}
+  }
+  /* ── PHONE PORTRAIT: single-column stats, larger pillar cards ── */
+  @media (max-aspect-ratio:1/1) and (max-width:520px){
+    .top{grid-template-columns:1fr; justify-items:start; gap:8px}
+    .eyebrow{justify-self:start; white-space:normal; font-size:13px; line-height:1.3}
+    .corner{justify-self:start}
+    .left h1{font-size:clamp(30px,8.4vw,40px)}
+    .left .body{font-size:14px; max-width:none}
+    .shot{height:clamp(180px,32vh,240px)}
+    .cards{grid-template-columns:1fr; grid-template-rows:none; gap:14px}
+    .pillar{min-height:148px}
+    .face .num{font-size:48px}
+    .face .pn{font-size:22px}
+    .rev p{font-size:14px; max-width:36ch}
+    .stats{flex-wrap:wrap; gap:14px 10px}
+    .stat{flex:1 1 28%}
+    .stat + .stat::before,.stat + .stat::after{display:none}
+    .stat .sv{font-size:clamp(26px,8vw,34px)}
+    .stat.wide{flex:1 1 60%} .stat.wide .sv{font-size:clamp(22px,6.6vw,30px)}
+    .stat.eco{flex:1 1 38%}
+    .stat .sl{font-size:11px}
+  }
+  /* landscape phone: keep two-column but tighten heights */
+  @media (max-height:480px) and (min-aspect-ratio:1/1){
+    .wrap{overflow-y:auto; -webkit-overflow-scrolling:touch}
+    .left h1{font-size:clamp(24px,7vh,34px)}
+    .cards{grid-template-rows:repeat(2,minmax(96px,1fr))}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important; transition-duration:.01ms!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:var(--navy)!important; border:1px solid rgba(236,232,224,.5)!important; color:var(--on-navy)!important; font-family:"Jost",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(6px)!important; backdrop-filter:blur(6px)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  @media (hover:hover){ .back:hover{background:var(--navy-2)!important; border-color:var(--gold-lt)!important; box-shadow:0 10px 24px -10px rgba(6,9,16,.6)!important} }
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:var(--gold-lt)!important}
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="wrap">
+    <div class="top">
+      <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+      <div class="eyebrow">A development by Embassy Group &middot; Mekhri Circle, Bengaluru</div>
+      <div class="corner">Embassy ONE · North Tower</div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT -->
+      <div class="left fadein">
+        <h1>Two acres of calm.<br>Eight acres of life.</h1>
+        <div class="orn"><i></i><b>&#10070;</b><i></i></div>
+        <p class="body">The residences hold their own two-acre ground within Embassy ONE. Beyond the gate, the wider eight-acre landmark contains premier offices, hospitality and a Four Seasons hotel, which gives the address its standing in the city. A world of consequence at your doorstep. A private one behind your own.</p>
+        <div class="shot">
+          <img src="../assets/renders/exterior/overview-dev.webp" alt="Embassy ONE development">
+          <button class="vfs" id="vfs"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>View Full Screen</button>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="right fadein" style="animation-delay:.1s">
+        <div class="sphead"><i></i>The Six Pillars<i></i></div>
+        <div class="cards" id="cards"></div>
+      </div>
+    </div>
+
+    <!-- bottom stats -->
+    <div class="stats fadein" style="animation-delay:.2s">
+      <div class="stat"><span class="sv">30</span><span class="sl">Floors</span></div>
+      <div class="stat"><span class="sv">2</span><span class="sl">Homes / Floor</span></div>
+      <div class="stat"><span class="sv">59</span><span class="sl">Residences</span></div>
+      <div class="stat wide"><span class="sv">4,149&ndash;15,124</span><span class="sl">Sq Ft</span></div>
+      <div class="stat"><span class="sv">8</span><span class="sl">Acres</span></div>
+      <div class="stat eco"><span class="ecoico" id="ecoico"></span><span class="sl">Embassy ONE<br>Ecosystem</span></div>
+    </div>
+  </div>
+
+  <!-- fullscreen -->
+  <div class="fs" id="fs"><img src="../assets/renders/exterior/overview-dev.webp" alt="Embassy ONE development"><button class="fsx" id="fsx" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+
+<script>
+  var FLOR='<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/><path d="M20 8c3 3 4 5 4 7a4 4 0 0 1-8 0c0-2 1-4 4-7Z"/><path d="M20 32c-3-3-4-5-4-7a4 4 0 0 1 8 0c0 2-1 4-4 7Z"/><path d="M8 20c3-3 5-4 7-4a4 4 0 0 1 0 8c-2 0-4-1-7-4Z"/><path d="M32 20c-3-3-5-4-7-4a4 4 0 0 0 0 8c2 0 4-1 7-4Z"/></svg>';
+  var ICONS={
+    rarity:'<svg viewBox="0 0 24 24"><path d="M5 9l3-4h8l3 4-7 10z"/><path d="M5 9h14M9.5 9L12 19M14.5 9L12 19M8 5l1.5 4M16 5l-1.5 4"/></svg>',
+    provenance:'<svg viewBox="0 0 24 24"><path d="M6 20h12M7 20V9M17 20V9M5.5 9h13M7 9l1.5-2.5M17 9l-1.5-2.5M8.5 6.5h7M9 6.5L12 4l3 2.5"/><path d="M8.5 9v11M11 9v11M13 9v11M15.5 9v11"/></svg>',
+    living:'<svg viewBox="0 0 24 24"><path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M4 12a2 2 0 0 1 4 0v3h8v-3a2 2 0 0 1 4 0v6"/><path d="M6 18v2M18 18v2"/></svg>',
+    scale:'<svg viewBox="0 0 24 24"><path d="M4 21V10l5-3v14"/><path d="M9 21V6l7-3v18"/><path d="M16 21V9l4 2v10"/><path d="M11.5 8h2M11.5 11h2M11.5 14h2M6 12h1M6 15h1"/></svg>',
+    integration:'<svg viewBox="0 0 24 24"><path d="M12 21c5-7 7-10 7-13A7 7 0 0 0 5 8c0 3 2 6 7 13Z"/><path d="M12 21V8"/><path d="M12 13l3.5-3M12 16l-3-2.5"/></svg>',
+    service:'<svg viewBox="0 0 24 24"><path d="M4 17h16M5 17a7 7 0 0 1 14 0M12 7V5M11 5h2"/></svg>'
+  };
+  var PILLARS=[
+    {n:'I',   key:'rarity',      name:'Rarity',          p:'30 floors, 2 homes per floor, 59 residences — an address that will never be replicated.'},
+    {n:'II',  key:'provenance',  name:'Provenance',      p:'At the heart of Sadashivanagar, Malleshwaram & Dollars Colony — Bangalore’s most storied enclaves.'},
+    {n:'III', key:'living',      name:'Living Standard', p:'Four Seasons proximity, Embassy’s own service arm. Every day, elevated.'},
+    {n:'IV',  key:'scale',       name:'Scale',           p:'Residences from 4,149 to 15,124 sq ft. The city at your feet, the sky as your ceiling.'},
+    {n:'V',   key:'integration', name:'Integration',     p:'Part of Embassy ONE — Bangalore’s only luxury integrated development anchored by the Four Seasons.'},
+    {n:'VI',  key:'service',     name:'Service',         p:'A bespoke suite curated by Embassy — concierge, wellness, lifestyle.'}
+  ];
+
+  var cards=document.getElementById('cards');
+  PILLARS.forEach(function(pl){
+    var b=document.createElement('button'); b.className='pillar'; b.setAttribute('aria-expanded','false');
+    b.innerHTML=
+      '<div class="inner">'+
+        '<div class="face"><span class="num">'+pl.n+'</span><span class="pn">'+pl.name+'</span>'+
+          '<span class="ico">'+ICONS[pl.key]+'</span><span class="tap">Tap to open</span></div>'+
+        '<div class="rev"><span class="flor">'+FLOR+'</span><p>'+pl.p+'</p></div>'+
+      '</div>';
+    b.addEventListener('click', function(){
+      var open=b.classList.toggle('open'); b.setAttribute('aria-expanded', open?'true':'false');
+      if(open){
+        // per-card auto-flip-back: close this card to its front face after 6s
+        clearTimeout(b._flipTimer);
+        b._flipTimer=setTimeout(function(){
+          b.classList.remove('open'); b.setAttribute('aria-expanded','false'); b._flipTimer=null;
+        }, 6000);
+      } else {
+        // manual close before the timer fires — cancel it
+        clearTimeout(b._flipTimer); b._flipTimer=null;
+      }
+    });
+    cards.appendChild(b);
+  });
+  document.getElementById('ecoico').innerHTML=FLOR;
+  // dev: ?reveal=1 opens all cards (to preview the revealed state)
+  try{ if(new URLSearchParams(location.search).get('reveal')){ document.querySelectorAll('.pillar').forEach(function(p){ p.classList.add('open'); }); } }catch(e){}
+
+  /* fullscreen image */
+  var fs=document.getElementById('fs');
+  document.getElementById('vfs').addEventListener('click', function(){ fs.classList.add('open'); });
+  document.getElementById('fsx').addEventListener('click', function(){ fs.classList.remove('open'); });
+  fs.addEventListener('click', function(e){ if(e.target===fs) fs.classList.remove('open'); });
+
+  document.getElementById('back').addEventListener('click', function(){ try{ parent.postMessage('eo-screen-close','*'); }catch(e){} });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ if(fs.classList.contains('open')){ fs.classList.remove('open'); return; } try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } } });
+</script>
+  <!-- leaf/foliage motif removed per redesign -->
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

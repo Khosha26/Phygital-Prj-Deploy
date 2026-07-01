@@ -1,0 +1,23 @@
+{
+  "_meta": { "note": "LIVE map (Leaflet). Project pin is approximate for Sector 118 Mohali (corridor SW of Chandigarh airport along PR-7) and is sales-confirmable; landmark coords are real, so relative geometry is correct. Distances shown qualitatively (no fabricated km — kd Law 3).", "center": { "lat": 30.6605, "lng": 76.6985 }, "zoom": 13 },
+  "project": { "lat": 30.6605, "lng": 76.6985, "name": "Highland Mayfields", "note": "Sector 118 · Airport Road (PR-7), Mohali" },
+  "categories": [
+    { "id": "connectivity", "name": "Connectivity", "color": "#cfb88d" },
+    { "id": "city",        "name": "City & Hubs",  "color": "#b89c6d" },
+    { "id": "education",   "name": "Education",    "color": "#de9b8a" },
+    { "id": "healthcare",  "name": "Healthcare",   "color": "#9db4a0" },
+    { "id": "lifestyle",   "name": "Lifestyle",    "color": "#c9a06a" }
+  ],
+  "landmarks": [
+    { "name": "Chandigarh Int'l Airport", "cat": "connectivity", "lat": 30.6735, "lng": 76.7885, "note": "via Airport Road / PR-7" },
+    { "name": "IT City, Mohali",          "cat": "city",        "lat": 30.6870, "lng": 76.7000 },
+    { "name": "ISB Mohali",               "cat": "education",   "lat": 30.6519, "lng": 76.7287 },
+    { "name": "Chandigarh University",    "cat": "education",   "lat": 30.7690, "lng": 76.5760 },
+    { "name": "Fortis Hospital, Mohali",  "cat": "healthcare",  "lat": 30.7045, "lng": 76.6958 },
+    { "name": "PGIMER, Chandigarh",       "cat": "healthcare",  "lat": 30.7649, "lng": 76.7752 },
+    { "name": "VR Punjab Mall",           "cat": "lifestyle",   "lat": 30.6840, "lng": 76.6730 },
+    { "name": "Mohali (Phase 7)",         "cat": "city",        "lat": 30.7050, "lng": 76.7180 },
+    { "name": "Chandigarh (Sukhna Lake)", "cat": "city",        "lat": 30.7426, "lng": 76.8188 },
+    { "name": "New Chandigarh (Mullanpur)","cat": "city",       "lat": 30.7900, "lng": 76.6800 }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "ref_w": 1448,
+  "ref_h": 1086,
+  "pieces": {
+    "address": {
+      "file": "assets/plaques/address.png",
+      "cx": 0.30387,
+      "cy": 0.29006,
+      "w": 0.19406,
+      "h": 0.25691
+    },
+    "residences": {
+      "file": "assets/plaques/residences.png",
+      "cx": 0.50932,
+      "cy": 0.26335,
+      "w": 0.20994,
+      "h": 0.23481
+    },
+    "pearl": {
+      "file": "assets/plaques/pearl.png",
+      "cx": 0.71892,
+      "cy": 0.28683,
+      "w": 0.20925,
+      "h": 0.2523
+    },
+    "inventory": {
+      "file": "assets/plaques/inventory.png",
+      "cx": 0.23826,
+      "cy": 0.47882,
+      "w": 0.1982,
+      "h": 0.25138
+    },
+    "villas": {
+      "file": "assets/plaques/villas.png",
+      "cx": 0.50587,
+      "cy": 0.50645,
+      "w": 0.26934,
+      "h": 0.26427
+    },
+    "landscape": {
+      "file": "assets/plaques/landscape.png",
+      "cx": 0.75207,
+      "cy": 0.47882,
+      "w": 0.23688,
+      "h": 0.24954
+    },
+    "masterplan": {
+      "file": "assets/plaques/masterplan.png",
+      "cx": 0.33529,
+      "cy": 0.71363,
+      "w": 0.19337,
+      "h": 0.2698
+    },
+    "gallery": {
+      "file": "assets/plaques/gallery.png",
+      "cx": 0.68163,
+      "cy": 0.70948,
+      "w": 0.1913,
+      "h": 0.27808
+    }
+  }
+}

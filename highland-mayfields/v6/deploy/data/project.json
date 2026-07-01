@@ -1,0 +1,42 @@
+{
+  "_meta": { "note": "All facts verified from client dump (USP docx, payment plan PDF, brochure, layout book). No fabrication (kd Law 3).", "rera": "PBRERA-SAS80-PR1041", "lastUpdated": "2026-06-29" },
+  "name": "Highland Mayfields",
+  "developer": "The Highland Group",
+  "developerEst": 1993,
+  "legalEntity": "Aerofront Developers",
+  "location": { "sector": "Sector 118", "road": "Airport Road (PR-7)", "city": "Mohali", "state": "Punjab", "context": "Between Chandigarh, Mohali & New Chandigarh" },
+  "taglines": [
+    "Excellence has an address",
+    "The Address of Kings",
+    "A Masterpiece in the Making",
+    "The Crown Jewel of the City Beautiful",
+    "A Sanctuary of Nature"
+  ],
+  "stats": [
+    { "n": "15", "u": "Acres", "k": "site" },
+    { "n": "8", "u": "Towers", "k": "towers" },
+    { "n": "G+22", "u": "Storeys", "k": "floors" },
+    { "n": "85+", "u": "Amenities", "k": "amenities" },
+    { "n": "15", "u": "Outdoor Sports", "k": "sports" },
+    { "n": "3", "u": "Clubhouses", "k": "clubs" },
+    { "n": "70%", "u": "Open Green", "k": "green" },
+    { "n": "2", "u": "Basement Parking", "k": "parking" }
+  ],
+  "clubhouseSqft": 50000,
+  "possession": { "pocket": "Pocket C", "date": "October 2027" },
+  "configs": ["3 BHK", "3+1 BHK", "4 BHK", "4+1 BHK", "3 BHK + 3W"],
+  "usps": [
+    "Easy & flexible payment plans",
+    "Excellent connectivity via PR-7 & PR-6 highways",
+    "100% land ownership",
+    "20+ years of experience with proven on-time delivery",
+    "One of the largest group-housing townships in the region",
+    "Lowest density development per acre",
+    "Spacious apartments with the largest configurations",
+    "Only high-rise development in Sector 118",
+    "Fastest construction progress in the market",
+    "70–80% open & green spaces",
+    "Three-side open views",
+    "Internationally recognised design consultant"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "note": "PLACEHOLDER inventory structure derived ONLY from client dump (master site plan + layout book + RERA payment chart). Areas are super sq.ft 'approx.' per docs. Unit counts are COMPUTED (floors x apts/floor) — not stated by client. Alter later as client confirms.",
+    "source": "Raghav Sir dump: Master Layout.pdf, layout book_Final.pdf, Payment Plan.PDF",
+    "rera": "PBRERA-SAS80-PR1041",
+    "lastUpdated": "2026-06-28",
+    "confirmed": {
+      "towerCount": 8,
+      "floorsPerTower": "Ground + 22 residential (floors 1-22)",
+      "groundFloorUse": "Waiting Lounge + Grand Entrance Lobby & Tower Club",
+      "clubhouses": 3,
+      "siteAcres": 15,
+      "residenceSizeRangeSqft": [2770, 12000],
+      "parking": "Double basement"
+    },
+    "conflicts": [
+      "Brochure says Sky Villas on 25th/26th floor, but layout book + RERA payment chart say towers are G+22. Authoritative = G+22 (legal docs). Sky/Earth Villas have NO floor plans or tower assignment in the dump.",
+      "Signage renders show zone names 'Highland Mayfield' and 'Highland Norwood'; docs label towers 1-8 numerically. Mayfield/Norwood -> tower-cluster mapping UNCONFIRMED.",
+      "No BSP / price-per-sqft printed anywhere (all 'As Per Payment Plan'). No per-tower unit availability/status given."
+    ]
+  },
+  "site": {
+    "parcels": [
+      {
+        "id": "west",
+        "shape": "L-shaped main parcel",
+        "frontage": "PR-7 Airport Road (200' wide), SW edge",
+        "towers": [1, 2, 3, 4, 5, 6],
+        "layout": "Towers 1-2-3 vertical column (S->N) on west edge; Towers 4-5-6 horizontal row along north edge; Clubhouse + central green + pool + courts in the L pocket; 'Reserved for Commercial' at SW near main gate; School Site to north",
+        "clubhouse": "The Pearl (main, multi-level: Ground / Ground Mezzanine / First / First Mezzanine)"
+      },
+      {
+        "id": "east",
+        "shape": "Triangular parcel, connected via landscaped link",
+        "frontage": "PR-6 (proposed, 150' wide), SE edge",
+        "towers": [7, 8],
+        "layout": "Towers 7 (N) & 8 (S) stacked N-S at south end with own pool/amenity pod; 'Area for Future Expansion' (north, phantom footprints, NOT in current launch); Commercial Block at SE corner on PR-6"
+      }
+    ]
+  },
+  "towers": [
+    { "id": 1, "parcel": "west", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 2, "unitsComputed": 44, "config": "3 BHK", "variants": [ {"type": "Type 2 (Spacious)", "superSqft": 2890, "carpetSqft": 1394}, {"type": "Type 1 (Corner)", "superSqft": 3280, "carpetSqft": 1368} ], "status": "TBD" },
+    { "id": 2, "parcel": "west", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 2, "unitsComputed": 44, "config": "3+1 BHK", "variants": [ {"type": "Type 1", "superSqft": 3675, "carpetSqft": 1783} ], "status": "TBD" },
+    { "id": 3, "parcel": "west", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 2, "unitsComputed": 44, "config": "4 BHK", "variants": [ {"type": "Type 2 (Corner)", "superSqft": 4400, "carpetSqft": 2042}, {"type": "Type 1", "superSqft": null, "carpetSqft": null, "note": "floor plate drawn, no area card in dump"} ], "status": "TBD" },
+    { "id": 4, "parcel": "west", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 2, "unitsComputed": 44, "config": "4+1 BHK", "variants": [ {"type": "Type 1 (Corner)", "superSqft": 4850, "carpetSqft": 2355} ], "status": "TBD" },
+    { "id": 5, "parcel": "west", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 2, "unitsComputed": 44, "config": "4+1 BHK", "variants": [ {"type": "Type 1", "superSqft": 4750, "carpetSqft": 2319} ], "status": "TBD" },
+    { "id": 6, "parcel": "west", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 2, "unitsComputed": 44, "config": "4+1 BHK", "variants": [ {"type": "Type 1 (Bright)", "superSqft": 5250, "carpetSqft": 2481}, {"type": "Type 2 (Corner)", "superSqft": 4750, "carpetSqft": 2327} ], "status": "TBD" },
+    { "id": 7, "parcel": "east", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 4, "unitsComputed": 88, "config": "3 BHK + 3W", "variants": [ {"type": "Type 4 (Corner)", "superSqft": 2770, "carpetSqft": 1398, "note": "every flat a corner flat, 4 balconies, separate wet kitchen"} ], "status": "TBD" },
+    { "id": 8, "parcel": "east", "floors": 22, "ground": "lobby+tower club", "aptsPerFloor": 4, "unitsComputed": 88, "config": "3 BHK + 3W", "variants": [ {"type": "Type 4 (Corner)", "superSqft": 2770, "carpetSqft": 1398, "note": "mirror of Tower 7"} ], "status": "TBD" }
+  ],
+  "villas": {
+    "_note": "Listed in brochure 'types of living spaces' wheel; NO floor plans, NO tower/floor assignment, NO areas in dump. Placeholder only.",
+    "earthVillas": { "count": 6, "config": "5+2 BHK (grounded)", "location": "ground level", "plans": "missing" },
+    "skyVillas": { "count": 12, "config": "5+1 BHK", "location": "brochure says 25th/26th floor + terrace (CONFLICTS with G+22)", "plans": "missing" }
+  },
+  "totals": {
+    "_note": "Computed, not client-stated.",
+    "apartmentsComputed": 440,
+    "breakdown": "Towers 1-6: 6 x 44 = 264; Towers 7-8: 2 x 88 = 176",
+    "villasListed": 18
+  }
+}

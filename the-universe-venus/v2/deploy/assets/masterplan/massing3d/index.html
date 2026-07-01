@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>Block Massing 3D</title>
+<style>
+  :root{--gold:#c9a05e;--gold-soft:#ead7a8;--ink:#0a0a0a;--ivory:#f4efe6;}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:transparent;font-family:Inter,system-ui,sans-serif;overflow:hidden;user-select:none}
+  #stage{position:fixed;inset:0}
+  canvas{display:block;touch-action:none}
+  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    font:600 14px 'JetBrains Mono',monospace;letter-spacing:.16em;color:#8a7a55}
+  .hint{position:fixed;left:18px;bottom:16px;font:500 11px 'JetBrains Mono',monospace;color:#9a8c6e;letter-spacing:.06em}
+
+  /* leader dot pinned to the selected tower's top */
+  #p-dot{position:fixed;left:0;top:0;width:15px;height:15px;border-radius:50%;
+    background:var(--gold);border:2px solid #fff;transform:translate(-50%,-50%);
+    box-shadow:0 0 0 4px rgba(201,160,94,.30),0 4px 12px rgba(0,0,0,.32);
+    opacity:0;transition:opacity .3s ease;pointer-events:none;z-index:6}
+  #p-dot.show{opacity:1}
+
+  /* the floating info card — positioned beside the tower, follows it as you orbit */
+  #panel{position:fixed;left:0;top:0;width:386px;background:rgba(252,250,245,.96);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border:1px solid rgba(201,160,94,.55);border-radius:22px;overflow:hidden;
+    box-shadow:0 26px 64px rgba(80,60,20,.26);z-index:7;
+    opacity:0;transform:translateY(10px) scale(.96);transform-origin:left center;
+    transition:opacity .32s ease,transform .32s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  #panel.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+  #p-img{width:100%;height:188px;object-fit:cover;display:block;background:#e9e1d4}
+  #p-close{position:absolute;top:13px;right:16px;cursor:pointer;color:#fff;font-size:24px;line-height:1;z-index:2;
+    text-shadow:0 1px 4px rgba(0,0,0,.55)}
+  .p-body{padding:22px 25px 25px}
+  .p-head{display:flex;align-items:center;gap:14px}
+  #p-sw{width:32px;height:32px;border-radius:9px;border:1.5px solid rgba(0,0,0,.12);flex:none}
+  #p-id{font:700 26px 'Cinzel',serif;color:#7a5a23;letter-spacing:.04em;line-height:1}
+  #p-cl{font:600 12px 'JetBrains Mono',monospace;color:#9a8c6e;letter-spacing:.12em;margin-top:5px}
+  .p-stats{display:flex;gap:30px;margin-top:21px}
+  .p-stat b{display:block;font:600 33px 'Cormorant',serif;color:#2a2418;line-height:1}
+  .p-stat i{display:block;font:600 11px 'JetBrains Mono',monospace;color:#9a8c6e;letter-spacing:.1em;margin-top:5px;font-style:normal}
+  #p-ty{font:600 19px 'Cormorant',serif;color:#2a2418;margin-top:18px}
+  #p-vw{font:500 13px 'JetBrains Mono',monospace;color:#9a8c6e;letter-spacing:.04em;margin-top:7px;line-height:1.45}
+</style></head>
+<body>
+  <div id="stage"></div>
+  <div id="loading">LOADING 3D MASSING…</div>
+  <div class="hint">DRAG · orbit&nbsp;&nbsp;SCROLL · zoom&nbsp;&nbsp;TAP · tower</div>
+
+  <div id="p-dot"></div>
+  <div id="panel">
+    <div id="p-close">✕</div>
+    <img id="p-img" alt=""/>
+    <div class="p-body">
+      <div class="p-head"><div id="p-sw"></div><div><div id="p-id">TOWER</div><div id="p-cl">—</div></div></div>
+      <div class="p-stats">
+        <div class="p-stat"><b id="p-fl">—</b><i>FLOORS</i></div>
+        <div class="p-stat"><b id="p-ho">—</b><i>HOMES</i></div>
+      </div>
+      <div id="p-ty">—</div>
+      <div id="p-vw">—</div>
+    </div>
+  </div>
+
+  <script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
+  <script type="module" src="viewer.js?v=6"></script>
+</body></html>

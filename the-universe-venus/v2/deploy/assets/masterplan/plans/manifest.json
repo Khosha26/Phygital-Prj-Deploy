@@ -1,0 +1,42 @@
+{
+  "ramp-ground.png": {
+    "source": "ramp_walking.png",
+    "crop_used": "full frame (single plan, no split); 1672x941 native",
+    "what_it_shows": "Ground-floor parking site plan (L-shaped, with smaller wing at lower-left) showing the ramp markings (red dashed RAMP indicators) over the parking layout, on the cream textured backdrop."
+  },
+  "retail-zoning-parking.png": {
+    "source": "retail_zoning_parking.png",
+    "crop_used": "right half, 836x941+836+0, resized to x1700 (1510x1700)",
+    "what_it_shows": "Basement/parking plan (grey parking-bay layout) with the red-dashed ramp run and green/violet zone blocks, on the cream textured backdrop."
+  },
+  "retail-ground.png": {
+    "source": "retail_ground_first.png",
+    "crop_used": "left half, 836x941+0+0, resized to x1700 (1510x1700)",
+    "what_it_shows": "Retail ground-floor site plan: orange retail units around the perimeter with the central parking court and the connected lower-left residential wing, on the cream textured backdrop."
+  },
+  "retail-first.png": {
+    "source": "retail_ground_first.png",
+    "crop_used": "right half, 836x941+836+0, resized to x1700 (1510x1700)",
+    "what_it_shows": "Retail first-floor site plan: orange retail at top with the green landscaped podium garden / pool court in the centre and the lower-left wing, on the cream textured backdrop."
+  },
+  "circulation-ab.png": {
+    "source": "circulation.png",
+    "crop_used": "full frame (single circulation plan with legend); 1672x941 native",
+    "what_it_shows": "Master circulation plan with Tower A-J labels, coloured circulation arrows (green/magenta/blue per tower group) and the legend (Double Height Entrance foyer, Residential Core, Entrance Lobby, Drop off, per-group circulation). Shared circulation crop reused for the Tower A&B view."
+  },
+  "circulation-cdhij.png": {
+    "source": "circulation.png",
+    "crop_used": "full frame (single circulation plan with legend); 1672x941 native",
+    "what_it_shows": "Same master circulation plan (Tower A-J + arrows + legend), reused as the cleaned circulation crop for the Tower C/D/H/I/J view."
+  },
+  "circulation-efg.png": {
+    "source": "circulation.png",
+    "crop_used": "full frame (single circulation plan with legend); 1672x941 native",
+    "what_it_shows": "Same master circulation plan (Tower A-J + arrows + legend), reused as the cleaned circulation crop for the Tower E/F/G view."
+  },
+  "main-masterplan.png": {
+    "source": "typical_floor_layout.png",
+    "crop_used": "full frame, upscaled to x1700 (1700x1520) from 1098x982 native",
+    "what_it_shows": "Overview 'Typical Floor (Residential)' labeled site plan with Tower A-J labels on a white background; the master overview plan."
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "_meta": {
+    "note": "VERBATIM from client 'Payment Plan.PDF' (Tower 7 & 8, 3BHK+3W). BSP (base rate) is intentionally BLANK in the source ('Price (BSP): ____') — it is sales-entered. The app lets the sales person type a BSP and computes each milestone amount from these exact percentages. No invented prices (kd Law 3).",
+    "scope": "Tower 7 & 8 — 3 BHK + 3W",
+    "config": { "carpetSqft": 1398, "builtUpSqft": 1957, "superSqft": 2770, "floors": "1st – 22nd", "ground": "Waiting Lounge + Grand Entrance Lobby & Tower Club" },
+    "disclaimer": "All prices, payment terms and offers are indicative. In case of discrepancy, the Apartment Buyer Agreement shall supersede. For illustration & training purpose only.",
+    "rera": "PBRERA-SAS80-PR1041"
+  },
+  "plans": [
+    {
+      "id": "ppa", "code": "Plan A", "name": "Progress Pay Advantage", "short": "PPA", "tagline": "Pay as the tower rises",
+      "milestones": [
+        { "stage": "Booking Amount", "pct": 5, "extra": "+ GST" },
+        { "stage": "Within 15 days from booking", "pct": 10, "extra": "+ GST" },
+        { "stage": "On completion of Ground Floor structure", "pct": 15, "extra": "+ GST" },
+        { "stage": "On completion of Half Structure / 11th Floor", "pct": 10, "extra": "+ GST" },
+        { "stage": "On completion of Full Structure / 22nd Floor", "pct": 10, "extra": "+ Club Charges + GST" },
+        { "stage": "On completion of Flooring", "pct": 10, "extra": "+ GST" },
+        { "stage": "On completion of Window System", "pct": 10, "extra": "+ GST" },
+        { "stage": "On start of 1st Paint Coat", "pct": 10, "extra": "+ GST" },
+        { "stage": "On start of Wood Work", "pct": 10, "extra": "+ GST" },
+        { "stage": "On Offer of Possession", "pct": 20, "extra": "+ PLC + GST + Additional Charges (if any)" }
+      ]
+    },
+    {
+      "id": "crackjack", "code": "Plan B", "name": "Crackjack Deal", "short": "50:50", "tagline": "Half now, half at finish",
+      "milestones": [
+        { "stage": "Booking Amount", "pct": 5, "extra": "+ GST" },
+        { "stage": "Within 15 days from booking", "pct": 10, "extra": "+ GST" },
+        { "stage": "30 days from booking", "pct": 35, "extra": "+ Club Charges + GST" },
+        { "stage": "On start of 1st Paint Coat", "pct": 40, "extra": "+ GST" },
+        { "stage": "On Offer of Possession", "pct": 10, "extra": "+ PLC + GST + Additional Charges (if any)" }
+      ]
+    },
+    {
+      "id": "ssa", "code": "Plan C", "name": "Smart Stage Advantage", "short": "30:30:40", "tagline": "Three simple stages",
+      "milestones": [
+        { "stage": "Booking Amount", "pct": 5, "extra": "+ GST" },
+        { "stage": "Within 15 days from booking", "pct": 10, "extra": "+ GST" },
+        { "stage": "30 days from booking", "pct": 15, "extra": "+ GST" },
+        { "stage": "On completion of Full Structure / 22nd Floor", "pct": 30, "extra": "+ Club Charges + GST" },
+        { "stage": "On Offer of Possession", "pct": 40, "extra": "+ PLC + GST + Additional Charges (if any)" }
+      ]
+    }
+  ],
+  "bspInclusive": {
+    "label": "A · BSP Inclusive of", "tag": "Mandatory",
+    "items": [
+      { "name": "5 KVA DG Power Backup Installation", "sub": "Per residence", "rate": "INR 50/sq.ft + GST" },
+      { "name": "Covered Car Parking", "sub": "1 slot", "rate": "INR 400/sq.ft + GST" },
+      { "name": "External Development Charges (EDC)", "rate": "INR 150/sq.ft + GST" },
+      { "name": "Fire Safety & External Electrification (FFC & EEC)", "rate": "INR 150/sq.ft + GST" },
+      { "name": "One Year Maintenance Charges", "sub": "From offer of possession", "rate": "INR 60/sq.ft + GST" },
+      { "name": "Limited Period Saving", "rate": "INR 810/sq.ft + GST", "highlight": true }
+    ]
+  },
+  "additional": {
+    "label": "B · Additional Charges", "tag": "Mandatory",
+    "items": [
+      { "name": "Clubhouse Membership Contribution", "rate": "INR 400/sq.ft + GST" },
+      { "name": "Interest-Free Maintenance Security (IFMS)", "rate": "INR 50/sq.ft" }
+    ]
+  },
+  "superFinishing": {
+    "label": "C · Super Finishing Charges", "tag": "Optional", "note": "Waved off for limited period", "saving": "INR 700/sq.ft + GST",
+    "items": [
+      { "name": "Smart Access & Entry", "desc": "Keyless digital entry system" },
+      { "name": "Doors & Windows", "desc": "Premium flush doors, mica/veneer finish, teakwood frames" },
+      { "name": "Air Conditioning", "desc": "All-weather centralized hybrid AC (excluding washrooms)" },
+      { "name": "Flooring", "desc": "Premium vitrified tiles; anti-skid in washrooms/balconies; wooden flooring in one bedroom" },
+      { "name": "Ceiling & Lighting", "desc": "Designer false ceiling with ambient lighting" },
+      { "name": "Wall Finish", "desc": "Premium emulsion paint across all apartments" },
+      { "name": "Modular Kitchen", "desc": "Branded chimney, built-in hob, false ceiling, anti-skid flooring" },
+      { "name": "Designer Washrooms", "desc": "Branded CP fittings & sanitaryware, vanity counter, ambient lighting" },
+      { "name": "Wardrobes & Storage", "desc": "Full-height wall-to-wall modular wardrobes, walk-in closet where applicable" },
+      { "name": "Windows", "desc": "High-quality aluminium windows, toughened glass, mesh shutters" },
+      { "name": "Safety Features", "desc": "Integrated sprinklers, LPG pipeline, panic button" },
+      { "name": "Electrical & Connectivity", "desc": "Premium fittings; DTH, broadband & connectivity provision" }
+    ]
+  },
+  "eliteFinishing": {
+    "label": "D · Elite Finishing Charges", "tag": "Optional", "saving": "INR 250/sq.ft + GST",
+    "items": [
+      { "name": "Smart Access", "desc": "Video door phone" },
+      { "name": "Modular Kitchen", "desc": "Microwave (25–35 Ltr) + built-in OTG (25–35 Ltr)" },
+      { "name": "Designer Washrooms", "desc": "Glass shower partition / enclosure / mirror" },
+      { "name": "Smart Living Features", "desc": "Automated curtain system" }
+    ]
+  },
+  "plc": {
+    "label": "Preferential Location Charges (PLC)",
+    "rows": [
+      { "floor": "01–04 Floor", "floorPlc": "5%", "facing": "5%" },
+      { "floor": "05–18 Floor", "floorPlc": "—", "facing": "5%" },
+      { "floor": "19–22 Floor", "floorPlc": "5%", "facing": "5%" }
+    ],
+    "facingNote": "150 ft. facing"
+  },
+  "terms": [
+    "All payments via bank draft or cheque in favour of 'Aerofront Developers', payable at par.",
+    "Additional car parking (beyond first allocation): Rs. 11,00,000 + GST per slot, subject to availability.",
+    "Additional DG power backup load: Rs. 30,000 per KVA + GST (meter & wiring extra, before possession).",
+    "First-year maintenance: Rs. 5 per sq.ft.",
+    "Transfer charges: Rs. 300 per sq.ft + GST on super area per transfer (waived for direct registry from developer).",
+    "Interest + applicable GST charged on delayed payments per RERA guidelines.",
+    "PLC, GST, registration, stamp duty & statutory levies payable as per prevailing government regulations.",
+    "Home-loan approvals subject to bank policy; developer not responsible for sanction decisions.",
+    "Stated prices are escalation-free but subject to revision; applicable rate is the rate prevailing on the date of booking.",
+    "All areas are approximate, subject to final confirmation per sanctioned plans."
+  ]
+}

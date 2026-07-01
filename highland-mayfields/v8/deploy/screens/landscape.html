@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Landscape — Highland Mayfields</title>
+<link rel="stylesheet" href="../styles/brand.css">
+<link rel="stylesheet" href="../assets/css/hm-tools.css">
+<link rel="stylesheet" href="_kit.css">
+<style>
+  /* ============================================================
+     LANDSCAPE — "where the green lives".
+     A master-layout PLAN is the centrepiece; glowing numbered gold
+     markers sit over the central garden core. Tapping a marker
+     cinematically zooms the plan toward that pointer and opens a
+     glass card on the side OPPOSITE the pin. The plan itself is
+     pinch/wheel/double-tap zoomable + drag-pannable; renders open
+     in a custom zoomable lightbox. Sustainability slides in as a
+     bespoke right-side mainframe panel.
+     ============================================================ */
+
+  .land{ flex:1 1 auto; min-height:0; display:flex; gap:clamp(1rem,2.2vw,2.4rem); }
+
+  /* ---------- side rail (copy + stats + legend) ---------- */
+  .land-aside{ flex:0 0 clamp(300px,25vw,408px); min-width:0; min-height:0;
+    display:flex; flex-direction:column; gap:clamp(.7rem,1.5vh,1.15rem); overflow:hidden; }
+  .land-aside .poem{ font-family:var(--font-body); font-style:italic; font-weight:300;
+    font-size:clamp(.98rem,1.3vw,1.32rem); line-height:1.5; color:var(--ink-dim); max-width:34ch; }
+  .land-aside .k-title{ font-size:clamp(2rem,3.6vw,3.4rem); margin:.1em 0 .15em; line-height:1.02; }
+
+  .land-stats{ display:flex; gap:clamp(1.1rem,2vw,2rem); flex-wrap:wrap; align-items:flex-end;
+    padding-top:clamp(.3rem,.8vh,.7rem); }
+  .land-stat b{ display:block; font-family:var(--font-display); font-weight:200; line-height:.85;
+    font-size:clamp(1.7rem,3vw,2.8rem); color:var(--ink); }
+  .land-stat span{ display:block; margin-top:.55em; font-family:var(--font-label); font-size:var(--t-micro);
+    letter-spacing:var(--track-label); text-transform:uppercase; color:var(--accent-text); }
+
+  /* numbered legend — cross-references the markers on the plan */
+  .land-legend{ display:flex; flex-direction:column; gap:.34rem; min-height:0; }
+  .land-legend .leg-cap{ display:flex; align-items:center; justify-content:space-between; gap:1em; margin-bottom:.15rem; }
+  .leg-row{ display:flex; align-items:center; gap:.8em; width:100%; text-align:left; min-height:44px;
+    padding:.4rem .7rem; background:rgba(34,26,24,.42); border:1px solid var(--hairline-soft);
+    border-radius:var(--r-tile); cursor:pointer; -webkit-tap-highlight-color:transparent; color:var(--ink);
+    transition:border-color .25s var(--ease-soft), background .25s var(--ease-soft), transform .25s var(--ease-soft); }
+  @media(hover:hover){ .leg-row:hover{ border-color:var(--hairline); background:rgba(44,33,29,.55); transform:translateX(3px); } }
+  .leg-row.on{ border-color:var(--accent); background:rgba(44,33,29,.6); }
+  .leg-row .num{ flex:0 0 auto; width:23px; height:23px; display:grid; place-items:center; border-radius:50%;
+    border:1px solid var(--hairline); font-family:var(--font-label); font-size:11px; font-weight:500;
+    color:var(--accent); transition:background .25s, color .25s, border-color .25s; }
+  .leg-row.on .num{ background:var(--accent); color:var(--hm-espresso); border-color:var(--accent); }
+  .leg-row .lbl{ flex:1 1 auto; min-width:0; font-family:var(--font-body); font-size:var(--t-body);
+    line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .leg-row .chev{ flex:0 0 auto; width:14px; height:14px; color:var(--ink-dim); }
+  .leg-row .chev svg{ width:100%; height:100%; } .leg-row .chev svg path{ fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ---------- action tiles (thumbnail prominence) ---------- */
+  .land-acts{ display:flex; gap:.65rem; flex-wrap:wrap; margin-top:auto; padding-top:.4rem; }
+  .act-tile{ flex:1 1 0; min-width:0; display:flex; align-items:center; gap:.7rem; min-height:66px;
+    padding:.5rem .55rem; background:rgba(34,26,24,.5); border:1px solid var(--hairline-soft);
+    border-radius:var(--r-tile); cursor:pointer; -webkit-tap-highlight-color:transparent; color:var(--ink);
+    text-align:left; transition:border-color .25s var(--ease-soft), background .25s var(--ease-soft), transform .2s var(--ease-soft); }
+  .act-tile .thumb{ flex:0 0 auto; width:56px; height:56px; border-radius:calc(var(--r-tile) - 3px);
+    overflow:hidden; position:relative; border:1px solid var(--hairline-soft); background:#0e0b0a; }
+  .act-tile .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .act-tile .thumb::after{ content:""; position:absolute; inset:0;
+    background:linear-gradient(180deg, transparent 42%, rgba(14,11,10,.5)); }
+  .act-tile .thumb .ic{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:22px; height:22px; color:var(--hm-gold-bright); }
+  .act-tile .thumb .ic svg{ width:100%; height:100%; } .act-tile .thumb .ic svg path,.act-tile .thumb .ic svg circle{ fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 1px 3px rgba(0,0,0,.7)); }
+  .act-tile .meta{ flex:1 1 auto; min-width:0; }
+  .act-tile .meta b{ display:block; font-family:var(--font-display); font-weight:300;
+    font-size:clamp(1rem,1.15vw,1.2rem); color:var(--ink); line-height:1.08; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .act-tile .meta span{ display:block; margin-top:.25em; font-family:var(--font-label); font-size:var(--t-micro);
+    letter-spacing:var(--track-label); text-transform:uppercase; color:var(--accent-text); }
+  .act-tile .go{ flex:0 0 auto; width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+    border:1px solid var(--hairline-soft); color:var(--accent); transition:transform .2s var(--ease-soft), border-color .2s; }
+  .act-tile .go svg{ width:13px; height:13px; } .act-tile .go svg path{ fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  @media(hover:hover){ .act-tile:hover{ border-color:var(--accent); background:rgba(44,33,29,.6); transform:translateY(-2px); }
+    .act-tile:hover .go{ transform:translateX(2px); border-color:var(--accent); } }
+
+  /* ---------- the plan stage ---------- */
+  .land-main{ flex:1 1 auto; min-width:0; min-height:0; display:flex; align-items:center; justify-content:center;
+    container-type:size; }
+  .plan{ position:relative; aspect-ratio:2706/1806; width:min(100cqw, 149.834cqh); height:auto;
+    max-width:100%; max-height:100%; touch-action:none;
+    border:1px solid var(--hairline-soft); border-radius:var(--r-tile); overflow:hidden; background:#0e0b0a;
+    box-shadow:0 26px 60px rgba(0,0,0,.42); cursor:grab; }
+  .plan:active{ cursor:grabbing; }
+  /* viewport that receives pan/zoom transforms (image + pins ride along) */
+  .plan-vp{ position:absolute; inset:0; transform-origin:0 0; will-change:transform; }
+  .plan-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  /* faint warm vignette so gold markers read over the plan's pale streets */
+  .plan::after{ content:""; position:absolute; inset:0; pointer-events:none; z-index:6;
+    background:radial-gradient(120% 110% at 44% 32%, transparent 38%, rgba(20,15,13,.34) 100%); }
+
+  .plan-cap{ position:absolute; left:0; bottom:0; z-index:7; pointer-events:none;
+    display:inline-flex; align-items:center; gap:.7em; padding:.55em .95em;
+    background:linear-gradient(90deg, rgba(14,11,10,.82), transparent);
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink-dim); }
+  .plan-cap .dot{ width:7px; height:7px; border-radius:50%; background:var(--hm-gold-bright);
+    box-shadow:0 0 8px rgba(207,184,141,.8); }
+  .plan-tools{ position:absolute; top:.6rem; right:.6rem; z-index:7; display:flex; gap:.4rem; }
+  .plan-tool{ width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+    background:rgba(26,20,18,.9); border:1px solid var(--hairline); color:var(--ink); cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:transform .25s var(--ease-soft), border-color .25s, opacity .25s; }
+  .plan-tool[disabled]{ opacity:.32; pointer-events:none; }
+  @media(hover:hover){ .plan-tool:hover{ transform:scale(1.08); border-color:var(--accent); } }
+  .plan-tool svg{ width:17px; height:17px; } .plan-tool svg path,.plan-tool svg line,.plan-tool svg circle{ fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ---------- markers (clearly glowing / pulsing) ---------- */
+  .pin{ position:absolute; width:32px; height:32px; transform:translate(-50%,-50%); z-index:8;
+    display:grid; place-items:center; padding:0; background:none; border:0;
+    cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  /* expanding pulse ring */
+  .pin .halo{ position:absolute; left:50%; top:50%; width:32px; height:32px; transform:translate(-50%,-50%);
+    border-radius:50%; border:1.5px solid var(--accent); opacity:0; pointer-events:none; }
+  .scr.ready .pin .halo{ animation:pin-pulse 2.6s var(--ease-soft) infinite; animation-delay:var(--pd,0ms); }
+  @keyframes pin-pulse{ 0%{ transform:translate(-50%,-50%) scale(.55); opacity:.8 } 70%{opacity:.18} 100%{ transform:translate(-50%,-50%) scale(1.85); opacity:0 } }
+  /* static breathing ring (always visible cue that pin is tappable) */
+  .pin .ring2{ position:absolute; left:50%; top:50%; width:32px; height:32px; transform:translate(-50%,-50%);
+    border-radius:50%; box-shadow:0 0 0 1px rgba(207,184,141,.45); pointer-events:none; }
+  .pin .head{ position:relative; width:30px; height:30px; border-radius:50%; display:grid; place-items:center;
+    background:radial-gradient(120% 120% at 35% 28%, var(--hm-gold-bright), var(--hm-gold) 60%, var(--hm-copper-text));
+    border:1.5px solid rgba(245,241,235,.6); color:var(--hm-espresso);
+    font-family:var(--font-label); font-size:12px; font-weight:600; line-height:1;
+    box-shadow:0 4px 12px rgba(0,0,0,.5), 0 0 0 4px rgba(34,26,24,.45), 0 0 12px 2px rgba(207,184,141,.5);
+    opacity:0; transform:scale(.6); will-change:transform; }
+  .scr.ready .pin .head{ animation:pin-in .6s var(--ease-settle) forwards; animation-delay:var(--pd,0ms); }
+  @keyframes pin-in{ to{ opacity:1; transform:scale(1); } }
+  @keyframes pin-glow{ 0%,100%{ box-shadow:0 4px 12px rgba(0,0,0,.5), 0 0 0 4px rgba(34,26,24,.45), 0 0 10px 1px rgba(207,184,141,.45); }
+    50%{ box-shadow:0 5px 16px rgba(0,0,0,.55), 0 0 0 5px rgba(34,26,24,.5), 0 0 20px 5px rgba(207,184,141,.85); } }
+  .pin .head{ transition:transform .25s var(--ease-soft), box-shadow .25s var(--ease-soft); }
+  @media(hover:hover){ .pin:hover .head{ transform:scale(1.18); } }
+  .pin.on{ z-index:9; }
+  .pin.on .head{ transform:scale(1.3); background:radial-gradient(120% 120% at 35% 28%, #fff, var(--hm-gold-bright) 70%);
+    animation:none; box-shadow:0 8px 22px rgba(0,0,0,.6), 0 0 0 6px rgba(34,26,24,.55), 0 0 22px 6px rgba(207,184,141,.9); }
+  .pin.on .halo{ animation:none; opacity:0; }
+
+  /* ---------- side card (opens OPPOSITE the pin) ---------- */
+  .land-card{ position:absolute; top:50%; z-index:12; width:clamp(320px,19vw,500px); max-height:calc(100% - 28px);
+    display:flex; flex-direction:column; overflow:hidden;
+    background:rgba(26,20,18,.97); border:1px solid var(--hairline); border-radius:var(--r-tile);
+    box-shadow:0 26px 60px rgba(0,0,0,.6); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    opacity:0; pointer-events:none; transform:translateY(-50%) scale(.95);
+    transition:opacity .26s var(--ease-soft), transform .34s var(--ease-settle); }
+  .land-card.right{ right:clamp(12px,1.2vw,20px); transform-origin:left center; }
+  .land-card.left{  left:clamp(12px,1.2vw,20px);  transform-origin:right center; }
+  .land-card.on{ opacity:1; pointer-events:auto; transform:translateY(-50%) scale(1); }
+  .land-card .card-fig{ position:relative; flex:0 0 auto; aspect-ratio:16/10; overflow:hidden;
+    background:linear-gradient(110deg, rgba(44,33,29,.6), rgba(30,24,22,.6)); }
+  .land-card .card-fig img{ width:100%; height:100%; object-fit:cover; display:block; opacity:0;
+    transform:scale(1.05); transition:opacity .5s var(--ease-soft), transform .9s var(--ease-soft); }
+  .land-card .card-fig img.loaded{ opacity:1; transform:scale(1); }
+  .land-card .rep{ position:absolute; left:.6rem; bottom:.6rem; padding:.3em .7em;
+    background:rgba(14,11,10,.72); border:1px solid var(--hairline-soft); border-radius:var(--r-pill);
+    font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent); }
+  .land-card .card-meta{ padding:.95rem 1.05rem 1.1rem; }
+  .land-card .card-num{ display:inline-flex; align-items:center; gap:.55em; font-family:var(--font-label);
+    font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent-text); }
+  .land-card .card-num i{ width:18px; height:18px; display:inline-grid; place-items:center; border-radius:50%;
+    border:1px solid var(--hairline); color:var(--accent); font-style:normal; font-size:9px; font-weight:600; }
+  .land-card .card-meta b{ display:block; margin:.5em 0 .3em; font-family:var(--font-display); font-weight:300;
+    font-size:clamp(1.2rem,1.5vw,1.7rem); color:var(--ink); line-height:1.14; }
+  .land-card .card-meta p{ margin:0; font-family:var(--font-body); font-weight:300;
+    font-size:clamp(.88rem,1vw,1.06rem); line-height:1.5; color:var(--ink-dim); }
+  .land-card .card-x{ position:absolute; top:8px; right:8px; z-index:2; width:44px; height:44px; border-radius:50%;
+    display:grid; place-items:center; background:rgba(14,11,10,.62); border:1px solid var(--hairline-soft);
+    color:var(--ink); cursor:pointer; -webkit-tap-highlight-color:transparent; font-size:15px; line-height:1;
+    transition:border-color .2s, background .2s; }
+  @media(hover:hover){ .land-card .card-x:hover{ border-color:var(--accent); background:rgba(14,11,10,.8); } }
+
+  /* ---------- sustainability mainframe panel (slides in from right) ---------- */
+  .eco-scrim{ position:fixed; inset:0; z-index:70; background:rgba(8,6,5,.62);
+    opacity:0; pointer-events:none; transition:opacity .4s var(--ease-soft); }
+  .eco-scrim.on{ opacity:1; pointer-events:auto; }
+  .eco-panel{ position:fixed; top:0; right:0; bottom:0; z-index:72; width:clamp(360px,34vw,560px);
+    display:flex; flex-direction:column; background:linear-gradient(180deg, rgba(30,24,22,.99), rgba(20,15,13,.99));
+    border-left:1px solid var(--hairline); box-shadow:-30px 0 70px rgba(0,0,0,.55);
+    transform:translateX(100%); transition:transform .5s var(--ease-settle); }
+  .eco-panel.on{ transform:none; }
+  .eco-panel::before{ content:""; position:absolute; inset:0; background-image:var(--hm-lattice); background-size:300px;
+    opacity:.04; pointer-events:none; }
+  .eco-head{ flex:0 0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+    padding:clamp(1.2rem,2.6vh,1.9rem) clamp(1.2rem,2vw,1.8rem) clamp(.9rem,1.6vh,1.2rem); border-bottom:1px solid var(--hairline-soft); }
+  .eco-head h3{ margin:.15em 0 0; font-family:var(--font-display); font-weight:300; line-height:1.05;
+    font-size:clamp(1.7rem,2.4vw,2.5rem); color:var(--ink); }
+  .eco-x{ flex:0 0 auto; width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
+    background:rgba(14,11,10,.5); border:1px solid var(--hairline-soft); color:var(--ink); cursor:pointer;
+    -webkit-tap-highlight-color:transparent; font-size:15px; transition:border-color .2s, background .2s; }
+  @media(hover:hover){ .eco-x:hover{ border-color:var(--accent); background:rgba(14,11,10,.7); } }
+  .eco-body{ flex:1 1 auto; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch;
+    padding:clamp(1rem,2vh,1.5rem) clamp(1.2rem,2vw,1.8rem) clamp(1.4rem,3vh,2rem); }
+  .eco-body::-webkit-scrollbar{ width:6px; } .eco-body::-webkit-scrollbar-thumb{ background:var(--hairline-soft); border-radius:3px; }
+  .eco-stats{ display:flex; gap:clamp(1rem,2vw,1.8rem); padding-bottom:clamp(1rem,2vh,1.5rem);
+    margin-bottom:clamp(1rem,2vh,1.4rem); border-bottom:1px solid var(--hairline-soft); }
+  .eco-stats div{ min-width:0; }
+  .eco-stats b{ display:block; font-family:var(--font-display); font-weight:200; line-height:.85;
+    font-size:clamp(2rem,3.4vw,3rem); color:var(--ink); }
+  .eco-stats span{ display:block; margin-top:.5em; font-family:var(--font-label); font-size:var(--t-micro);
+    letter-spacing:var(--track-label); text-transform:uppercase; color:var(--accent-text); }
+  .eco-lede{ font-family:var(--font-body); font-weight:300; font-size:clamp(.92rem,1vw,1.08rem); line-height:1.55;
+    color:var(--ink-dim); margin:0 0 clamp(1rem,2vh,1.4rem); max-width:44ch; }
+  .eco-cap{ display:block; font-family:var(--font-label); font-size:var(--t-label); letter-spacing:var(--track-label);
+    text-transform:uppercase; color:var(--accent); margin:clamp(.6rem,1.4vh,1rem) 0 .65rem; }
+  .eco-sec+.eco-sec .eco-cap{ margin-top:clamp(1rem,2vh,1.5rem); }
+  .eco-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+  .eco-item{ display:flex; align-items:center; gap:.7em; min-height:54px; padding:.6rem .75rem;
+    background:rgba(34,26,24,.5); border:1px solid var(--hairline-soft); border-radius:var(--r-tile);
+    font-family:var(--font-body); font-size:clamp(.84rem,.92vw,1rem); color:var(--ink); line-height:1.2;
+    opacity:0; transform:translateX(16px); }
+  .eco-panel.on .eco-item{ animation:eco-in .5s var(--ease-soft) forwards; animation-delay:calc(var(--i,0) * 42ms + 200ms); }
+  @keyframes eco-in{ to{ opacity:1; transform:none; } }
+  .eco-item .eco-ico{ flex:0 0 auto; width:26px; height:26px; }
+  .eco-item .eco-ico svg{ width:100%; height:100%; display:block; }
+  .eco-item .eco-ico svg path,.eco-item .eco-ico svg circle,.eco-item .eco-ico svg line,.eco-item .eco-ico svg rect{
+    fill:none; stroke:var(--accent); stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ---------- custom zoomable lightbox ---------- */
+  .land-lb{ position:fixed; inset:0; z-index:90; display:none; background:rgba(10,8,7,.92);
+    backdrop-filter:blur(6px); align-items:center; justify-content:center; }
+  .land-lb.on{ display:flex; }
+  .lb-stage{ position:absolute; inset:clamp(2rem,7vh,5rem) clamp(4rem,8vw,7rem); overflow:hidden; touch-action:none; }
+  .lb-frame{ position:absolute; inset:0; transform-origin:0 0; will-change:transform; }
+  .lb-frame img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; }
+  .lb-x,.lb-nav{ position:absolute; z-index:3; border-radius:50%; display:grid; place-items:center; cursor:pointer;
+    background:rgba(26,20,18,.7); border:1px solid var(--hairline); color:var(--ink);
+    -webkit-tap-highlight-color:transparent; transition:transform .2s var(--ease-soft), border-color .2s; }
+  .lb-x{ top:clamp(.9rem,3vh,2rem); right:clamp(.9rem,3vw,2rem); width:46px; height:46px; font-size:17px; }
+  .lb-nav{ top:50%; transform:translateY(-50%); width:54px; height:54px; font-size:24px; }
+  .lb-nav.prev{ left:clamp(.7rem,2.4vw,1.8rem); } .lb-nav.next{ right:clamp(.7rem,2.4vw,1.8rem); }
+  @media(hover:hover){ .lb-x:hover,.lb-nav:hover{ border-color:var(--accent); } .lb-nav.prev:hover{ transform:translateY(-50%) scale(1.08); } .lb-nav.next:hover{ transform:translateY(-50%) scale(1.08); } }
+  .lb-cap{ position:absolute; bottom:clamp(1rem,3.5vh,2.2rem); left:50%; transform:translateX(-50%); z-index:3;
+    text-align:center; font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink-dim); padding:.5em 1.1em; background:rgba(14,11,10,.55);
+    border:1px solid var(--hairline-soft); border-radius:var(--r-pill); max-width:80vw; }
+  .lb-hint{ position:absolute; top:clamp(.9rem,3vh,2rem); left:clamp(.9rem,3vw,2rem); z-index:3;
+    font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase;
+    color:var(--ink-dim); opacity:.7; }
+
+  /* ---------- reduced motion ---------- */
+  @media (prefers-reduced-motion:reduce){
+    .scr.ready .pin .halo,.scr.ready .pin .head{ animation:none; }
+    .pin .head{ opacity:1; transform:none; }
+    .pin .halo{ opacity:.5; }
+    .land-card,.eco-panel,.eco-scrim,.eco-item,.land-card .card-fig img{ transition:opacity .2s linear; }
+    .land-card{ transform:translateY(-50%); }
+    .land-card.on{ transform:translateY(-50%); }
+    .eco-panel{ transform:none; opacity:0; }
+    .eco-panel.on{ opacity:1; }
+    .eco-panel.on .eco-item{ animation:none; opacity:1; transform:none; }
+    .plan-vp,.lb-frame{ transition:none !important; }
+  }
+
+  /* ---------- portrait + narrow ---------- */
+  @media (orientation:portrait),(max-width:920px){
+    .land{ flex-direction:column; gap:clamp(.7rem,1.6vh,1.2rem); }
+    .land-aside{ flex:0 0 auto; gap:.55rem; }
+    .land-aside .k-title{ font-size:clamp(1.7rem,5.4vw,2.6rem); margin:.05em 0 .1em; }
+    .land-aside .poem{ max-width:48ch; font-size:clamp(.9rem,2.3vw,1.1rem); }
+    .land-legend{ display:none; }
+    .land-stats{ gap:1.4rem; }
+    .land-acts{ margin-top:.2rem; }
+    .land-main{ flex:1 1 auto; }
+    .eco-panel{ width:min(100vw,560px); }
+    .land-card{ width:clamp(260px,62vw,380px); }
+  }
+  @media (orientation:portrait) and (max-height:760px){
+    .land-aside .poem{ display:none; }
+  }
+</style>
+</head>
+<body data-screen="landscape">
+  <div class="scr">
+    <header class="scr-top">
+      <button class="scr-back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Home</button>
+      <div class="scr-head">
+        <span class="k-eyebrow">A sanctuary of green</span>
+        <h1 class="scr-name">Landscape</h1>
+      </div>
+      <div class="scr-side"><img class="scr-crest" src="../assets/logo-crest.webp" alt="" onerror="this.style.display='none'"></div>
+    </header>
+
+    <main class="scr-body">
+      <div class="scr-wrap fill">
+        <section class="land">
+
+          <!-- ---------- side rail ---------- -->
+          <aside class="land-aside">
+            <div data-reveal>
+              <span class="k-eyebrow">Across fifteen acres</span>
+              <h2 class="k-title">Where the green lives</h2>
+              <p class="poem">A nature-led sanctuary — amphitheatre, pavilions, water and walking paths, kept open for a slower way of living.</p>
+            </div>
+
+            <div class="land-stats" data-reveal>
+              <div class="land-stat"><b data-count="70" data-suffix="%">0</b><span>Open &amp; green</span></div>
+              <div class="land-stat"><b data-count="15">0</b><span>Acres</span></div>
+              <div class="land-stat"><b data-count="3">0</b><span>Clubhouses</span></div>
+            </div>
+
+            <div class="land-legend" data-reveal>
+              <div class="leg-cap">
+                <span class="k-eyebrow" style="color:var(--accent)">On the plan</span>
+                <span class="k-swipe-hint" style="opacity:.6">Positions indicative</span>
+              </div>
+              <div id="legRows"></div>
+            </div>
+
+            <div class="land-acts" data-reveal>
+              <button class="act-tile" id="btnEco" type="button">
+                <span class="thumb"><img src="../assets/screens/landscape-1.webp" alt="" onerror="this.style.display='none'">
+                  <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21V11"/><path d="M12 13c-3 0-6-2-6-6 3 0 6 2 6 6z"/><path d="M12 11c3 0 6-2 6-5-3 0-6 2-6 5z"/></svg></span></span>
+                <span class="meta"><b>Sustainability</b><span>Green &amp; eco</span></span>
+                <span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+              </button>
+              <button class="act-tile" id="btnGallery" type="button">
+                <span class="thumb"><img src="../assets/screens/landscape-4.webp" alt="" onerror="this.style.display='none'">
+                  <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M4 15l4-4 4 4 3-3 5 5"/><circle cx="9" cy="9" r="1.3"/></svg></span></span>
+                <span class="meta"><b>Renders</b><span>4 views</span></span>
+                <span class="go"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+              </button>
+            </div>
+          </aside>
+
+          <!-- ---------- plan stage ---------- -->
+          <div class="land-main">
+            <div class="plan" id="plan" data-reveal>
+              <div class="plan-vp" id="planVp">
+                <img class="plan-img" id="planImg" src="../assets/screens/master-layout.webp" alt="Highland Mayfields master layout"
+                     onerror="this.style.visibility='hidden'">
+                <!-- markers injected here -->
+              </div>
+              <div class="plan-tools">
+                <button class="plan-tool" id="planOut" type="button" aria-label="Zoom out"><svg viewBox="0 0 24 24"><line x1="6" y1="12" x2="18" y2="12"/></svg></button>
+                <button class="plan-tool" id="planIn" type="button" aria-label="Zoom in"><svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></button>
+                <button class="plan-tool" id="planExpand" type="button" aria-label="Enlarge plan"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+              </div>
+              <div class="plan-cap"><span class="dot"></span>Master layout · tap a marker · pinch / double-tap to zoom</div>
+              <!-- side card -->
+              <aside class="land-card" id="card" role="dialog" aria-hidden="true" aria-label="Feature detail"></aside>
+            </div>
+          </div>
+
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- sustainability mainframe panel -->
+  <div class="eco-scrim" id="ecoScrim"></div>
+  <aside class="eco-panel" id="ecoPanel" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Sustainability"></aside>
+
+  <!-- custom zoomable lightbox -->
+  <div class="land-lb" id="lb" role="dialog" aria-label="Render viewer">
+    <div class="lb-hint">Pinch / scroll to zoom · drag to pan · double-tap to reset</div>
+    <button class="lb-x" id="lbX" type="button" aria-label="Close">✕</button>
+    <button class="lb-nav prev" id="lbPrev" type="button" aria-label="Previous">‹</button>
+    <div class="lb-stage" id="lbStage"><div class="lb-frame" id="lbFrame"><img id="lbImg" alt=""></div></div>
+    <button class="lb-nav next" id="lbNext" type="button" aria-label="Next">›</button>
+    <div class="lb-cap" id="lbCap"></div>
+  </div>
+
+  <script src="_kit.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    var reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    window.HM_SCREEN_INFO = { title:'Landscape', html:
+      '<p class="k-lede">Highland Mayfields · a nature-led sanctuary across approximately fifteen acres.</p>'+
+      '<ul style="list-style:none;padding:0;margin:.6rem 0;display:flex;flex-direction:column;gap:.5rem">'+
+      '<li>70%+ kept open &amp; green · lowest density per acre</li>'+
+      '<li>Amphitheatre, pavilions, water features &amp; walking paths</li>'+
+      '<li>3 grand clubhouses · 85+ amenities · 15+ sports</li>'+
+      '<li>Rainwater harvesting · solar · greywater recycling · EV charging</li></ul>' };
+
+    /* the 4 landscape renders (for the zoomable lightbox / "Renders") */
+    var SHOTS = [
+      { src:'../assets/screens/landscape-1.webp', title:'Sports court & water-feature gardens' },
+      { src:'../assets/screens/landscape-2.webp', title:'Multipurpose court & garden walk' },
+      { src:'../assets/screens/landscape-3.webp', title:'Garden pavilion' },
+      { src:'../assets/screens/landscape-4.webp', title:'Open-air amphitheatre' }
+    ];
+
+    /* features. `name` MUST match amenities.json "landscape" items verbatim. */
+    var FEAT = [
+      { name:'Open-air amphitheatre',     x:39, y:27, img:'../assets/screens/landscape-4.webp', rep:false, note:'Terraced lawn seating stepping down to an open stage for gatherings.' },
+      { name:'Pavilions',                 x:46, y:24, img:'../assets/screens/landscape-3.webp', rep:false, note:'Shaded copper-canopy pavilions set among the gardens.' },
+      { name:'Pet-friendly walk',         x:51, y:30, img:'../assets/screens/landscape-2.webp', rep:true,  note:'Planted walkways open to residents and their pets.' },
+      { name:'Water features & fountains',x:41, y:34, img:'../assets/screens/landscape-1.webp', rep:true,  note:'Fountains and water channels woven through the greens.' },
+      { name:'Outdoor sitting',           x:47, y:36, img:'../assets/screens/landscape-3.webp', rep:true,  note:'Seating nooks tucked into the planting across the landscape.' },
+      { name:'Walking paths for seniors', x:37, y:40, img:'../assets/screens/landscape-4.webp', rep:true,  note:'Level, shaded paths laid out for unhurried walks.' },
+      { name:'Reflexology pathway',       x:45, y:42, img:'../assets/screens/landscape-2.webp', rep:true,  note:'A textured reflexology path threaded through the gardens.' }
+    ];
+
+    var plan    = document.getElementById('plan');
+    var planVp  = document.getElementById('planVp');
+    var card    = document.getElementById('card');
+    var legRows = document.getElementById('legRows');
+    var pins = [];
+    var ACTIVE = [];
+    var openIdx = -1, cardOpen = false;
+    var CATNAME = 'Landscape & Green';
+    var GREEN = [], ECO = [];
+    var hoverable = matchMedia('(hover:hover) and (pointer:fine)').matches;
+
+    /* ============================================================
+       generic pinch / wheel / double-tap / drag zoom controller
+       (transform-origin 0 0; content box == frame, so clamp keeps
+       the content covering the frame). Reused by plan + lightbox.
+       ============================================================ */
+    function makeZoom(frame, content, opt){
+      opt = opt||{}; var maxS = opt.maxS||4;
+      var st = {s:1,tx:0,ty:0}, ptrs = new Map(), pan=null, pinch=null, moved=false, tapT=0, tapTimer=null;
+      function fr(){ return {w:frame.clientWidth, h:frame.clientHeight}; }
+      function apply(anim){
+        content.style.transition = (anim && !reduce) ? 'transform .8s cubic-bezier(.16,1,.3,1)' : 'none';
+        content.style.transform = 'translate('+st.tx+'px,'+st.ty+'px) scale('+st.s+')';
+        if(opt.onChange) opt.onChange(st);
+      }
+      function clamp(){ var f=fr();
+        if(st.s<1) st.s=1; if(st.s>maxS) st.s=maxS;
+        var minTx=f.w-f.w*st.s, minTy=f.h-f.h*st.s;
+        st.tx=Math.min(0,Math.max(st.tx,minTx)); st.ty=Math.min(0,Math.max(st.ty,minTy));
+        if(st.s<=1.001){ st.tx=0; st.ty=0; }
+      }
+      function zoomAt(x,y,ns,anim){ ns=Math.max(1,Math.min(ns,maxS)); var k=ns/st.s;
+        st.tx=x-k*(x-st.tx); st.ty=y-k*(y-st.ty); st.s=ns; clamp(); apply(!!anim); }
+      function reset(anim){ st.s=1; st.tx=0; st.ty=0; apply(!!anim); }
+      function setView(s,tx,ty,anim){ st.s=s; st.tx=tx; st.ty=ty; clamp(); apply(!!anim); }
+      function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+      function ign(t){ return opt.ignore && t.closest && t.closest(opt.ignore); }
+
+      frame.addEventListener('wheel', function(e){ e.preventDefault();
+        var r=frame.getBoundingClientRect();
+        zoomAt(e.clientX-r.left, e.clientY-r.top, st.s*(e.deltaY<0?1.2:0.84), false);
+      }, {passive:false});
+
+      frame.addEventListener('pointerdown', function(e){
+        if(ign(e.target)) return;
+        try{ frame.setPointerCapture(e.pointerId); }catch(_){}
+        ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false;
+        if(ptrs.size===1){ pan={x:e.clientX,y:e.clientY,tx:st.tx,ty:st.ty}; }
+        else if(ptrs.size===2){ var a=[].concat.apply([],[Array.from(ptrs.values())]); var r=frame.getBoundingClientRect();
+          pinch={d:dist(a[0],a[1]),s:st.s,mx:(a[0].x+a[1].x)/2-r.left,my:(a[0].y+a[1].y)/2-r.top}; pan=null; }
+      });
+      frame.addEventListener('pointermove', function(e){
+        if(!ptrs.has(e.pointerId)) return;
+        ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(ptrs.size>=2 && pinch){ var a=Array.from(ptrs.values()); var d=dist(a[0],a[1]);
+          zoomAt(pinch.mx,pinch.my, pinch.s*(d/pinch.d), false); moved=true; }
+        else if(pan && st.s>1){ var dx=e.clientX-pan.x, dy=e.clientY-pan.y;
+          if(Math.abs(dx)+Math.abs(dy)>5) moved=true; st.tx=pan.tx+dx; st.ty=pan.ty+dy; clamp(); apply(false); }
+      });
+      function endP(e){ if(ptrs.has(e.pointerId)) ptrs.delete(e.pointerId); if(ptrs.size<2) pinch=null; if(ptrs.size===0) pan=null; }
+      frame.addEventListener('pointerup', function(e){
+        var wasMoved=moved; endP(e);
+        if(ign(e.target)) return;
+        if(wasMoved) return;
+        var now=Date.now(), r=frame.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+        if(now-tapT<300){ tapT=0; if(tapTimer){ clearTimeout(tapTimer); tapTimer=null; }
+          if(st.s>1.05) reset(true); else zoomAt(x,y,2.4,true);
+        } else { tapT=now;
+          if(opt.onTap){ tapTimer=setTimeout(function(){ tapTimer=null; opt.onTap(e); }, 300); }
+        }
+      });
+      frame.addEventListener('pointercancel', endP);
+      return { reset:reset, setView:setView, zoomAt:zoomAt, frame:fr, state:function(){ return st; } };
+    }
+
+    /* ---- plan zoom (markers ride along; empty tap closes card) ---- */
+    var planZoom = makeZoom(plan, planVp, {
+      ignore:'.pin,.land-card,.plan-tools,.plan-cap', maxS:4,
+      onTap:function(){ if(cardOpen) closeCard(); },
+      onChange:function(st){
+        var pin = document.getElementById('planIn'), pout = document.getElementById('planOut');
+        if(pout) pout.disabled = st.s<=1.001; if(pin) pin.disabled = st.s>=3.999;
+      }
+    });
+    document.getElementById('planIn').addEventListener('click', function(e){ e.stopPropagation();
+      planZoom.zoomAt(plan.clientWidth/2, plan.clientHeight/2, planZoom.state().s*1.5, true); });
+    document.getElementById('planOut').addEventListener('click', function(e){ e.stopPropagation();
+      planZoom.zoomAt(plan.clientWidth/2, plan.clientHeight/2, planZoom.state().s*0.66, true); });
+
+    /* ---- build markers + numbered legend ---- */
+    function build(){
+      planVp.querySelectorAll('.pin').forEach(function(p){ p.remove(); });
+      pins = [];
+      ACTIVE.forEach(function(f, i){
+        var pin = document.createElement('button');
+        pin.type='button'; pin.className='pin'; pin.setAttribute('aria-label', f.name);
+        pin.style.left = f.x+'%'; pin.style.top = f.y+'%'; pin.style.setProperty('--pd',(i*110)+'ms');
+        pin.innerHTML = '<span class="halo"></span><span class="ring2"></span><span class="head">'+(i+1)+'</span>';
+        pin.addEventListener('click', function(e){ e.stopPropagation(); toggle(i); });
+        planVp.appendChild(pin);
+        pins.push(pin);
+      });
+
+      legRows.innerHTML = ACTIVE.map(function(f,i){
+        return '<button class="leg-row" type="button" data-i="'+i+'">'+
+                 '<span class="num">'+(i+1)+'</span>'+
+                 '<span class="lbl">'+esc(f.name)+'</span>'+
+                 '<span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>'+
+               '</button>';
+      }).join('');
+      Array.prototype.forEach.call(legRows.querySelectorAll('.leg-row'), function(row){
+        var i = parseInt(row.dataset.i,10);
+        row.addEventListener('click', function(){ toggle(i); });
+        if(hoverable){
+          row.addEventListener('mouseenter', function(){ if(openIdx!==i && pins[i]) pins[i].classList.add('on'); });
+          row.addEventListener('mouseleave', function(){ if(openIdx!==i && pins[i]) pins[i].classList.remove('on'); });
+        }
+      });
+    }
+
+    /* ---- cinematic zoom toward a pin + side card opposite it ---- */
+    function computeZoom(i, anim){
+      if(reduce){ return; }
+      var f = ACTIVE[i]; if(!f) return;
+      var FW = plan.clientWidth, FH = plan.clientHeight;
+      var side = f.x < 50 ? 'right' : 'left';
+      var cw = card.offsetWidth || (FW*0.2);
+      var gap = 40, cm = cw + gap, s = 2.0;
+      var Dx = side==='right' ? (FW - cm)/2 : cm + (FW - cm)/2;
+      var Dy = FH * 0.52;
+      var Px = f.x/100*FW, Py = f.y/100*FH;
+      planZoom.setView(s, Dx - s*Px, Dy - s*Py, anim);
+    }
+
+    function openCard(i){
+      var f = ACTIVE[i]; if(!f) return;
+      openIdx = i; cardOpen = true;
+      pins.forEach(function(p,k){ p.classList.toggle('on', k===i); });
+      Array.prototype.forEach.call(legRows.querySelectorAll('.leg-row'), function(r){ r.classList.toggle('on', parseInt(r.dataset.i,10)===i); });
+      var side = f.x < 50 ? 'right' : 'left';
+      card.className = 'land-card '+side;
+      card.setAttribute('aria-hidden','false');
+      card.innerHTML =
+        '<button class="card-x" type="button" aria-label="Close">✕</button>'+
+        '<div class="card-fig"><img alt="'+esc(f.name)+' — representative render">'+
+          (f.rep ? '<span class="rep">Representative render</span>' : '')+
+        '</div>'+
+        '<div class="card-meta">'+
+          '<span class="card-num"><i>'+(i+1)+'</i> '+esc(CATNAME)+'</span>'+
+          '<b>'+esc(f.name)+'</b>'+
+          '<p>'+esc(f.note)+'</p>'+
+        '</div>';
+      card.querySelector('.card-x').addEventListener('click', function(e){ e.stopPropagation(); closeCard(); });
+      var img = card.querySelector('.card-fig img');
+      img.onload = function(){ img.classList.add('loaded'); };
+      img.onerror = function(){ img.classList.add('loaded'); };
+      img.src = f.img;
+      // measure → cinematic zoom → reveal card
+      requestAnimationFrame(function(){
+        computeZoom(i, true);
+        card.classList.add('on');
+      });
+    }
+    function closeCard(){
+      if(!cardOpen) return;
+      cardOpen = false; openIdx = -1;
+      card.classList.remove('on'); card.setAttribute('aria-hidden','true');
+      pins.forEach(function(p){ p.classList.remove('on'); });
+      Array.prototype.forEach.call(legRows.querySelectorAll('.leg-row.on'), function(r){ r.classList.remove('on'); });
+      planZoom.reset(true);
+    }
+    function toggle(i){ if(cardOpen && openIdx===i) closeCard(); else openCard(i); }
+
+    /* outside-tap close (excludes the plan itself — empty plan tap handled by zoom onTap) */
+    document.addEventListener('pointerdown', function(e){
+      if(!cardOpen) return;
+      if(e.target.closest && (e.target.closest('.land-card') || e.target.closest('.plan') || e.target.closest('.leg-row'))) return;
+      closeCard();
+    }, true);
+
+    /* keyboard: Esc closes the topmost overlay (intercept so kit's Esc→back doesn't fire) */
+    document.addEventListener('keydown', function(e){
+      if(e.key!=='Escape') return;
+      if(lbEl.classList.contains('on')){ e.stopImmediatePropagation(); closeLb(); return; }
+      if(ecoOpen){ e.stopImmediatePropagation(); closeEco(); return; }
+      if(cardOpen){ e.stopImmediatePropagation(); closeCard(); return; }
+    }, true);
+
+    /* re-place / re-zoom on resize */
+    var rt; window.addEventListener('resize', function(){ clearTimeout(rt); rt=setTimeout(function(){
+      if(cardOpen) computeZoom(openIdx, false); else planZoom.reset(false);
+    }, 100); });
+
+    /* ============================================================
+       custom zoomable lightbox (plan-expand + renders)
+       ============================================================ */
+    var lbEl = document.getElementById('lb'), lbStage = document.getElementById('lbStage');
+    var lbFrame = document.getElementById('lbFrame'), lbImg = document.getElementById('lbImg');
+    var lbCap = document.getElementById('lbCap'), lbPrev = document.getElementById('lbPrev'), lbNext = document.getElementById('lbNext');
+    var lbItems = [], lbIdx = 0;
+    var lbZoom = makeZoom(lbStage, lbFrame, { ignore:'.lb-nav,.lb-x', maxS:5 });
+    function lbRender(){ var it=lbItems[lbIdx]||{}; lbImg.src=it.src||''; lbCap.textContent=it.title||'';
+      lbZoom.reset(false);
+      var multi = lbItems.length>1; lbPrev.style.display=multi?'':'none'; lbNext.style.display=multi?'':'none'; }
+    function lbGo(d){ lbIdx=(lbIdx+d+lbItems.length)%lbItems.length; lbRender(); }
+    function openLb(items, i){ lbItems=items||[]; lbIdx=i||0; lbRender(); lbEl.classList.add('on'); }
+    function closeLb(){ lbEl.classList.remove('on'); lbZoom.reset(false); }
+    lbPrev.addEventListener('click', function(e){ e.stopPropagation(); lbGo(-1); });
+    lbNext.addEventListener('click', function(e){ e.stopPropagation(); lbGo(1); });
+    document.getElementById('lbX').addEventListener('click', function(e){ e.stopPropagation(); closeLb(); });
+    lbEl.addEventListener('click', function(e){ if(e.target===lbEl) closeLb(); });
+    if(window.HMKit && HMKit.swipe) HMKit.swipe(lbStage, { onLeft:function(){ if(lbZoom.state().s<=1.05) lbGo(1); }, onRight:function(){ if(lbZoom.state().s<=1.05) lbGo(-1); } });
+    document.addEventListener('keydown', function(e){ if(!lbEl.classList.contains('on')) return;
+      if(e.key==='ArrowRight') lbGo(1); if(e.key==='ArrowLeft') lbGo(-1); });
+
+    document.getElementById('planExpand').addEventListener('click', function(e){ e.stopPropagation();
+      openLb([{ src:'../assets/screens/master-layout.webp', title:'Master Layout' }], 0); });
+    document.getElementById('btnGallery').addEventListener('click', function(){ openLb(SHOTS, 0); });
+
+    /* ============================================================
+       sustainability mainframe panel
+       ============================================================ */
+    var ecoScrim = document.getElementById('ecoScrim'), ecoPanel = document.getElementById('ecoPanel');
+    var ecoOpen = false, ecoBuilt = false;
+
+    /* distinct line icons per metric (keyed by substring) */
+    var ICONS = {
+      'amphitheatre':'<path d="M3 18h18"/><path d="M5 18c0-3.3 3-5.5 7-5.5s7 2.2 7 5.5"/><path d="M8.5 18c0-2 1.6-3.2 3.5-3.2s3.5 1.2 3.5 3.2"/><circle cx="12" cy="7.5" r="2"/>',
+      'pavilion':'<path d="M3 10l9-6 9 6"/><path d="M5 10v9h14v-9"/><path d="M9.5 19v-5h5v5"/>',
+      'pet':'<circle cx="6.5" cy="11" r="1.5"/><circle cx="10" cy="8" r="1.5"/><circle cx="14" cy="8" r="1.5"/><circle cx="17.5" cy="11" r="1.5"/><path d="M8 17c0-2.2 1.8-3.4 4-3.4s4 1.2 4 3.4-1.8 3.2-4 3.2-4-1-4-3.2z"/>',
+      'water':'<path d="M12 3.5s5 5.8 5 9.5a5 5 0 01-10 0c0-3.7 5-9.5 5-9.5z"/>',
+      'sitting':'<path d="M3 11h18"/><path d="M4 8h16"/><path d="M3 14h18"/><path d="M5 14v5M19 14v5"/>',
+      'walking':'<circle cx="13" cy="4.5" r="1.7"/><path d="M13 7l-1.8 5 3 1.8 1 5.2"/><path d="M11.2 12L8 13.2"/><path d="M14 9.2l3 1"/><path d="M14.2 13.8L12.5 19"/>',
+      'reflexology':'<path d="M9 4.5c2.2 0 3.6 2.2 3.6 6 0 3-1 5-1 7 0 1.8-1 2.8-2.6 2.8S6.4 21.1 6.4 19.3c0-2.8 1-4 1-6.5 0-3.8.4-8.3 1.6-8.3z"/><circle cx="14.5" cy="6.5" r="1"/><circle cx="15.3" cy="9.5" r="1"/><circle cx="15.2" cy="12.5" r="1"/>',
+      'rainwater':'<path d="M7 13a4 4 0 010-8 5 5 0 019.5-1.3A4 4 0 0117 13"/><path d="M8.5 17l-1 2.5M12 17l-1 2.5M15.5 17l-1 2.5"/>',
+      'solar':'<rect x="3" y="12.5" width="18" height="7.5" rx="1"/><path d="M7 12.5v7.5M12 12.5v7.5M17 12.5v7.5M3 16.2h18"/><circle cx="12" cy="6" r="2.4"/><path d="M12 1.6v1.4M12 9v1.4M16.4 6h-1.4M9 6H7.6"/>',
+      'greywater':'<circle cx="12" cy="12" r="9"/><path d="M12 7s3.2 3.8 3.2 6a3.2 3.2 0 01-6.4 0c0-2.2 3.2-6 3.2-6z"/>',
+      'composting':'<path d="M12 20.5c0-5.5 3.2-8.5 7.5-9.5-1 5.5-3.2 8.5-7.5 9.5z"/><path d="M12 20.5c0-5.5-3.2-8.5-7.5-9.5 1 5.5 3.2 8.5 7.5 9.5z"/><path d="M12 20.5v-6.5"/>',
+      'zen':'<path d="M12 21v-7.5"/><path d="M12 13.5c-3 0-5-2-5-5 3 0 5 2 5 5z"/><path d="M12 11.5c3 0 5-2 5-5-3 0-5 2-5 5z"/><path d="M5 21h14"/>',
+      'energy-efficient':'<path d="M9.5 18.5h5"/><path d="M10 21h4"/><path d="M8 11a4 4 0 118 0c0 2-1.2 3.2-1.6 4.2H9.6C9.2 14.2 8 13 8 11z"/>',
+      'smart waste':'<path d="M5 8.5h6l-.6 11h-4.8z"/><path d="M4 8.5h8"/><path d="M7 8.5V6.5h2v2"/><path d="M14 11.5h5l-.5 8h-4z"/><path d="M13.5 11.5h6"/>',
+      'ev charging':'<rect x="6" y="3.5" width="8.5" height="17" rx="1"/><path d="M10.6 7.5l-2 4h2l-2 4"/><path d="M14.5 8h2a2 2 0 012 2v4.2a1.4 1.4 0 01-2.8 0V11.5"/>'
+    };
+    function ecoIcon(name){
+      var n = (name||'').toLowerCase(), key=null;
+      for(var k in ICONS){ if(n.indexOf(k)>-1){ key=k; break; } }
+      var body = key ? ICONS[key] : '<path d="M12 21V11"/><path d="M12 13c-3 0-6-2-6-6 3 0 6 2 6 6z"/><path d="M12 11c3 0 6-2 6-5-3 0-6 2-6 5z"/>';
+      return '<span class="eco-ico"><svg viewBox="0 0 24 24">'+body+'</svg></span>';
+    }
+    function ecoItems(list, off){ return (list||[]).map(function(it,i){
+      return '<div class="eco-item" style="--i:'+(off+i)+'">'+ecoIcon(it)+'<span>'+esc(it)+'</span></div>'; }).join(''); }
+
+    function buildEco(){
+      if(ecoBuilt) return;
+      ecoPanel.innerHTML =
+        '<div class="eco-head">'+
+          '<div><span class="k-eyebrow" style="color:var(--accent)">Tread lightly</span><h3>Green &amp; Sustainable</h3></div>'+
+          '<button class="eco-x" type="button" aria-label="Close">✕</button>'+
+        '</div>'+
+        '<div class="eco-body">'+
+          '<div class="eco-stats">'+
+            '<div><b data-count="70" data-suffix="%">0</b><span>Open &amp; green</span></div>'+
+            '<div><b data-count="15">0</b><span>Acres</span></div>'+
+            '<div><b data-count="3">0</b><span>Clubhouses</span></div>'+
+          '</div>'+
+          '<p class="eco-lede">A landscape that gives back — rainwater harvested, water recycled, sunlight harnessed, every system tuned to tread lightly.</p>'+
+          '<div class="eco-sec"><span class="eco-cap">Green features · '+GREEN.length+'</span><div class="eco-grid">'+ecoItems(GREEN,0)+'</div></div>'+
+          '<div class="eco-sec"><span class="eco-cap">Sustainability · '+ECO.length+'</span><div class="eco-grid">'+ecoItems(ECO,GREEN.length)+'</div></div>'+
+        '</div>';
+      ecoPanel.querySelector('.eco-x').addEventListener('click', function(e){ e.stopPropagation(); closeEco(); });
+      ecoBuilt = true;
+    }
+    function openEco(){
+      buildEco();
+      ecoOpen = true; ecoPanel.setAttribute('aria-hidden','false');
+      ecoScrim.classList.add('on'); ecoPanel.classList.add('on');
+      // re-run count-ups
+      Array.prototype.forEach.call(ecoPanel.querySelectorAll('[data-count]'), function(el){
+        el.textContent='0'; if(window.HMKit && HMKit.countUp) HMKit.countUp(el); });
+    }
+    function closeEco(){
+      ecoOpen = false; ecoPanel.setAttribute('aria-hidden','true');
+      ecoPanel.classList.remove('on'); ecoScrim.classList.remove('on');
+    }
+    ecoScrim.addEventListener('click', closeEco);
+    document.getElementById('btnEco').addEventListener('click', openEco);
+
+    /* ---- load amenities.json; only show markers/legend whose names exist verbatim ---- */
+    fetch('../data/amenities.json').then(function(r){ return r.json(); }).then(function(D){
+      var cats = D.categories || [];
+      function find(id){ for(var i=0;i<cats.length;i++){ if(cats[i].id===id) return cats[i]; } return null; }
+      var land = find('landscape'), eco = find('eco');
+      if(land){ CATNAME = land.name; GREEN = land.items.slice(); }
+      if(eco){ ECO = eco.items.slice(); }
+      var allow = {}; if(land){ land.items.forEach(function(n){ allow[n]=1; }); }
+      ACTIVE = FEAT.filter(function(f){ return !land || allow[f.name]; });
+      build();
+    }).catch(function(){ ACTIVE = FEAT.slice(); GREEN = FEAT.map(function(f){return f.name;}); ECO = []; build(); });
+  })();
+  </script>
+</body>
+</html>

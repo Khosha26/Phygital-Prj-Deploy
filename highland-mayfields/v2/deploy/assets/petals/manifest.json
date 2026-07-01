@@ -1,0 +1,62 @@
+{
+  "ref_w": 1448,
+  "ref_h": 1086,
+  "pieces": {
+    "residences": {
+      "file": "assets/petals/residences.png",
+      "cx": 0.49931,
+      "cy": 0.23849,
+      "w": 0.17058,
+      "h": 0.33794
+    },
+    "address": {
+      "file": "assets/petals/address.png",
+      "cx": 0.33046,
+      "cy": 0.30064,
+      "w": 0.1616,
+      "h": 0.26335
+    },
+    "pearl": {
+      "file": "assets/petals/pearl.png",
+      "cx": 0.66782,
+      "cy": 0.29972,
+      "w": 0.16229,
+      "h": 0.26519
+    },
+    "inventory": {
+      "file": "assets/petals/inventory.png",
+      "cx": 0.24102,
+      "cy": 0.48343,
+      "w": 0.22859,
+      "h": 0.24586
+    },
+    "landscape": {
+      "file": "assets/petals/landscape.png",
+      "cx": 0.75829,
+      "cy": 0.48343,
+      "w": 0.22997,
+      "h": 0.24586
+    },
+    "villas": {
+      "file": "assets/petals/villas.png",
+      "cx": 0.49965,
+      "cy": 0.58425,
+      "w": 0.26796,
+      "h": 0.35359
+    },
+    "masterplan": {
+      "file": "assets/petals/masterplan.png",
+      "cx": 0.34392,
+      "cy": 0.70212,
+      "w": 0.23273,
+      "h": 0.29834
+    },
+    "gallery": {
+      "file": "assets/petals/gallery.png",
+      "cx": 0.66126,
+      "cy": 0.7035,
+      "w": 0.22099,
+      "h": 0.29374
+    }
+  }
+}

@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>The Grounds · Master Plan</title>
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE GROUNDS — MASTER PLAN EXPLORER
+  ──────────────────────────────────────────────────────────────────────
+  A plan-switcher explorer (modelled on the Embassy Citadel pattern):
+   · View switcher swaps the base drawing (Master / Zoning / Planting /
+     Trees) and its own calibrated legend + pins.
+   · Master view carries the 25 numbered features from the CD master plan
+     legend, pinned onto the real drawing; the legend is a navigable list
+     (click an item → fly-to + spotlight that pin).
+   · Pan (drag), zoom (wheel cursor-anchored / pinch / ± / double-click
+     reset). Plans sourced from the FOUR SEASONS Landscape CD.
+   · "Illustrated" view loads the vector explorer (retained) in an iframe.
+  Plan drawings: assets/masterplan/views/*.webp
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* deck palette — ink-navy + bone */
+    --deck-ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone-2:#f2ece0; --taupe:#6e5c58;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#1b2230; --on-light-dim:#6b6f78;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette (reskin) */
+    --parch:#e9e1d4; --paper:#faf8f4; --ink:#1b2230; --muted:#6b6f78; --faint:#9a9aa0;
+    --gold:#b3a184; --gold-d:#857a66; --gold-l:#c9b79c; --gold-lt:#c9b79c; --line:#d8d0c2;
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a;
+    --bone:#e9e1d4; --champ:#c9b79c; --on-navy:#ece8e0; --on-navy-dim:#9aa1ad; --brass:#c9b79c;
+    --exo:cubic-bezier(0.23,1,0.32,1);          /* strong ease-out (design-eng) */
+    --eio:cubic-bezier(0.77,0,0.175,1);          /* strong ease-in-out */
+    --overshoot:cubic-bezier(.34,1.56,.64,1);    /* spring-like overshoot */
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--on-dark); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; overflow:hidden; position:fixed; inset:0;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; touch-action:none}
+  img,svg{-webkit-user-drag:none}
+  /* original warm bone background (reverted per request; other surfaces stay as-is) */
+  .bg{position:fixed; inset:0; z-index:0; background:radial-gradient(125% 100% at 50% 0%, #f3eee3, #e3dbcc)}
+  /* faint architectural line-drawing of the real ONE tower (INK lines for the light ground), bottom-left */
+  .bg::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-outline.webp) no-repeat left -4% bottom;
+    background-size:auto 98%; opacity:.07; mix-blend-mode:multiply}
+  /* subtle grain */
+  .bg::before{content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:radial-gradient(rgba(236,232,224,.05) .5px, transparent .6px); background-size:3px 3px}
+
+  /* ── TOP BAR ─────────────────────────────────────────── */
+  .top{position:fixed; top:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:1fr auto 1fr;
+    align-items:center; padding:clamp(14px,2vh,26px) clamp(20px,3vw,52px) 0; gap:12px; pointer-events:none}
+  .top>*{pointer-events:auto}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:var(--navy); border:1px solid var(--navy-3); color:var(--on-navy); font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.34em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:0 8px 18px -8px rgba(17,21,32,.45);
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:hover{ background:var(--navy-2); border-color:var(--brass);
+    box-shadow:0 10px 22px -8px rgba(17,21,32,.5); }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px; stroke:var(--brass)}
+  .eyebrow{justify-self:center; font-size:clamp(9px,1.2vh,13px); letter-spacing:.46em; text-transform:uppercase; color:#7a684a; white-space:nowrap}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.36em; text-transform:uppercase; color:#6e5c58}
+
+  /* ── STAGE (pan/zoom plan) ───────────────────────────── */
+  .stage{position:fixed; inset:0; z-index:5; overflow:hidden; cursor:grab; isolation:isolate}
+  .stage.grabbing{cursor:grabbing}
+  .canvas{position:absolute; inset:0; transform-origin:0 0; will-change:transform}
+  .planwrap{position:absolute; right:0.5%; top:50%; transform:translateY(-50%);
+    width:min(80vw,1680px); aspect-ratio:4961/3507; max-height:97vh;
+    filter:drop-shadow(0 18px 40px rgba(40,28,12,.10))}
+  .planimg{position:absolute; inset:0; width:100%; height:100%; object-fit:contain;
+    transition:opacity .42s var(--exo), filter .42s var(--exo)}
+  .planimg.swapping{opacity:0; filter:blur(6px)}
+  /* ── SVG zones overlay (Zones view): real polygons over the master plan ── */
+  .zonesvg-layer{position:absolute; inset:0; z-index:3; pointer-events:none; opacity:0; transition:opacity .45s var(--exo)}
+  .zonesvg-layer.on{opacity:1}
+  .zonesvg-layer svg{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:136%; height:136%; overflow:visible; pointer-events:none}
+  .zpath{fill:var(--zc,#caa36a); fill-opacity:.45; stroke:#ffffff; stroke-opacity:.6; stroke-width:3; paint-order:stroke;
+    cursor:pointer; pointer-events:auto; transition:fill-opacity .35s var(--exo), filter .35s var(--exo), stroke-opacity .35s}
+  @media(hover:hover){ .zpath:hover{fill-opacity:.62; filter:drop-shadow(0 0 16px var(--zc))} }
+  .zpath.is-active{fill-opacity:.72; stroke-opacity:1; filter:drop-shadow(0 0 28px var(--zc)) drop-shadow(0 0 10px var(--zc))}
+  .zpath.dim{fill-opacity:.12; stroke-opacity:.2; filter:none}
+  /* zone spotlight (zoning view): dims the plan except a soft glow over the selected zone */
+  .zonespot{position:absolute; inset:0; z-index:2; pointer-events:none; opacity:0; transition:opacity .45s var(--exo);
+    background:radial-gradient(circle at var(--zx,50%) var(--zy,50%), transparent 0, transparent 11%, rgba(8,11,18,.34) 30%, rgba(8,11,18,.52) 100%)}
+  .zonespot.on{opacity:1}
+  .zonespot::before{content:""; position:absolute; left:var(--zx,50%); top:var(--zy,50%); width:24%; height:24%;
+    transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle, var(--zc,#caa36a) 0%, transparent 68%);
+    opacity:.55; mix-blend-mode:screen; filter:blur(5px); animation:zpulse 2.6s ease-in-out infinite}
+  @keyframes zpulse{0%,100%{transform:translate(-50%,-50%) scale(.9); opacity:.4} 50%{transform:translate(-50%,-50%) scale(1.1); opacity:.62}}
+
+  /* clickable zone pins (zoning view) */
+  .zpin{position:absolute; transform:translate(-50%,-50%); z-index:4; cursor:pointer;
+    width:clamp(17px,1.7vw,25px); height:clamp(17px,1.7vw,25px); border-radius:50%;
+    border:2px solid #fbf8f1; box-shadow:0 3px 11px -2px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.18);
+    transition:transform .34s var(--overshoot), box-shadow .3s, opacity .3s}
+  .zpin::after{content:""; position:absolute; inset:-9px; border-radius:50%; border:1.5px solid currentColor; opacity:0; pointer-events:none}
+  @media(hover:hover){ .zpin:hover{transform:translate(-50%,-50%) scale(1.2)} }
+  .zpin.is-active{transform:translate(-50%,-50%) scale(1.34); box-shadow:0 5px 18px -2px rgba(0,0,0,.6), 0 0 0 3px rgba(250,248,244,.4)}
+  .zpin.is-active::after{opacity:.9; animation:ping 1.9s var(--exo) infinite}
+  .zpin.dim{opacity:.34}
+
+  /* floating zone info card — anchored above the selected pin, springs up smoothly */
+  .zonepop{position:fixed; z-index:60; width:clamp(380px,32vw,500px);
+    transform:translate(-50%,-100%) translateY(8px) scale(.94); transform-origin:50% calc(100% + 14px);
+    opacity:0; pointer-events:none; transition:opacity .3s var(--exo), transform .46s var(--overshoot)}
+  .zonepop.on{opacity:1; transform:translate(-50%,-100%) translateY(0) scale(1); pointer-events:auto}
+  .zonepop .card{position:relative; border-radius:14px; padding:14px 30px 15px 16px; overflow:hidden;
+    background:#121621;
+    border:1px solid rgba(201,183,156,.4); color:var(--on-dark);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+  .zonepop .zpimg{display:block; height:clamp(180px,22vh,240px); object-fit:cover;
+    margin:-14px -30px 12px -16px; width:calc(100% + 46px); border-radius:14px 14px 0 0}
+  .zonepop .tail{position:absolute; left:50%; bottom:-8px; width:16px; height:16px; transform:translateX(-50%) rotate(45deg);
+    background:#121621;
+    border-right:1px solid rgba(201,183,156,.4); border-bottom:1px solid rgba(201,183,156,.4)}
+  .zonepop .zc{display:flex; align-items:center; gap:9px; margin-bottom:6px}
+  .zonepop .zc .sw{flex:0 0 auto; width:18px; height:18px; border-radius:5px; border:1px solid rgba(236,232,224,.2)}
+  .zonepop .zc .k{font-size:9.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--champ)}
+  .zonepop h3{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(23px,3vh,32px); color:var(--on-dark); line-height:1.1}
+  .zonepop p{font-weight:300; color:var(--on-dark-dim); font-size:clamp(13px,1.7vh,17px); line-height:1.6; margin-top:7px}
+  .zonepop .x{position:absolute; top:9px; right:9px; width:24px; height:24px; border:0; background:rgba(9,12,24,.5); border-radius:50%; color:var(--on-dark); cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center}
+  .zonepop .x:hover{color:#fff; background:rgba(9,12,24,.72)}
+
+  /* numbered pins (master view) */
+  .pin{position:absolute; transform:translate(-50%,-50%); z-index:3; cursor:pointer;
+    width:clamp(20px,2.0vw,30px); height:clamp(20px,2.0vw,30px);
+    display:flex; align-items:center; justify-content:center; border-radius:50%;
+    background:rgba(250,248,244,.92); border:1.5px solid var(--gold);
+    color:var(--gold-d); font-size:clamp(9px,1.1vw,13px); font-weight:500; font-family:"Jost";
+    box-shadow:0 3px 9px -2px rgba(12,16,24,.4); transition:transform .18s var(--exo), background .2s, color .2s, border-color .2s}
+  @media (hover:hover){ .pin:hover{transform:translate(-50%,-50%) scale(1.18); background:var(--gold); color:#fff} }
+  .pin:active{transform:translate(-50%,-50%) scale(1.05)}
+  .pin.is-active{background:var(--gold); color:#fff; border-color:var(--gold-l)}
+  .pin.is-lantern{border-color:var(--gold-d); background:var(--gold-d); color:#fff}
+  .pin.dim{opacity:.32}
+  .pin .ring{position:absolute; inset:-7px; border-radius:50%; border:1.5px solid var(--gold); opacity:0; pointer-events:none}
+  .pin.is-active .ring{animation:ping 1.6s var(--exo) infinite}
+  @keyframes ping{0%{transform:scale(.7);opacity:.7}70%{transform:scale(1.7);opacity:0}100%{opacity:0}}
+
+  /* ── LEFT RAIL ───────────────────────────────────────── */
+  .rail{position:fixed; top:0; left:0; bottom:0; z-index:30; width:clamp(290px,24vw,372px);
+    display:flex; flex-direction:column; padding:clamp(64px,9vh,96px) clamp(16px,1.4vw,26px) clamp(16px,2vh,26px) clamp(20px,3vw,52px);
+    pointer-events:none}
+  .rail>*{pointer-events:auto}
+  .rail-head{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(26px,3.4vh,40px); line-height:1; color:#1b2230}
+  .rail-head em{font-style:italic; color:#8a7350}
+  .rail-sub{font-weight:300; color:#6b6f78; font-size:clamp(11px,1.35vh,14px); line-height:1.55; margin:10px 0 16px; max-width:34ch}
+
+  /* view switcher */
+  .views{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px}
+  .vbtn{appearance:none; cursor:pointer;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,183,156,.20);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    color:var(--on-dark-dim); font-family:"Jost"; font-size:clamp(9px,1.1vh,12px); letter-spacing:.14em; text-transform:uppercase;
+    padding:8px 13px; border-radius:999px; transition:background .2s var(--exo), color .2s, border-color .2s, transform .14s var(--exo)}
+  .vbtn:hover{border-color:rgba(201,183,156,.36); color:var(--on-dark)} .vbtn:active{transform:scale(.97)}
+  .vbtn.is-active{background:var(--ink-2); color:var(--on-dark); border-color:var(--champ)}
+
+  /* facts */
+  /* metadata = quiet stat line (de-emphasised so the legend frame can be taller) */
+  .facts{display:grid; grid-template-columns:1fr 1fr; gap:3px 14px; margin-bottom:9px; opacity:.92}
+  .fact{background:none; border:0; border-radius:0; padding:1px 0; display:flex; align-items:baseline; gap:7px}
+  .fact .n{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(12px,1.5vh,16px); color:#8a7350; line-height:1.1; font-variant-numeric:tabular-nums}
+  .fact .l{font-size:clamp(7px,.82vh,9px); letter-spacing:.1em; text-transform:uppercase; color:#6b6f78; margin-top:0}
+
+  /* legend list — glassmorphic cream panel (matches the Location rail for consistency) */
+  .legend{flex:1 1 auto; min-height:0; display:flex; flex-direction:column; color:var(--on-dark);
+    background:#121621;
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    border:1px solid rgba(201,183,156,.4); border-radius:18px; overflow:hidden;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); outline:1px solid rgba(201,183,156,.20); outline-offset:-4px}
+  .legend-h{flex:0 0 auto; padding:12px 16px; font-size:clamp(9px,1.1vh,12px); letter-spacing:.24em; text-transform:uppercase;
+    color:var(--champ); border-bottom:1px solid rgba(201,183,156,.22); display:flex; justify-content:space-between; align-items:center}
+  .legend-h .ct{color:var(--on-dark-dim); letter-spacing:.1em}
+  .legend-body{flex:1 1 auto; overflow-y:auto; padding:6px}
+  .legend-body::-webkit-scrollbar{width:7px} .legend-body::-webkit-scrollbar-thumb{background:rgba(201,183,156,.5); border-radius:7px}
+  .lg-group-h{font-size:clamp(8.5px,1vh,11px); letter-spacing:.2em; text-transform:uppercase; color:var(--on-dark-dim);
+    padding:11px 9px 5px}
+  .lg-item{display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:9px; cursor:pointer;
+    transition:background .16s var(--exo)}
+  .lg-item:hover{background:rgba(201,183,156,.16)}
+  .lg-item.is-active{background:rgba(201,183,156,.26)}
+  .lg-item .num{flex:0 0 auto; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:500; color:var(--on-dark); border:1.5px solid var(--champ); background:rgba(236,232,224,.06)}
+  .lg-item.lantern .num{background:var(--champ); color:#1b2230; border-color:var(--champ)}
+  .lg-item .sw{flex:0 0 auto; width:16px; height:16px; border-radius:5px; border:1px solid rgba(236,232,224,.2)}
+  .lg-item .t{flex:1 1 auto; font-size:clamp(11px,1.35vh,14px); color:var(--on-dark); line-height:1.25}
+  .lg-item .t small{display:block; font-size:clamp(8.5px,1vh,10.5px); color:var(--on-dark-dim); letter-spacing:.02em; margin-top:1px}
+  .lg-item .go{flex:0 0 auto; color:var(--champ); opacity:0; transition:opacity .16s, transform .16s var(--exo)}
+  .lg-item:hover .go{opacity:1; transform:translateX(2px)}
+
+  /* zoom controls */
+  .zoomctl{position:fixed; right:clamp(16px,1.6vw,28px); bottom:clamp(16px,2.4vh,30px); z-index:31; display:flex; flex-direction:column; gap:8px}
+  .zbtn{width:42px; height:42px; border-radius:12px; cursor:pointer; color:var(--champ);
+    background:#121621;
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    border:1px solid rgba(201,183,156,.4);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    display:flex; align-items:center; justify-content:center; transition:background .2s, transform .14s var(--exo), border-color .2s}
+  .zbtn:hover{border-color:rgba(201,183,156,.36)} .zbtn:active{transform:scale(.94)}
+  .zbtn svg{width:18px;height:18px}
+
+  /* info card */
+  .info{position:fixed; right:clamp(16px,1.6vw,28px); bottom:clamp(72px,11vh,108px); z-index:33;
+    width:clamp(244px,21vw,320px); border-radius:15px; padding:16px 17px; color:var(--on-dark);
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,183,156,.20);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    opacity:0; transform:translateY(10px) scale(.97); transform-origin:bottom right; pointer-events:none;
+    transition:opacity .26s var(--exo), transform .26s var(--exo)}
+  .info.on{opacity:1; transform:translateY(0) scale(1); pointer-events:auto}
+  .info .ic{display:flex; align-items:center; gap:9px; margin-bottom:8px}
+  .info .ic .b{width:26px;height:26px;border-radius:50%;background:var(--gold-d);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500}
+  .info .ic .cat{font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--champ)}
+  .info h3{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(19px,2.5vh,26px); color:var(--on-dark); line-height:1.05}
+  .info p{font-weight:300; color:var(--on-dark-dim); font-size:clamp(11px,1.3vh,13.5px); line-height:1.55; margin-top:6px}
+  .info .x{position:absolute; top:11px; right:12px; width:24px;height:24px;border:none;background:transparent;color:var(--on-dark-dim);cursor:pointer;font-size:17px}
+  .info .x:hover{color:var(--on-dark)}
+
+  /* illustrated (iframe) view */
+  .illus{position:fixed; inset:0; z-index:20; border:0; width:100%; height:100%; opacity:0; visibility:hidden; transition:opacity .4s var(--exo), visibility .4s}
+  .illus.on{opacity:1; visibility:visible}
+
+  .scalehint{position:fixed; left:clamp(16px,1.4vw,26px); bottom:clamp(16px,2.4vh,30px); z-index:31;
+    font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--on-dark-dim); font-variant-numeric:tabular-nums}
+  @media (max-width:1024px){ .rail{width:clamp(220px,38vw,300px)} .planwrap{width:min(70vw,980px); right:1%} }
+
+  /* ── SURVIVAL KIT: gate hover so iOS sticky-hover never flickers ── */
+  @media (hover:none){
+    .back:hover{background:var(--navy)!important; border-color:rgba(201,183,156,.5)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important}
+    .vbtn:hover{border-color:rgba(201,183,156,.20); color:var(--on-dark-dim)}
+    .lg-item:hover{background:none}
+    .lg-item:hover .go{opacity:0; transform:none}
+    .zbtn:hover{border-color:rgba(201,183,156,.20)}
+    .pin:hover{transform:translate(-50%,-50%)}
+    .zpin:hover{transform:translate(-50%,-50%)}
+  }
+
+  /* ── PHONE PORTRAIT: rail → bottom sheet so the plan fills the screen ── */
+  @media (max-width:560px) and (max-aspect-ratio:3/4){
+    /* top bar: stack so the eyebrow never clips; drop the corner */
+    .top{grid-template-columns:auto 1fr; gap:8px; padding:clamp(12px,2vh,20px) clamp(14px,4vw,24px) 0}
+    .eyebrow{justify-self:end; font-size:9px; letter-spacing:.24em; text-align:right;
+      max-width:55vw; white-space:normal; line-height:1.3}
+    .corner{display:none}
+
+    /* plan: fill the upper area above the sheet */
+    .planwrap{width:min(150vw,1100px); right:auto; left:50%; transform:translate(-50%,-50%); top:42%; max-height:78vh}
+
+    /* rail becomes a compact bottom sheet */
+    .rail{top:auto; left:0; right:0; bottom:0; width:auto; flex-direction:column;
+      padding:0; max-height:46vh; pointer-events:none}
+    .rail>*{pointer-events:auto}
+    .rail-head,.rail-sub,.facts{display:none}        /* prose hidden on phone — keep the actionable controls */
+    .views{margin:0; padding:8px clamp(12px,4vw,18px) 0; gap:7px; flex-wrap:wrap; justify-content:center;
+      background:rgba(18,22,33,.92); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px)}
+    .vbtn{min-height:40px; padding:9px 14px; font-size:11px}
+    .legend{margin:0; border-radius:16px 16px 0 0; flex:1 1 auto;
+      background:rgba(18,22,33,.94); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px)}
+    .legend-h{padding:11px 16px}
+    .lg-item{min-height:46px; padding:9px 11px}
+    .lg-item .t{font-size:13px}
+    .lg-item .go{opacity:1}                            /* always show the chevron (no hover on touch) */
+
+    /* zoom controls: lift above the sheet, comfortable taps */
+    .zoomctl{bottom:calc(46vh + 12px); right:clamp(12px,4vw,18px); gap:9px}
+    .zbtn{width:46px; height:46px}
+    .scalehint{bottom:calc(46vh + 12px); left:clamp(12px,4vw,18px)}
+
+    /* pins: a touch bigger / easier to hit on phone */
+    .pin{width:clamp(24px,7vw,30px); height:clamp(24px,7vw,30px); font-size:12px}
+    .zpin{width:clamp(22px,6vw,26px); height:clamp(22px,6vw,26px)}
+
+    /* zone card narrower so it never overflows */
+    .zonepop{width:min(80vw,300px)}
+    .info{width:min(82vw,320px); right:clamp(10px,4vw,16px); bottom:calc(46vh + 64px)}
+  }
+
+  /* short phone landscape — keep a narrow left rail, trim prose */
+  @media (max-height:430px) and (min-aspect-ratio:3/2){
+    .rail{width:clamp(190px,28vw,240px); padding-top:clamp(52px,14vh,72px)}
+    .rail-sub,.facts{display:none}
+    .rail-head{font-size:clamp(20px,5vh,28px); margin-bottom:8px}
+    .planwrap{width:min(74vw,1100px)}
+  }
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:var(--navy)!important; border:1px solid rgba(201,183,156,.5)!important; color:var(--on-navy)!important; font-family:"Jost",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(6px)!important; backdrop-filter:blur(6px)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  .back:hover{background:var(--navy-2)!important; border-color:var(--gold-lt)!important; box-shadow:0 10px 24px -10px rgba(6,9,16,.6)!important}
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:var(--gold-lt)!important}
+</style>
+</head>
+<body data-kd-brand="ros">
+<div class="bg"></div>
+
+<div class="top">
+  <button class="back" id="backBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Return</button>
+  <div class="eyebrow">The Grounds · Master Plan</div>
+  <div class="corner">Embassy One</div>
+</div>
+
+<!-- pan/zoom stage -->
+<div class="stage" id="stage">
+  <div class="canvas" id="canvas">
+    <div class="planwrap" id="planwrap">
+      <img class="planimg" id="planimg" src="../assets/masterplan/views/master-fs.webp" alt="Master plan">
+      <div class="zonesvg-layer" id="zoneSvgLayer" aria-hidden="true"></div>
+      <div class="zonespot" id="zoneSpot" aria-hidden="true"></div>
+      <div id="pinLayer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- right rail -->
+<aside class="rail">
+  <div class="rail-head">Arrival unfolds <em>slowly</em></div>
+  <div class="rail-sub">The gardens reveal themselves in sequence. The landscape is not an amenity bolted on, but the atmosphere within.</div>
+  <div class="views" id="views"></div>
+  <div class="facts" id="facts"></div>
+  <div class="legend">
+    <div class="legend-h"><span id="legendTitle">What's Where</span><span class="ct" id="legendCt"></span></div>
+    <div class="legend-body" id="legendBody"></div>
+  </div>
+</aside>
+
+<div class="zoomctl">
+  <button class="zbtn" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="zbtn" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></button>
+  <button class="zbtn" id="zreset" aria-label="Reset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/></svg></button>
+</div>
+<div class="scalehint" id="scaleHint">100%</div>
+
+<div class="info" id="info">
+  <button class="x" id="infoX">×</button>
+  <div class="ic"><span class="b" id="infoNum">1</span><span class="cat" id="infoCat">Feature</span></div>
+  <h3 id="infoTitle">Title</h3>
+  <p id="infoBody">Description</p>
+</div>
+
+<!-- floating zone info — anchored above the selected zone pin -->
+<div class="zonepop" id="zonePop" aria-hidden="true">
+  <div class="card">
+    <img class="zpimg" id="zpImg" alt="">
+    <button class="x" id="zonePopX" aria-label="Close">×</button>
+    <div class="zc"><span class="sw" id="zpSw"></span><span class="k" id="zpKind">Landscape Zone</span></div>
+    <h3 id="zpTitle"></h3>
+    <p id="zpBody"></p>
+    <span class="tail"></span>
+  </div>
+</div>
+
+<script>
+// ── data: facts ────────────────────────────────────────
+const FACTS=[
+  {n:'5',label:'Seasonal Lanterns'}, {n:'25',label:'Named Features'},
+  {n:'262m',label:'Jogging Loop'}, {n:'9',label:'Landscape Zones'}
+];
+// ── master plan: 25 numbered features (px,py = % of master.webp) ──
+const GROUPS=[['Lanterns'],['Arrival'],['Sport & Play'],['Gardens & Lawn'],['Pool & Wellness'],['Banquet']];
+const MASTER=[
+  {n:1, g:'Lanterns', lantern:1, t:'Twin Lantern', d:'Paired woven-mesh towers marking the entrance arrival.', px:82, py:80},
+  {n:3, g:'Lanterns', lantern:1, t:'Winter Lantern', d:'Terracotta brick-jali planter at the main drop-off.', px:59, py:87},
+  {n:10,g:'Lanterns', lantern:1, t:'Summer Lantern', d:'Frosted glass-block pavilion on the rain terrace.', px:37, py:34},
+  {n:14,g:'Lanterns', lantern:1, t:'Center Lantern', d:'The milky frosted “All Seasons” glass cube at the cascade edge.', px:52, py:41},
+  {n:20,g:'Lanterns', lantern:1, t:'Spring Lantern & Miyawaki Forest', d:'Woven-mesh lantern with a feature tree, in a mini forest.', px:64, py:35},
+  {n:22,g:'Lanterns', lantern:1, t:'Autumn Lantern', d:'Corten-and-wire bridge cabana with a lunar lamp.', px:72, py:49},
+  {n:2, g:'Arrival', t:'Drop-off', d:'The sheltered arrival court.', px:55, py:78},
+  {n:4, g:'Sport & Play', t:"Pet's Park", d:'A fenced run for residents’ pets.', px:30, py:85},
+  {n:5, g:'Sport & Play', t:'Linear Playground', d:'A linear play trail for children.', px:27, py:68},
+  {n:6, g:'Sport & Play', t:'Yoga Deck', d:'A 4.7 × 4.7 m timber practice deck.', px:26, py:51},
+  {n:7, g:'Sport & Play', t:'Pickleball Court', d:'A multi-use sport court.', px:25, py:28},
+  {n:9, g:'Sport & Play', t:'Padel Court', d:'A glazed padel court (20.1 × 9.8 m).', px:28, py:15},
+  {n:8, g:'Gardens & Lawn', t:'Orchard Garden', d:'A fruiting-tree garden.', px:16, py:30},
+  {n:12,g:'Gardens & Lawn', t:'Open Lawn', d:'A flexible event lawn.', px:42, py:24},
+  {n:13,g:'Gardens & Lawn', t:'Seating Area', d:'Shaded garden seating.', px:47, py:18},
+  {n:21,g:'Gardens & Lawn', t:'Grand Trellis', d:'A 14.5 × 7.8 m planted trellis walk.', px:74, py:42},
+  {n:11,g:'Pool & Wellness', t:'Rain Terrace', d:'A water-play terrace (21.3 × 9.8 m).', px:45, py:32},
+  {n:15,g:'Pool & Wellness', t:'Swimming Pool', d:'A 25 × 9 m lap pool.', px:53, py:47},
+  {n:16,g:'Pool & Wellness', t:'Children’s Cabana', d:'Cabana by the children’s pool.', px:43, py:48},
+  {n:17,g:'Pool & Wellness', t:'Pool Edge Cabana', d:'A shaded pool-deck cabana.', px:35, py:54},
+  {n:18,g:'Pool & Wellness', t:'Jacuzzi Cabana', d:'A jacuzzi retreat.', px:64, py:48},
+  {n:19,g:'Pool & Wellness', t:'Pool Deck', d:'The sun-deck along the pool.', px:53, py:54},
+  {n:23,g:'Banquet', t:'Banquet Garden', d:'A garden for events.', px:80, py:48},
+  {n:24,g:'Banquet', t:'Banquet Cabana', d:'A banquet-side cabana.', px:85, py:60},
+  {n:25,g:'Banquet', t:'Banquet Spill-out Deck', d:'An outdoor banquet deck.', px:79, py:66},
+];
+// ── zone legend (zoning view) ──
+const ZONES=[
+  {c:'#c98b6b', px:71, py:82, t:'Drop-off and Vehicular Access Zone', d:'The sheltered arrival court and porte-cochère — the first address moment, framed by the twin and winter lanterns.'},
+  {c:'#b8915a', px:37, py:24, t:'Sports Zone', d:'Padel and half-muga / pickleball courts, a linear playground and a yoga deck — the active heart of the grounds.'},
+  {c:'#a9b06a', px:75, py:30, t:'Lawn & Rain Terrace Zone', d:'A flexible open event lawn beside the rain terrace water feature — the social green for gatherings.'},
+  {c:'#7fa18a', px:38, py:52, t:'Forest Zone', d:'A dense Miyawaki micro-forest woven around the spring lantern — native layered planting for cool shade.'},
+  {c:'#8aa0b4', px:64, py:47, t:'Pool Area', d:'The 25 × 9 m lap pool, children’s pool, pool deck and cabanas — the wellness and leisure zone.'},
+  {c:'#caa36a', px:87, py:45, t:'Herbs Garden Zone', d:'A productive herb and kitchen garden threading between the wellness lawns.'},
+  {c:'#d68f6a', px:90, py:68, t:'Bridge & Rear Entrance Zone', d:'The corten-and-wire autumn bridge cabana marking the rear access and grand trellis walk.'},
+  {c:'#bcae8e', px:82, py:60, t:'Banquet Spill-out Zone', d:'The banquet garden, cabana and outdoor spill-out deck for events at the building’s edge.'},
+  {c:'#cdbf9a', px:42, py:86, t:'Pet-friendly Area', d:'A fenced pet run and pet-friendly lawn for residents and their companions.'}
+];
+const VIEWS=[
+  {key:'master',  label:'Master',   img:'../assets/masterplan/views/master-fs.webp',  mode:'pins',  title:"What's Where"},
+  {key:'zoning',  label:'Zones',    img:'../assets/masterplan/views/master.webp',  fallbackImg:'../assets/masterplan/views/zoning.webp', mode:'zones', title:'Zoning Plan'}
+];
+
+// ── elements ──
+const stage=document.getElementById('stage'), canvas=document.getElementById('canvas');
+const planimg=document.getElementById('planimg'), pinLayer=document.getElementById('pinLayer');
+const zoneSpot=document.getElementById('zoneSpot');
+const legendBody=document.getElementById('legendBody'), legendTitle=document.getElementById('legendTitle'), legendCt=document.getElementById('legendCt');
+const info=document.getElementById('info'), scaleHint=document.getElementById('scaleHint');
+let activeView='master', activeId=null;
+let zonePopOpen=false, curZone=null, curIdx=null, curPopEl=null, zoomRaf=null;
+const zonePop=document.getElementById('zonePop'), zpSw=document.getElementById('zpSw'),
+      zpKind=document.getElementById('zpKind'),
+      zpTitle=document.getElementById('zpTitle'), zpBody=document.getElementById('zpBody');
+// ── SVG zone overlay (real polygons over the master plan) ──
+const zoneSvgLayer=document.getElementById('zoneSvgLayer');
+var zoneSvgLoaded=false, zPaths=[];
+/* viewBox remap: stretches the SVG art so its site outline lands on the master plan's site outline
+   (preserveAspectRatio=none + this box → zones fill the plan's boundary, not the inset artboard). Tunable. */
+var VB={x:362, y:182, w:3200, h:1800};   /* zones scaled ~20% up (viewBox tightened around the zone centre) */
+var ZNAMES=[
+  {c:'#8697a6', n:'Pool Area',                       d:'The 25 × 9 m lap pool, children’s pool, deck and cabanas — the wellness core.'},
+  {c:'#dec7b4', n:'Banquet Spill-out Zone',          d:'The banquet garden, cabana and outdoor spill-out deck for events.'},
+  {c:'#d6c197', n:'Herbs Garden Zone',               d:'A productive herb and kitchen garden threading between the wellness lawns.'},
+  {c:'#d7c095', n:'Bridge & Rear Entrance Zone',     d:'The corten bridge cabana marking the rear access and grand trellis walk.'},
+  {c:'#cdbd90', n:'Pet-friendly Area',               d:'A fenced pet run and pet-friendly lawn for residents and their companions.'},
+  {c:'#ebe7e1', n:'Arrival & Drop-off Zone',         d:'The sheltered arrival court and porte-cochère — the first address moment.'},
+  {c:'#a09d6e', n:'Lawn & Rain Terrace Zone',        d:'A flexible event lawn beside the rain-terrace water feature.'},
+  {c:'#d5d5ca', n:'Forest Zone',                     d:'A dense Miyawaki micro-forest — native, layered planting for cool shade.'},
+  {c:'#b7827a', n:'Sports Zone',                     d:'Padel and half-court, a linear playground and a yoga deck — the active heart.'},
+  {c:'#ab8870', n:'Banquet Garden Zone',             d:'A garden for gatherings beside the spill-out deck.'},
+  {c:'#d8a382', n:'Drop-off & Vehicular Access Zone',d:'The vehicular access loop and rear-entrance route.'},
+  {c:'#bcc8c9', n:'Rain Terrace',                    d:'A still-water rain terrace mirrored beside the wellness lawns.'}
+];
+function loadZoneSvg(cb){
+  if(zoneSvgLoaded){ cb&&cb(); return; }
+  fetch('../assets/zones-svg.svg').then(function(r){ return r.text(); }).then(function(txt){
+    zoneSvgLayer.innerHTML=txt;
+    var svgEl=zoneSvgLayer.querySelector('svg'); if(svgEl){ svgEl.setAttribute('preserveAspectRatio','xMidYMid meet'); } // natural proportions (no stretch); sized to 70% via CSS
+    zPaths=[].slice.call(zoneSvgLayer.querySelectorAll('path,polygon'));
+    zPaths.forEach(function(p,i){ p.setAttribute('class', ((p.getAttribute('class')||'')+' zpath').trim()); p.setAttribute('data-z', i);
+      if(ZNAMES[i]) p.style.setProperty('--zc', ZNAMES[i].c);
+      p.addEventListener('click', function(ev){ ev.stopPropagation(); selectSvgZone(i); }); });
+    zoneSvgLoaded=true; cb&&cb();
+  }).catch(function(e){ console.warn('zones svg load failed — falling back to flat image', e);
+    var zv=VIEWS.find(function(x){ return x.key==='zoning'; }); if(zv&&zv.fallbackImg){ planimg.src=zv.fallbackImg; } cb&&cb(); });
+}
+// select a zone polygon: glow it, dim the rest, fly to its true bounds, float the card above it
+function selectSvgZone(i){ var nm=ZNAMES[i]||{n:'Zone '+(i+1),d:'',c:'#caa36a'}; activeId='zsvg'+i;
+  zPaths.forEach(function(p,j){ p.classList.toggle('is-active', j===i); p.classList.toggle('dim', j!==i); });
+  legendBody.querySelectorAll('.lg-item').forEach(function(it){ it.classList.toggle('is-active', +it.dataset.zone===i); });
+  var act=legendBody.querySelector('.lg-item.is-active'); if(act&&act.scrollIntoView)act.scrollIntoView({block:'nearest'});
+  info.classList.remove('on'); if(zoneSpot) zoneSpot.classList.remove('on');
+  document.getElementById('zpImg').src='../assets/renders/exterior/overview-dev.webp';
+  zpSw.style.background=nm.c; zpKind.textContent='Landscape Zone'; zpTitle.textContent=nm.n; zpBody.textContent=nm.d;
+  curIdx=i; curPopEl=zPaths[i];
+  var cs=scale,cx=tx,cy=ty; scale=1;tx=0;ty=0;apply();                 // measure the zone at base scale
+  var px=50,py=50;
+  try{ var bb=zPaths[i].getBBox(), m=zPaths[i].getScreenCTM(), ux=bb.x+bb.width/2, uy=bb.y+bb.height/2;
+    var sx=m.a*ux+m.c*uy+m.e, sy=m.b*ux+m.d*uy+m.f, pr=document.getElementById('planwrap').getBoundingClientRect();
+    px=(sx-pr.left)/pr.width*100; py=(sy-pr.top)/pr.height*100; }catch(e){}
+  scale=cs;tx=cx;ty=cy;apply();
+  var z={ px:px, py:py, c:nm.c }; curZone=z;
+  zonePopOpen=false; zonePop.classList.remove('on');
+  zoneFly(z);
+  clearTimeout(_zoneT); _zoneT=setTimeout(function(){ zonePopOpen=true; positionZonePop(); zonePop.classList.add('on'); }, 580);
+}
+
+// facts
+const factsEl=document.getElementById('facts');
+FACTS.forEach(f=>{ const d=document.createElement('div'); d.className='fact';
+  d.innerHTML='<div class="n">'+f.n+'</div><div class="l">'+f.label+'</div>'; factsEl.appendChild(d); });
+
+// view switcher
+const viewsEl=document.getElementById('views');
+VIEWS.forEach((v,i)=>{ const b=document.createElement('button'); b.className='vbtn'+(i===0?' is-active':'');
+  b.textContent=v.label; b.dataset.key=v.key; b.addEventListener('click',()=>setView(v.key)); viewsEl.appendChild(b); });
+
+// ── transform state (pan/zoom) ──
+let scale=1, tx=0, ty=0; const MIN=1, MAX=4.5;
+function apply(){ canvas.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; scaleHint.textContent=Math.round(scale*100)+'%'; if(zonePopOpen) positionZonePop(); }
+function clampPan(){ const r=stage.getBoundingClientRect();
+  const maxX=(scale-1)*r.width*0.5+r.width*0.18, maxY=(scale-1)*r.height*0.5+r.height*0.18;
+  tx=Math.max(-maxX,Math.min(maxX,tx)); ty=Math.max(-maxY,Math.min(maxY,ty)); }
+function zoomAt(cx,cy,ns){ ns=Math.max(MIN,Math.min(MAX,ns)); const r=stage.getBoundingClientRect();
+  const ox=cx-r.left, oy=cy-r.top; tx=ox-(ox-tx)*(ns/scale); ty=oy-(oy-ty)*(ns/scale); scale=ns; clampPan(); apply(); }
+function reset(){ scale=1; tx=0; ty=0; apply(); }
+
+stage.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY, scale*(e.deltaY<0?1.12:1/1.12)); },{passive:false});
+document.getElementById('zin').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,scale+0.5);};
+document.getElementById('zout').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,scale-0.5);};
+document.getElementById('zreset').onclick=reset;
+stage.addEventListener('dblclick',e=>{ if(scale>1.05) reset(); else zoomAt(e.clientX,e.clientY,2.4); });
+let drag=false,lx=0,ly=0,moved=0,downPin=false;
+stage.addEventListener('pointerdown',e=>{ downPin=!!(e.target.closest('.pin')||e.target.closest('.zpath')); moved=0; if(downPin)return; drag=true;lx=e.clientX;ly=e.clientY;stage.classList.add('grabbing');stage.setPointerCapture(e.pointerId); });
+stage.addEventListener('pointermove',e=>{ if(!drag)return; const dx=e.clientX-lx,dy=e.clientY-ly; lx=e.clientX;ly=e.clientY; moved+=Math.abs(dx)+Math.abs(dy); tx+=dx;ty+=dy; clampPan(); apply(); });
+function endDrag(e){ drag=false; stage.classList.remove('grabbing'); try{stage.releasePointerCapture(e.pointerId);}catch(_){}
+  if(!downPin && moved<6){ if(scale>1.05) reset(); if(activeId) clearSel(); } }   // click on empty plan → zoom out + deselect
+stage.addEventListener('pointerup',endDrag); stage.addEventListener('pointercancel',endDrag);
+let pts=new Map(), pd0=0, ps0=1;
+stage.addEventListener('pointerdown',e=>{ pts.set(e.pointerId,e); if(pts.size===2){drag=false; const a=[...pts.values()]; pd0=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY); ps0=scale;} });
+stage.addEventListener('pointermove',e=>{ if(!pts.has(e.pointerId))return; pts.set(e.pointerId,e); if(pts.size===2){ const a=[...pts.values()]; const d=Math.hypot(a[0].clientX-a[1].clientX,a[0].clientY-a[1].clientY); const cx=(a[0].clientX+a[1].clientX)/2, cy=(a[0].clientY+a[1].clientY)/2; if(pd0) zoomAt(cx,cy, ps0*(d/pd0)); } });
+function dropPt(e){ pts.delete(e.pointerId); if(pts.size<2)pd0=0; }
+stage.addEventListener('pointerup',dropPt); stage.addEventListener('pointercancel',dropPt);
+
+// ── is the rail a bottom sheet (phone portrait) rather than a left rail? ──
+function isSheet(){ return window.matchMedia('(max-width:560px) and (max-aspect-ratio:3/4)').matches; }
+// the visible map centre, accounting for either a LEFT rail (desktop/tablet) or a BOTTOM sheet (phone)
+function openCentre(pr){
+  const railEl=document.querySelector('.rail');
+  const rr=railEl?railEl.getBoundingClientRect():null;
+  if(isSheet()){
+    // sheet sits at the bottom — open area is the map ABOVE it
+    const topChrome=clamp(pr.height*0.16,120,200);          // top bar + header zone
+    const sheetTop=rr?rr.top:pr.height;
+    return { cx:pr.width/2, cy:(topChrome + Math.min(sheetTop,pr.height))/2 };
+  }
+  const railWidth=rr?rr.width:0;
+  return { cx:(pr.width + railWidth)/2, cy:pr.height/2 };    // open area is right of the left rail
+}
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+// ── fly-to a master pin ──
+function flyTo(m){ const ns=isSheet()?2.0:2.4;
+  scale=1; tx=0; ty=0; apply();
+  const pr=stage.getBoundingClientRect(), wr=document.getElementById('planwrap').getBoundingClientRect();
+  const pinX=wr.left-pr.left + wr.width*(m.px/100);
+  const pinY=wr.top-pr.top + wr.height*(m.py/100);
+  const o=openCentre(pr);
+  tx=o.cx - pinX*ns; ty=o.cy - pinY*ns; scale=ns; apply();   // center the clicked pin exactly in the OPEN area (no clamp → edge pins still centre)
+}
+
+// ── render pins (master features + zone markers) ──
+function renderPins(){ pinLayer.innerHTML='';
+  if(activeView==='master'){
+    MASTER.forEach(m=>{ const p=document.createElement('div');
+      p.className='pin'+(m.lantern?' is-lantern':''); p.style.left=m.px+'%'; p.style.top=m.py+'%';
+      p.dataset.n=m.n; p.innerHTML=m.n+'<span class="ring"></span>';
+      p.addEventListener('click',ev=>{ ev.stopPropagation(); select(m); });
+      pinLayer.appendChild(p); });
+  } else if(activeView==='zones'){
+    ZONES.forEach((z,zi)=>{ const p=document.createElement('div');
+      p.className='zpin'; p.style.left=z.px+'%'; p.style.top=z.py+'%'; p.style.background=z.c; p.style.color=z.c; p.dataset.zone=zi;
+      p.addEventListener('click',ev=>{ ev.stopPropagation(); selectZone(z,zi); });
+      pinLayer.appendChild(p); });
+  }
+}
+// ── smooth spring-ish camera move + zone fly + popup anchoring ──
+function animateTo(tS,tX,tY,dur){ if(zoomRaf)cancelAnimationFrame(zoomRaf);
+  const cs=scale,cx=tx,cy=ty; scale=tS;tx=tX;ty=tY; const fS=scale,fX=tx,fY=ty; scale=cs;tx=cx;ty=cy;   // center exactly (no clamp)
+  const s0=scale,x0=tx,y0=ty,t0=performance.now(); dur=dur||760; const ease=p=>1-Math.pow(1-p,3);
+  function step(now){ let p=Math.min(1,(now-t0)/dur), e=ease(p);
+    scale=s0+(fS-s0)*e; tx=x0+(fX-x0)*e; ty=y0+(fY-y0)*e; apply();
+    if(p<1) zoomRaf=requestAnimationFrame(step); else zoomRaf=null; }
+  zoomRaf=requestAnimationFrame(step);
+}
+function zoneFly(z){ const ns=isSheet()?2.0:2.3; const cs=scale,cx=tx,cy=ty;
+  scale=1;tx=0;ty=0;apply();
+  const pr=stage.getBoundingClientRect(), wr=document.getElementById('planwrap').getBoundingClientRect();
+  const pinX=wr.left-pr.left + wr.width*(z.px/100), pinY=wr.top-pr.top + wr.height*(z.py/100);
+  const o=openCentre(pr);
+  const tX=o.cx-pinX*ns, tY=o.cy-pinY*ns;
+  scale=cs;tx=cx;ty=cy;apply();
+  animateTo(ns,tX,tY,780);
+}
+function positionZonePop(){ if(!curPopEl) return;
+  var r; try{ r=curPopEl.getBoundingClientRect(); }catch(e){ return; }
+  var vw=window.innerWidth, vh=window.innerHeight;
+  var cardW=zonePop.offsetWidth||280, cardH=zonePop.offsetHeight||130;     // card is anchored bottom-centre (translate(-50%,-100%))
+  var railEl=document.querySelector('.rail'); var railRect=railEl?railEl.getBoundingClientRect():null;
+  var sheet=isSheet();
+  var railR=(railRect&&!sheet)?railRect.right:0;   // on phone the rail is a bottom sheet, not a left edge
+  var sheetTop=(railRect&&sheet)?railRect.top:vh;
+  var x=r.left + r.width/2;                 // centre on the zone…
+  var y=r.top - 14;                         // …card floats just above the zone's top edge
+  // clamp fully inside the viewport so it never slides off the top/edges when the zone is zoomed in big
+  var minX=railR + cardW/2 + 16, maxX=vw - cardW/2 - 16; if(minX>maxX){ minX=maxX=(railR+vw)/2; }
+  var minY=Math.max(cardH + 20, Math.round(vh*0.18)), maxY=sheet ? (sheetTop - 12) : (vh - 18);  // keep the card above the bottom sheet on phones
+  if(minY>maxY){ minY=maxY=Math.max(cardH+12, sheetTop-12); }
+  x=Math.max(minX, Math.min(maxX, x));
+  y=Math.max(minY, Math.min(maxY, y));
+  zonePop.style.left=x+'px'; zonePop.style.top=y+'px';
+}
+// ── render legend ──
+function renderLegend(){ const v=VIEWS.find(x=>x.key===activeView);
+  legendTitle.textContent=v.title; legendBody.innerHTML='';
+  if(v.mode==='pins'){ legendCt.textContent=MASTER.length;
+    GROUPS.forEach(([g])=>{ const items=MASTER.filter(m=>m.g===g); if(!items.length)return;
+      const h=document.createElement('div'); h.className='lg-group-h'; h.textContent=g; legendBody.appendChild(h);
+      items.forEach(m=>{ const it=document.createElement('div'); it.className='lg-item'+(m.lantern?' lantern':''); it.dataset.n=m.n;
+        it.innerHTML='<span class="num">'+m.n+'</span><span class="t">'+m.t+'</span><span class="go">›</span>';
+        it.addEventListener('click',()=>select(m)); legendBody.appendChild(it); }); });
+  } else if(v.mode==='zones'){ legendCt.textContent=ZNAMES.length;
+    ZNAMES.forEach(function(z,zi){ var it=document.createElement('div'); it.className='lg-item zone'; it.dataset.zone=zi;
+      it.innerHTML='<span class="sw" style="background:'+z.c+'"></span><span class="t">'+z.n+'</span><span class="go">›</span>';
+      it.addEventListener('click', function(){ selectSvgZone(zi); }); legendBody.appendChild(it); });
+  } else if(v.mode==='note'){ legendCt.textContent='';
+    const d=document.createElement('div'); d.style.cssText='padding:14px 11px;font-weight:300;color:var(--on-navy);font-size:13px;line-height:1.6';
+    d.textContent=v.note; legendBody.appendChild(d);
+  } else legendCt.textContent='';
+}
+// ── render image for the popup ──
+/* per-feature render mapping — spreads all available renders as relevantly as possible (lanterns get their exact render; sport/gardens/pool/banquet get contextual renders) to avoid repeats */
+var FEAT_IMG={
+  /* lanterns */
+  1:'lanterns/twin.webp', 3:'lanterns/twin.webp', 10:'lanterns/summer.webp', 14:'lanterns/center.webp', 20:'lanterns/spring.webp', 22:'lanterns/autumn.webp',
+  /* arrival */ 2:'exterior/tower-scene.webp',
+  /* sport & play */ 4:'amenities/pets.webp', 5:'amenities/lawn.webp', 6:'amenities/yoga.webp', 7:'amenities/muga.webp', 9:'amenities/muga.webp',
+  /* gardens & lawn */ 8:'exterior/ext-2.webp', 12:'amenities/lawn.webp', 13:'exterior/ext-1.webp', 21:'lanterns/lobby.webp',
+  /* pool & wellness */ 11:'exterior/tower-scene.webp', 15:'exterior/overview-dev.webp', 16:'exterior/ext-3.webp', 17:'exterior/ext-1.webp', 18:'exterior/ext-2.webp', 19:'exterior/tower-aerial.webp',
+  /* banquet */ 23:'exterior/ext-3.webp', 24:'exterior/ext-2.webp', 25:'exterior/ext-1.webp'
+};
+function featImg(m){ var R='../assets/renders/';
+  if(m && m.n && FEAT_IMG[m.n]) return R+FEAT_IMG[m.n];
+  return R+'exterior/overview-dev.webp'; }
+// ── select feature ──
+function select(m){ activeId=m.n;
+  pinLayer.querySelectorAll('.pin').forEach(p=>{ p.classList.toggle('is-active',+p.dataset.n===m.n); p.classList.toggle('dim',+p.dataset.n!==m.n); });
+  legendBody.querySelectorAll('.lg-item').forEach(it=>it.classList.toggle('is-active',+it.dataset.n===m.n));
+  const act=legendBody.querySelector('.lg-item.is-active'); if(act&&act.scrollIntoView)act.scrollIntoView({block:'nearest'});
+  // floating card anchored ABOVE the selected pin (replaces the corner info card)
+  info.classList.remove('on');
+  curPopEl=pinLayer.querySelector('.pin[data-n="'+m.n+'"]'); curIdx=null;
+  document.getElementById('zpImg').src=featImg(m);
+  zpSw.style.background='var(--gold)'; zpKind.textContent=(m.lantern?'Seasonal Lantern':m.g); zpTitle.textContent=m.t; zpBody.textContent=m.d;
+  zonePopOpen=false; zonePop.classList.remove('on');
+  flyTo(m);
+  clearTimeout(_zoneT); _zoneT=setTimeout(function(){ zonePopOpen=true; positionZonePop(); zonePop.classList.add('on'); }, 440);
+}
+function clearSel(){ activeId=null; curZone=null; curIdx=null; curPopEl=null; zonePopOpen=false; if(zonePop) zonePop.classList.remove('on');
+  info.classList.remove('on'); document.getElementById('infoNum').style.background='';
+  pinLayer.querySelectorAll('.pin').forEach(p=>p.classList.remove('is-active','dim'));
+  pinLayer.querySelectorAll('.zpin').forEach(p=>p.classList.remove('is-active','dim'));
+  zPaths.forEach(function(p){ p.classList.remove('is-active','dim'); });
+  legendBody.querySelectorAll('.lg-item').forEach(it=>it.classList.remove('is-active')); if(zoneSpot) zoneSpot.classList.remove('on'); }
+// ── select a ZONE: pin highlights + spotlight + smooth zoom + floating card springs up above the pin ──
+let _zoneT=null;
+function selectZone(z,zi){ activeId='z'+zi; curZone=z;
+  legendBody.querySelectorAll('.lg-item').forEach(it=>it.classList.toggle('is-active',+it.dataset.zone===zi));
+  const act=legendBody.querySelector('.lg-item.is-active'); if(act&&act.scrollIntoView)act.scrollIntoView({block:'nearest'});
+  pinLayer.querySelectorAll('.zpin').forEach(p=>{ p.classList.toggle('is-active',+p.dataset.zone===zi); p.classList.toggle('dim',+p.dataset.zone!==zi); });
+  info.classList.remove('on');                                   // zones use the anchored card, not the corner info
+  if(zoneSpot){ zoneSpot.style.setProperty('--zx', z.px+'%'); zoneSpot.style.setProperty('--zy', z.py+'%'); zoneSpot.style.setProperty('--zc', z.c); zoneSpot.classList.add('on'); }
+  document.getElementById('zpImg').src='../assets/renders/exterior/overview-dev.webp';
+  zpSw.style.background=z.c; zpTitle.textContent=z.t; zpBody.textContent=z.d;
+  zonePopOpen=false; zonePop.classList.remove('on');             // hide while the camera flies in
+  zoneFly(z);
+  clearTimeout(_zoneT); _zoneT=setTimeout(()=>{ zonePopOpen=true; positionZonePop(); zonePop.classList.add('on'); }, 580);
+}
+document.getElementById('infoX').onclick=clearSel;
+document.getElementById('zonePopX').onclick=clearSel;
+
+// ── view switch ──
+function setView(key){ if(key===activeView)return; activeView=key; clearSel(); reset();
+  viewsEl.querySelectorAll('.vbtn').forEach(b=>b.classList.toggle('is-active',b.dataset.key===key));
+  const v=VIEWS.find(x=>x.key===key);
+  stage.style.visibility='';
+  if(key==='zoning'){ planimg.style.objectFit=''; planimg.style.opacity='0'; planimg.style.transform=''; loadZoneSvg(function(){ zoneSvgLayer.classList.add('on'); }); }   /* hide the base plan — show zones only */
+  else { planimg.style.objectFit=''; planimg.style.opacity=''; planimg.style.transform=''; zoneSvgLayer.classList.remove('on'); }
+  planimg.classList.add('swapping');
+  setTimeout(()=>{ planimg.onload=()=>{ planimg.classList.remove('swapping'); fitWrap(); }; planimg.src=v.img; },180);
+  renderLegend(); renderPins();
+}
+
+// keep the plan wrapper matched to the current drawing's aspect so pins (% of wrapper) align exactly
+function fitWrap(){ if(planimg.naturalWidth) document.getElementById('planwrap').style.aspectRatio = planimg.naturalWidth+'/'+planimg.naturalHeight; }
+if(planimg.complete) fitWrap(); else planimg.onload=()=>{ planimg.classList.remove('swapping'); fitWrap(); };
+apply(); renderLegend(); renderPins();
+window.addEventListener('resize',()=>{ if(zonePopOpen) positionZonePop(); });
+document.getElementById('backBtn').onclick=()=>{ try{ parent.postMessage('eo-screen-close','*'); }catch(e){ location.href='../index.html'; } };
+/* dev/deep-link: ?v=<view> opens a view; ?z=<i> selects a zone (also handy for QA) */
+(function(){ try{ var q=new URLSearchParams(location.search); var vv=q.get('v'); if(vv&&VIEWS.find(x=>x.key===vv)) setView(vv);
+  var zz=q.get('z'); if(zz!=null) setTimeout(function(){ if(zPaths[+zz]) selectSvgZone(+zz); else if(ZONES[+zz]) selectZone(ZONES[+zz],+zz); }, 950); }catch(e){}
+  try{ var pp=new URLSearchParams(location.search).get('pin'); if(pp!=null){ var mm=MASTER.find(function(x){return x.n===+pp;}); if(mm) setTimeout(function(){ select(mm); }, 600); } }catch(e){} })();
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

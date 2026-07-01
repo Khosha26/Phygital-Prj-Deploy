@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bespoke Services · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  BESPOKE SERVICES — the managed-living / concierge experience.
+  Opened from the Service button. Self-contained screen with internal
+  view states (no iframe-in-iframe):
+      THRESHOLD → HUB → ┌ SERVICE DETAIL (master-detail, faded nav inert)
+                        └ CARE TIERS (Curated · Considered · Complete,
+                                      sidebar toggles in place)
+  Register = ink-navy + bone, pale-champagne hairline/text accent only.
+  Glass buttons, no gold borders. All prior motion mechanics preserved
+  (staggered reveals, champagne scale+tint pop, group zoom).
+  The "Fifth Key" / key / crest concept has been removed entirely.
+  ──────────────────────────────────────────────────────────────────────
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="../icons/favicon.png">
+<style>
+  :root{
+    /* deck palette — ink-navy primary + warm bone */
+    --ink:#121621;          /* signature dark navy-charcoal (statement bg) */
+    --ink-2:#1a2030;         /* raised panel on dark */
+    --ink-3:#222a3a;
+    --bone:#e9e1d4;          /* warm light bg */
+    --bone-2:#f2ece0;
+    --paper:#faf8f4;
+    --taupe:#6e5c58;
+    --champ:#c9b79c;         /* pale champagne — hairline/text accent ONLY, never a button border */
+    --champ-dim:#a99e8c;
+    --on-dark:#ece8e0;
+    --on-dark-dim:#9aa1ad;
+    --on-light:#1b2230;
+    --on-light-dim:#6b6f78;
+    --line-dark:rgba(236,232,224,.14);
+    --line-light:rgba(18,22,33,.12);
+    /* motion */
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-io:cubic-bezier(.77,0,.175,1);
+    --over:cubic-bezier(.34,1.3,.5,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--on-dark); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; background:var(--ink);
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+
+  /* ── ink ground used across ALL service screens ── */
+  .sky{position:fixed; inset:0; z-index:0;
+    background:radial-gradient(125% 95% at 50% 0%, var(--ink-2), var(--ink) 62%), var(--ink)}
+  /* architectural line-drawing of the real ONE tower — a soft blended backdrop that reads across
+     every Bespoke Services view (threshold / hub / care tiers / tier detail); it sits behind the
+     translucent glass so it shows through the cards without fighting the copy */
+  .sky::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-outline-bone.webp) no-repeat right -7% top -3%;
+    background-size:auto 116%; opacity:.11; mix-blend-mode:screen; filter:blur(.3px)}
+  .grain{position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.5; mix-blend-mode:soft-light;
+    background-image:radial-gradient(rgba(236,232,224,.05) .5px, transparent .6px); background-size:3px 3px}
+
+  /* ── glass primitive (brief spec) ── */
+  .glass{background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,183,156,.20); border-radius:14px; color:var(--on-dark);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:transform .16s var(--ease-out), background .2s, border-color .2s}
+  .glass:active{transform:scale(.97)}
+  @media(hover:hover){ .glass:hover{border-color:rgba(201,183,156,.34)} }
+
+  /* ── shared chrome ── */
+  .back{position:fixed; top:clamp(16px,2.4vh,30px); left:clamp(20px,2.6vw,48px); z-index:60;
+    display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:9px 20px 9px 15px; border-radius:999px; cursor:pointer;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,183,156,.20); color:var(--on-dark);
+    font-family:"Jost",sans-serif; font-size:clamp(10px,1.15vh,13px); font-weight:500; letter-spacing:.22em; text-transform:uppercase;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:background .2s, border-color .2s, transform .16s var(--ease-out), opacity .4s}
+  @media(hover:hover){ .back:hover{border-color:rgba(201,183,156,.36)} }
+  .back:active{transform:scale(.97)}
+  .back svg{width:15px; height:15px; display:block; stroke:var(--champ)}
+  .corner{position:fixed; top:clamp(16px,2.4vh,30px); right:clamp(20px,2.6vw,48px); z-index:60;
+    font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--champ-dim)}
+
+  /* ── view stack ── */
+  .exp{position:fixed; inset:0; z-index:5}
+  .view{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:clamp(64px,9vh,104px) clamp(26px,4vw,72px) clamp(28px,5vh,56px);
+    opacity:0; visibility:hidden; transform:scale(.985); transition:opacity .5s var(--ease-out), transform .55s var(--ease-out), visibility .5s}
+  .view.is-on{opacity:1; visibility:visible; transform:none}
+
+  /* base eyebrow */
+  .eyebrow{font-family:"Jost"; font-weight:500; text-transform:uppercase; color:var(--champ);
+    font-size:clamp(10px,1.2vh,13px); letter-spacing:.34em; margin-bottom:clamp(12px,2vh,20px)}
+
+  /* shared diamond divider */
+  .orn{display:flex; align-items:center; justify-content:center; gap:9px; width:clamp(108px,12vw,150px); color:var(--champ); margin:clamp(5px,.9vh,10px) auto}
+  .orn i{height:1px; flex:1; background:linear-gradient(90deg,transparent,currentColor); opacity:.5}
+  .orn i+i{background:linear-gradient(90deg,currentColor,transparent)}
+  .orn b{width:5px; height:5px; background:currentColor; transform:rotate(45deg); flex:0 0 auto; opacity:.85}
+
+  /* ════ THRESHOLD — clean ink antechamber (no key / no crest) ════ */
+  .v-threshold{text-align:center}
+  .thr-wrap{position:relative; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    width:100%; height:100%; padding:clamp(38px,7vh,88px) clamp(24px,4vw,64px)}
+  .bs-title{font-family:"Cormorant Garamond",serif; font-weight:300; text-transform:uppercase; color:var(--on-dark); line-height:1.02;
+    font-size:clamp(40px,9.5vh,108px); letter-spacing:.12em; text-shadow:0 3px 30px rgba(8,10,16,.6)}
+  .bs-sub{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:400; color:var(--champ);
+    font-size:clamp(15px,2.2vh,25px); line-height:1.5; max-width:34ch; margin:clamp(14px,2.4vh,26px) auto clamp(28px,4.4vh,50px)}
+  .enter-btn{display:inline-flex; align-items:center; gap:13px; cursor:pointer;
+    padding:clamp(15px,2.1vh,21px) clamp(34px,4vw,58px); border-radius:999px;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,183,156,.20); color:var(--on-dark);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    font-family:"Jost"; font-weight:500; font-size:clamp(11px,1.4vh,15px); letter-spacing:.26em; text-transform:uppercase;
+    transition:transform .16s var(--ease-out), background .2s, border-color .2s}
+  @media(hover:hover){ .enter-btn:hover{border-color:rgba(201,183,156,.36)} .enter-btn:hover .arr{transform:translateX(4px)} }
+  .enter-btn:active{transform:scale(.97)}
+  .enter-btn .arr{transition:transform .3s var(--ease-out)}
+
+  /* ════ HUB — four service pillars (glass cards on ink) ════ */
+  .v-hub{justify-content:center; padding-top:clamp(46px,7vh,88px); padding-bottom:clamp(20px,3.5vh,44px)}
+  .v-hub::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(56% 62% at 50% 22%, rgba(236,232,224,.05), transparent 66%)}
+  .v-hub>*{position:relative; z-index:1}
+  .hubhead{text-align:center; margin-bottom:clamp(12px,2.2vh,24px); max-width:min(960px,94vw)}
+  .hubhead h2{font-family:"Cormorant Garamond",serif; font-weight:400; text-transform:uppercase; color:var(--on-dark);
+    font-size:clamp(26px,4.6vh,52px); line-height:1.04; letter-spacing:.07em; text-shadow:0 2px 22px rgba(8,10,16,.6)}
+  .hubhead h2 em{font-style:italic; color:var(--champ); font-weight:400; text-transform:none}
+  .hubline{text-align:center; font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:400;
+    color:var(--on-dark-dim); font-size:clamp(13px,1.8vh,20px); line-height:1.55; max-width:min(620px,90vw);
+    margin:clamp(8px,1.4vh,16px) auto clamp(16px,2.6vh,30px)}
+  .hubline b{color:var(--champ); font-weight:500; font-style:normal}
+
+  /* four glass cards — floating in 3D (calm tilt) */
+  .keys4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:clamp(14px,1.6vw,26px); width:min(1240px,95vw); align-items:start; perspective:1600px}
+  .kcard{position:relative; cursor:pointer; text-align:left; appearance:none; isolation:isolate; overflow:hidden;
+    transform-style:preserve-3d; will-change:transform;
+    border:1px solid rgba(201,183,156,.20); border-radius:18px; padding:clamp(18px,2.6vh,28px) clamp(16px,1.5vw,24px) clamp(15px,2.1vh,22px);
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 34px 70px -30px rgba(6,9,16,.78), inset 0 1px 0 rgba(236,232,224,.12);
+    min-height:clamp(300px,52vh,500px); display:flex; flex-direction:column;
+    animation:cardFloat 9s ease-in-out infinite; transition:box-shadow .4s, border-color .4s, background .3s}
+  /* subtle bone shine sweeping across each card */
+  .kshine{position:absolute; inset:0; z-index:2; pointer-events:none; border-radius:inherit; overflow:hidden}
+  .kshine::before{content:""; position:absolute; top:-30%; left:-70%; width:55%; height:170%; transform:rotate(8deg);
+    background:linear-gradient(100deg, transparent, rgba(236,232,224,.10), transparent);
+    animation:cardShine 6.5s ease-in-out var(--sd,0s) infinite}
+  @keyframes cardShine{0%{left:-70%} 58%,100%{left:150%}}
+  @media (prefers-reduced-motion:reduce){ .kshine{display:none} }
+  @keyframes cardFloat{
+    0%{transform:rotateY(-3.2deg) rotateX(1deg)}
+    50%{transform:rotateY(3.2deg) rotateX(-1deg)}
+    100%{transform:rotateY(-3.2deg) rotateX(1deg)}}
+  .kcard:nth-child(1){animation-delay:0s} .kcard:nth-child(2){animation-delay:-2.25s}
+  .kcard:nth-child(3){animation-delay:-4.5s} .kcard:nth-child(4){animation-delay:-6.75s}
+  .kcard.tilt{animation:none; transition:transform .12s ease-out, box-shadow .4s, border-color .4s}
+  /* dim siblings while one pops */
+  .keys4.dim .kcard:not(.pop){opacity:.22; filter:blur(1.5px); transform:scale(.95); transition:opacity .45s, filter .45s, transform .45s; animation:none}
+  /* champagne scale+tint pop (replaces the old gold-key flip) */
+  .kcard.pop{animation:cardPop .5s var(--ease-out) forwards; z-index:6}
+  @keyframes cardPop{0%{transform:scale(1)} 45%{transform:scale(1.045)} 100%{transform:scale(1)}}
+  .kcard::after{content:""; position:absolute; inset:0; z-index:3; opacity:0; border-radius:inherit; pointer-events:none;
+    background:radial-gradient(90% 70% at 50% 0%, rgba(201,183,156,.22), transparent 70%); transition:opacity .4s var(--ease-out)}
+  .kcard.pop::after{opacity:1; transition:opacity .2s}
+  @media (hover:hover){ .kcard:hover{transform:translateY(-6px); border-color:rgba(201,183,156,.36); background:
+        radial-gradient(130% 100% at 78% 8%, rgba(70,86,120,.24), transparent 60%),
+        linear-gradient(155deg, rgba(26,33,50,.66), rgba(16,21,32,.58));
+      box-shadow:0 46px 92px -30px rgba(6,9,16,.88), inset 0 1px 0 rgba(236,232,224,.14)} .kcard:hover::after{opacity:.55} }
+  .kcard:active{transform:translateY(-3px) scale(.993)}
+  .kc-no{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(18px,2.4vh,28px); line-height:1}
+  .kc-rule{display:flex; align-items:center; gap:7px; width:clamp(40px,4vw,58px); color:var(--champ); margin:clamp(8px,1.4vh,14px) 0 clamp(10px,1.6vh,16px)}
+  .kc-rule b{width:5px; height:5px; background:currentColor; transform:rotate(45deg); flex:0 0 auto; opacity:.85}
+  .kc-rule i{height:1px; flex:1; background:linear-gradient(90deg,currentColor,transparent); opacity:.6}
+  .kcard h3{font-family:"Cormorant Garamond",serif; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--on-dark); font-size:clamp(20px,2.9vh,31px); line-height:1.08}
+  .kc-ess{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(12.5px,1.6vh,17px); line-height:1.4; margin-top:6px}
+  .kc-list{list-style:none; margin-top:clamp(12px,1.9vh,20px); display:flex; flex-direction:column; gap:clamp(8px,1.2vh,13px); flex:1 1 auto}
+  .kc-list li{position:relative; padding-left:17px; color:var(--on-dark-dim); font-weight:300; font-size:clamp(11px,1.4vh,14px); line-height:1.4}
+  .kc-list li::before{content:""; position:absolute; left:0; top:.5em; width:5px; height:5px; border-radius:50%; background:var(--champ)}
+  /* card CTA — glass pill */
+  .kc-cta{display:flex; align-items:center; justify-content:center; gap:9px; margin-top:clamp(12px,1.8vh,18px);
+    padding:clamp(10px,1.5vh,14px) 16px; border:1px solid rgba(201,183,156,.20); border-radius:12px;
+    color:var(--on-dark); font-family:"Jost"; font-weight:500; font-size:clamp(9px,1.05vh,12px); letter-spacing:.24em; text-transform:uppercase;
+    background:linear-gradient(155deg, rgba(30,46,104,.55), rgba(18,30,68,.48)); transition:border-color .3s, color .3s, background .3s}
+  .kc-cta .arr{color:var(--champ); transition:transform .3s var(--ease-out)}
+  @media (hover:hover){ .kcard:hover .kc-cta{border-color:rgba(201,183,156,.36); background:linear-gradient(155deg, rgba(26,33,50,.62), rgba(16,21,32,.54))} .kcard:hover .kc-cta .arr{transform:translateX(4px)} }
+
+  /* secondary hub link → Care Tiers (glass pill) */
+  .ala-link{margin:clamp(22px,3.6vh,46px) auto 0; display:inline-flex; align-items:center; gap:15px; cursor:pointer;
+    color:var(--on-dark); font-family:"Jost"; font-weight:500; font-size:clamp(13px,1.8vh,18px); letter-spacing:.22em; text-transform:uppercase;
+    padding:clamp(16px,2.3vh,22px) clamp(34px,4.2vw,58px); border:1px solid rgba(201,183,156,.20); border-radius:999px;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:border-color .2s, color .2s, background .2s, transform .16s var(--ease-out)}
+  @media(hover:hover){ .ala-link:hover{border-color:rgba(201,183,156,.36)} .ala-link:hover .arr{transform:translateX(4px)} }
+  .ala-link:active{transform:scale(.97)}
+  .ala-link .arr{color:var(--champ); transition:transform .3s var(--ease-out)}
+
+  /* ════ KEY/SERVICE DETAIL — header + master-detail ════ */
+  .v-cons{justify-content:stretch; padding:clamp(38px,5.2vh,74px) clamp(16px,2.4vw,58px) clamp(34px,4.4vh,62px)}
+  .cons{position:relative; width:min(1380px,97vw); margin:0 auto; flex:1 1 auto; display:flex; flex-direction:column}
+  .cons-headtext{text-align:center; max-width:46ch; margin:0 auto clamp(14px,2.4vh,28px); opacity:0; transform:translateY(-12px);
+    transition:opacity .6s var(--ease-out), transform .6s var(--ease-out)}
+  .v-cons.is-on .cons-headtext{opacity:1; transform:none}
+  .ch-no{display:block; font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(13px,1.7vh,19px); letter-spacing:.04em}
+  .cons-headtext h2{font-family:"Cormorant Garamond",serif; font-weight:400; text-transform:uppercase; letter-spacing:.07em; color:var(--on-dark);
+    font-size:clamp(30px,5.2vh,60px); line-height:1.04; margin:3px 0 6px; text-shadow:0 2px 22px rgba(8,10,16,.6)}
+  .ch-ess{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(14px,1.9vh,22px); margin-bottom:clamp(8px,1.4vh,15px)}
+  .ch-intro{color:var(--on-dark-dim); font-weight:300; font-size:clamp(12px,1.55vh,16px); line-height:1.6; max-width:46ch; margin:0 auto}
+
+  /* ════ MASTER–DETAIL (shared by detail + care tiers) ════ */
+  .ala-clusters{display:grid; grid-template-columns:clamp(230px,24vw,320px) 1fr; gap:clamp(24px,3.5vw,68px); width:100%; flex:1 1 auto; align-items:center; margin-top:clamp(8px,1.6vh,20px); transform-origin:center; transition:transform .14s ease-out}
+  .v-ala{touch-action:none}
+  /* left: vertical nav buttons (glass) */
+  .ala-nav{display:flex; flex-direction:column; gap:clamp(12px,1.8vh,20px)}
+  .anav-btn{position:relative; display:flex; align-items:center; gap:clamp(13px,1.1vw,18px); text-align:left; cursor:pointer; color:var(--on-dark);
+    padding:clamp(15px,2.1vh,21px) clamp(18px,1.6vw,26px); border:1px solid rgba(201,183,156,.20); border-radius:14px;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    opacity:0; transform:translateX(-30px); transition:opacity .4s var(--ease-out) var(--d,0s), transform .45s var(--ease-out) var(--d,0s), border-color .3s, background .3s, box-shadow .3s}
+  .ala-nav.in .anav-btn{opacity:1; transform:none}
+  .ala-nav.in .anav-btn:not(.sel){opacity:.5}                         /* care tiers: dim but fully functional (direct toggling) */
+  #kdNav.in .anav-btn:not(.sel){opacity:.5}                           /* service detail: dim but fully functional (direct toggling) */
+  .anav-btn .an-ic{flex:0 0 auto; width:clamp(42px,3.8vw,54px); height:clamp(42px,3.8vw,54px); border-radius:50%; display:grid; place-items:center;
+    background:rgba(236,232,224,.06); border:1px solid var(--line-dark); transition:border-color .35s, background .35s}
+  .anav-btn .an-ic svg{width:52%; height:52%; stroke:var(--champ); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
+  .anav-btn .an-t{font-family:"Cormorant Garamond",serif; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:var(--on-dark); font-size:clamp(17px,2.2vh,24px); line-height:1.1}
+  @media(hover:hover){ .anav-btn:hover{border-color:rgba(201,183,156,.34)} } .anav-btn:active{transform:scale(.985)}
+  .anav-btn.sel{border-color:rgba(201,183,156,.42); background:
+      radial-gradient(130% 100% at 78% 8%, rgba(70,86,120,.26), transparent 60%),
+      linear-gradient(155deg, rgba(28,36,54,.68), rgba(17,22,34,.60));
+    box-shadow:0 22px 50px -22px rgba(6,9,16,.78), inset 0 1px 0 rgba(236,232,224,.16)}
+  .anav-btn.sel .an-ic{border-color:rgba(236,232,224,.28); background:rgba(236,232,224,.1)}
+  .anav-btn.sel .an-t{color:var(--champ)}
+
+  /* tier caption line (care tiers screen) */
+  .ala-tiercap{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(13px,1.8vh,19px);
+    text-align:center; margin:clamp(6px,1.1vh,12px) auto clamp(2px,.6vh,8px); min-height:1.4em; transition:opacity .3s}
+
+  /* right: grid of rich boxes (icon + title + desc) */
+  .kd-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(clamp(185px,18vw,250px),1fr)); gap:clamp(14px,1.5vw,22px); align-content:center}
+  .kd-box{position:relative; display:flex; flex-direction:column; gap:clamp(8px,1.1vh,12px); padding:clamp(15px,2vh,22px) clamp(16px,1.4vw,22px);
+    border:1px solid rgba(201,183,156,.20); border-radius:15px; background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    opacity:0; transform:scale(.92) translateY(10px); transition:opacity .35s var(--ease-out) var(--gd,0s), transform .42s var(--over) var(--gd,0s), border-color .3s, box-shadow .3s, background .3s}
+  .kd-grid.in .kd-box{opacity:1; transform:none}
+  @media(hover:hover){ .kd-box:hover{border-color:rgba(201,183,156,.36); background:
+        radial-gradient(130% 100% at 78% 8%, rgba(70,86,120,.24), transparent 60%),
+        linear-gradient(155deg, rgba(26,33,50,.66), rgba(16,21,32,.58)); box-shadow:0 30px 58px -24px rgba(6,9,16,.82)} }
+  .kd-box .kb-ic{width:clamp(34px,3.4vw,46px); height:clamp(34px,3.4vw,46px); border-radius:50%; display:grid; place-items:center; flex:0 0 auto;
+    background:rgba(236,232,224,.06); border:1px solid var(--line-dark)}
+  .kd-box .kb-ic svg{width:54%; height:54%; stroke:var(--champ); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
+  .kd-box b{font-family:"Cormorant Garamond",serif; font-weight:500; color:var(--on-dark); font-size:clamp(16px,2vh,22px); line-height:1.16; letter-spacing:.01em}
+  .kd-box span{font-family:"Jost"; font-weight:300; color:var(--on-dark-dim); font-size:clamp(11.5px,1.45vh,14.5px); line-height:1.5}
+  .ala-foot{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ-dim); font-size:clamp(12px,1.6vh,17px);
+    margin-top:clamp(10px,1.8vh,22px); text-align:center}
+
+  /* ════ CARE TIERS head ════ */
+  .v-ala{justify-content:flex-start; padding:clamp(44px,6vh,82px) clamp(18px,3vw,60px) clamp(40px,5vh,70px)}
+  .ala{width:min(1300px,96vw); margin:0 auto; display:flex; flex-direction:column; align-items:center}
+  .ala-head{text-align:center; margin-bottom:clamp(10px,1.8vh,22px); max-width:52ch}
+  .ala-head .eyebrow{margin-bottom:clamp(6px,1vh,11px)}
+  .ala-head h2{font-family:"Cormorant Garamond",serif; font-weight:400; text-transform:uppercase; letter-spacing:.07em; color:var(--on-dark);
+    font-size:clamp(28px,4.8vh,52px); line-height:1.04; text-shadow:0 2px 20px rgba(8,10,16,.6)}
+  .ala-intro{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--on-dark-dim); font-size:clamp(13px,1.7vh,19px); line-height:1.5; max-width:54ch; margin:clamp(7px,1.2vh,14px) auto 0}
+
+  /* bottom-left back (text button) */
+  .cons-back{position:fixed; left:clamp(20px,2.6vw,52px); bottom:clamp(16px,2.8vh,32px); z-index:40; background:none; border:0; cursor:pointer;
+    color:var(--champ); font-family:"Jost"; font-weight:500; font-size:clamp(10px,1.2vh,13px); letter-spacing:.24em; text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:9px; padding-bottom:5px; opacity:0; transition:opacity .5s, transform .16s var(--ease-out); pointer-events:none}
+  .v-cons.is-on .cons-back, .v-ala.is-on .cons-back{opacity:1; pointer-events:auto}
+  .cons-back::after{content:""; position:absolute; left:0; bottom:0; width:100%; height:1px; background:linear-gradient(90deg,var(--champ),transparent)}
+  .cons-back:active{transform:scale(.97)}
+
+  .stagger{opacity:0; transform:translateY(12px)}
+  .is-on .stagger{animation:rise .7s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1; transform:none}}
+
+  /* ── responsive ── */
+  @media (max-width:1080px){ .keys4{grid-template-columns:repeat(2,minmax(0,1fr)); width:min(740px,94vw)} .kcard{min-height:clamp(230px,32vh,330px)} }
+  @media (max-aspect-ratio:1/1){ .keys4{grid-template-columns:repeat(2,minmax(0,1fr)); width:min(740px,94vw)} .kcard{min-height:clamp(220px,28vh,320px)} }
+  @media (max-aspect-ratio:1/1),(max-width:900px){
+    .ala-clusters{grid-template-columns:1fr; gap:clamp(16px,2.4vh,28px)}
+    .ala-nav{flex-direction:row; flex-wrap:wrap; justify-content:center}
+    .kd-grid{grid-template-columns:repeat(auto-fill,minmax(clamp(150px,42vw,220px),1fr))}
+  }
+  @media (max-width:560px){ .keys4{grid-template-columns:1fr; width:min(440px,94vw)} .kcard{min-height:0} }
+
+  /* phone portrait + narrow widths */
+  @media (max-width:600px){
+    .view{ overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+      padding:clamp(58px,8vh,84px) clamp(16px,5vw,26px) calc(clamp(22px,4vh,40px) + env(safe-area-inset-bottom)); justify-content:flex-start }
+    .v-hub,.v-ala,.v-cons{ justify-content:flex-start }
+    .v-threshold{ justify-content:center }
+    .bs-title{ font-size:clamp(38px,12vw,60px) }
+    .bs-sub{ font-size:clamp(14px,4vw,18px); max-width:28ch }
+    .hubhead h2{ font-size:clamp(26px,7.5vw,38px) }
+    .keys4{ grid-template-columns:1fr; width:min(420px,92vw); gap:clamp(14px,3.5vw,20px); perspective:1100px }
+    .kcard{ min-height:0; padding:clamp(18px,5vw,24px) clamp(16px,4.5vw,22px) }
+    .ala-link{ font-size:clamp(13px,3.6vw,17px); padding:clamp(15px,4.2vw,21px) clamp(28px,8vw,50px); max-width:92vw; text-align:center; justify-content:center; flex-wrap:wrap }
+    .v-cons{ padding:clamp(56px,9vh,78px) clamp(14px,4.5vw,22px) clamp(60px,10vh,80px) }
+    .cons-headtext h2{ font-size:clamp(28px,8vw,40px) }
+    .ala-clusters{ grid-template-columns:1fr; gap:clamp(16px,3.5vh,24px); align-items:stretch; transform:none!important }
+    .ala-nav{ flex-direction:row; flex-wrap:wrap; justify-content:center; gap:clamp(9px,2.4vw,14px) }
+    .anav-btn{ flex:0 1 auto; min-height:46px; padding:10px clamp(13px,3.4vw,18px); border-radius:999px; gap:clamp(8px,2.2vw,12px); transform:none }
+    .ala-nav.in .anav-btn{ transform:none }
+    .anav-btn .an-ic{ width:30px; height:30px }
+    .anav-btn .an-t{ font-size:clamp(15px,4.2vw,19px) }
+    .kd-grid{ grid-template-columns:1fr; gap:clamp(10px,2.8vw,16px); align-content:start }
+    .kd-box{ min-height:64px; padding:clamp(14px,3.6vw,18px) }
+    .ala-foot{ padding:0 8px }
+    .cons-back{ bottom:calc(clamp(12px,2.4vh,24px) + env(safe-area-inset-bottom)) }
+  }
+  @media (max-width:380px){ .anav-btn .an-t{ font-size:14px } .bs-title{ font-size:clamp(34px,12vw,52px) } }
+  @media (max-height:460px) and (orientation:landscape){
+    .view{ padding-top:clamp(40px,10vh,56px); padding-bottom:clamp(14px,5vh,26px) }
+    .bs-title{ font-size:clamp(32px,9vh,52px) }
+    .keys4{ grid-template-columns:repeat(2,minmax(0,1fr)); width:min(640px,94vw) }
+    .ala-nav{ flex-direction:row; flex-wrap:wrap; justify-content:center }
+    .ala-clusters{ grid-template-columns:1fr; transform:none!important }
+    .kd-grid{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)) }
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:opacity .2s linear!important} }
+</style>
+</head>
+<body>
+  <div class="sky"></div>
+  <div class="grain"></div>
+
+  <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="backlbl">Return</span></button>
+  <div class="corner">Embassy ONE · North Tower</div>
+
+  <div class="exp" id="exp">
+
+    <!-- ════════ THRESHOLD — clean intro, no key/crest ════════ -->
+    <section class="view v-threshold is-on" data-view="threshold" id="vThreshold">
+      <div class="thr-wrap">
+        <h1 class="bs-title stagger" style="animation-delay:.12s">Bespoke Services</h1>
+        <p class="bs-sub stagger" style="animation-delay:.34s">Managed living at Embassy ONE Private Residences — every need within the residence anticipated and attended to.</p>
+        <div class="orn stagger" style="animation-delay:.46s"><i></i><b></b><i></i></div>
+        <button class="enter-btn stagger" id="enterBtn" style="animation-delay:.6s">Enter <span class="arr">›</span></button>
+      </div>
+    </section>
+
+    <!-- ════════ HUB — four service pillars ════════ -->
+    <section class="view v-hub" data-view="hub" id="vHub">
+      <div class="hubhead">
+        <div class="eyebrow stagger" style="animation-delay:.05s">Bespoke Services</div>
+        <h2 class="stagger" style="animation-delay:.14s">Fully managed, <em>fully serviced</em></h2>
+        <div class="orn stagger" style="animation-delay:.2s"><i></i><b></b><i></i></div>
+        <p class="hubline stagger" style="animation-delay:.26s">A residence where life is quietly looked after — your own <b>Residence Manager</b>, Les Clefs d'Or trained, anticipating before you ask.</p>
+      </div>
+
+      <div class="keys4">
+        <button class="kcard" data-go="ease">
+          <span class="kc-no">Ⅰ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Ease</h3>
+          <p class="kc-ess">Friction removed before you feel it.</p>
+          <ul class="kc-list"><li>Seamless RFID access</li><li>Arrival &amp; departure choreography</li><li>Valet &amp; visitor parking</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+        <button class="kcard" data-go="sanctuary">
+          <span class="kc-no">Ⅱ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Sanctuary</h3>
+          <p class="kc-ess">Home kept immaculate, private, restorative.</p>
+          <ul class="kc-list"><li>Curated, Considered &amp; Complete care</li><li>Maintenance coordination</li><li>Seasonal home resets</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+        <button class="kcard" data-go="presence">
+          <span class="kc-no">Ⅲ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Presence</h3>
+          <p class="kc-ess">Known by name, served by relationship.</p>
+          <ul class="kc-list"><li>Private chef in residence</li><li>Spa, salon &amp; wellness</li><li>Personal training &amp; nutrition</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+        <button class="kcard" data-go="connection">
+          <span class="kc-no">Ⅳ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Connection</h3>
+          <p class="kc-ess">Moments and people beyond the four walls.</p>
+          <ul class="kc-list"><li>Festive gifting &amp; provisions</li><li>Bespoke celebration cake</li><li>Experiences &amp; reservations</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+      </div>
+      <button class="ala-link" id="alaBtn">The Care Tiers <span class="arr">›</span></button>
+    </section>
+
+    <!-- ════════ CARE TIERS — master-detail, sidebar toggles in place ════════ -->
+    <!-- PLACEHOLDER COPY: the three-tier service descriptions below are tasteful, on-brand
+         illustrations of managed-living inclusions, pending the client's final service
+         specification. Items flagged in the CARE_DATA array with `// PLACEHOLDER COPY`
+         should be verified/swapped; do not present any of these as contractual inclusions. -->
+    <section class="view v-ala" data-view="alacarte" id="vAla">
+      <div class="ala">
+        <div class="ala-head">
+          <div class="eyebrow">Bespoke Services · Care Tiers</div>
+          <h2>Curated · Considered · Complete</h2>
+          <p class="ala-intro">Three tiers of managed living, arranged through your Residence Manager — from everyday upkeep to a household entirely looked after.</p>
+        </div>
+        <p class="ala-tiercap" id="alaTierCap"></p>
+        <div class="ala-clusters kd-md" id="alaClusters"></div>
+        <p class="ala-foot">Every service is arranged and overseen by your Residence Manager.</p>
+      </div>
+      <button class="cons-back" data-hub><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Bespoke Services</button>
+    </section>
+
+    <!-- ════════ SERVICE DETAIL — master-detail (faded nav inert) ════════ -->
+    <section class="view v-cons" data-view="keydetail" id="vKeyDetail">
+      <div class="cons" id="cons">
+        <div class="cons-headtext">
+          <span class="ch-no" id="chNo"></span>
+          <h2 id="chTitle"></h2>
+          <p class="ch-ess" id="chEss"></p>
+          <p class="ch-intro" id="chIntro"></p>
+        </div>
+        <div class="ala-clusters kd-md">
+          <div class="ala-nav" id="kdNav"></div>
+          <div class="kd-grid" id="kdGrid"></div>
+        </div>
+      </div>
+      <button class="cons-back" data-hub><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Bespoke Services</button>
+    </section>
+
+  </div>
+
+<script>
+  var views={}; document.querySelectorAll('.view').forEach(function(v){ views[v.dataset.view]=v; });
+  var cur='threshold';
+  var backBtn=document.getElementById('back'), backLbl=document.getElementById('backlbl');
+
+  function show(name){
+    if(!views[name]) return;
+    views[cur].classList.remove('is-on');
+    cur=name;
+    var v=views[name];
+    v.querySelectorAll('.stagger').forEach(function(el){ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; });
+    v.classList.add('is-on');
+    backLbl.textContent=(name==='threshold'||name==='hub')?'Return':'Back';
+  }
+
+  // ── THRESHOLD: simple elegant entry → hub ──
+  var enterBtn=document.getElementById('enterBtn');
+  if(enterBtn) enterBtn.addEventListener('click', function(){ show('hub'); });
+
+  // ── icon library (champagne line icons) ──
+  function svg(p){ return '<svg viewBox="0 0 24 24">'+p+'</svg>'; }
+  var ICON={
+    signal: svg('<path d="M4.5 11a10 10 0 0 1 15 0"/><path d="M7.5 14a6 6 0 0 1 9 0"/><circle cx="12" cy="17.4" r="1.1"/>'),
+    pin: svg('<path d="M12 21s6.5-6 6.5-10.5a6.5 6.5 0 0 0-13 0C5.5 15 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>'),
+    id: svg('<rect x="3" y="6" width="18" height="12.5" rx="2"/><circle cx="8.5" cy="11.4" r="1.9"/><path d="M13 10.5h5M13 13.5h5M5.6 15.4c.7-1.5 4.1-1.5 4.8 0"/>'),
+    parking: svg('<rect x="4.5" y="4.5" width="15" height="15" rx="3"/><path d="M10 15.5v-7h3a2.4 2.4 0 0 1 0 4.8h-3"/>'),
+    car: svg('<path d="M4 13l1.8-4.5h12.4L20 13"/><path d="M4 13h16v4H4z"/><circle cx="7.5" cy="17.2" r="1.3"/><circle cx="16.5" cy="17.2" r="1.3"/>'),
+    cup: svg('<path d="M6 8.5h10.5v4.5a5.25 5.25 0 0 1-10.5 0z"/><path d="M16.5 9.5h2a1.6 1.6 0 0 1 0 3.2h-2"/><path d="M9 5.4s-.6.8 0 1.7M12.4 5.4s-.6.8 0 1.7"/>'),
+    sparkle: svg('<path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"/>'),
+    layers: svg('<path d="M12 4l8 4-8 4-8-4z"/><path d="M4.5 12.4l7.5 3.8 7.5-3.8"/>'),
+    shield: svg('<path d="M12 3.2l7 2.8v4.8c0 4.4-3 7.4-7 8.9-4-1.5-7-4.5-7-8.9V6z"/><path d="M9 11.5l2 2 4-4"/>'),
+    wrench: svg('<path d="M15.5 7.2a3.6 3.6 0 0 1-4.7 4.7l-5.1 5.1a1.6 1.6 0 0 0 2.3 2.3l5.1-5.1a3.6 3.6 0 0 1 4.7-4.7l-2.4 2.4-2-2z"/>'),
+    leaf: svg('<path d="M5 19c-1-8 5-14 14-14 1 9-5 15-14 14z"/><path d="M5.5 18.5c3-5 7-8 11-9.5"/>'),
+    calendar: svg('<rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M4 9.5h16M8.5 3.5v4M15.5 3.5v4"/>'),
+    chef: svg('<path d="M7.5 13.5a3.6 3.6 0 1 1 1-7 3.9 3.9 0 0 1 7 0 3.6 3.6 0 1 1 1 7z"/><path d="M7.5 13.5v4h9v-4"/>'),
+    glass: svg('<path d="M7 4.5h10l-1 6.2a4 4 0 0 1-8 0z"/><path d="M12 14.5v4M9 18.5h6"/>'),
+    plate: svg('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/>'),
+    lotus: svg('<path d="M12 18.5c-4 0-7-2.4-7-4.8 1.9 0 3.4.9 4 1.9 0-2.9 1.4-4.9 3-5.9 1.6 1 3 3 3 5.9.6-1 2.1-1.9 4-1.9 0 2.4-3 4.8-7 4.8z"/>'),
+    dumbbell: svg('<path d="M4 9.5v5M7 7.5v9M17 7.5v9M20 9.5v5M7 12h10"/>'),
+    apple: svg('<path d="M12 8.5c-1.8-2.7-6.5-1.8-6.5 2.6 0 3.8 3 7.4 6.5 7.4s6.5-3.6 6.5-7.4c0-4.4-4.7-5.3-6.5-2.6z"/><path d="M12 8.5c0-2 1-3 2.6-3.4"/>'),
+    gift: svg('<rect x="4.5" y="9.5" width="15" height="10" rx="1"/><path d="M4.5 13h15M12 9.5v10"/><path d="M12 9.5S10.4 5 8.2 6.2 12 9.5 12 9.5zM12 9.5s1.6-4.5 3.8-3.3S12 9.5 12 9.5z"/>'),
+    cake: svg('<path d="M5 20v-7.5a2.5 2.5 0 0 1 2.5-2.5h9A2.5 2.5 0 0 1 19 12.5V20z"/><path d="M5 15.5h14M12 10V7"/><circle cx="12" cy="5.6" r="1"/>'),
+    basket: svg('<path d="M5 9.5h14l-1.4 9.5H6.4z"/><path d="M8.5 9.5l2-5M15.5 9.5l-2-5M4 9.5h16"/>'),
+    coffee: svg('<path d="M6 8.5h10.5v4.5a5.25 5.25 0 0 1-10.5 0z"/><path d="M16.5 9.5h2a1.6 1.6 0 0 1 0 3.2h-2"/><path d="M5 19.5h12"/>'),
+    star: svg('<path d="M12 3.5l2.4 5.6 6 .5-4.6 4 1.4 5.9L12 16.4 6.8 19.5l1.4-5.9-4.6-4 6-.5z"/>')
+  };
+
+  // ── content for the four service pillars (service detail) ──
+  var KEYS_DATA={
+    ease:{no:'Ⅰ · Arrival & Access', title:'Ease', ess:'Friction removed before you feel it.',
+      intro:'Arrival, parking and departure handled end to end, so the residence quietly moves for you.', items:[
+      {ic:'signal',  t:'Seamless RFID Access',   d:'Contactless gate and lobby entry — no stops, no waiting.'},
+      {ic:'id',      t:'Visitor Protocol',        d:'Guests pre-cleared, received and escorted to your door.'},
+      {ic:'car',     t:'Departure Coordination',  d:'Vehicle brought round, cab arranged, luggage handled.'},
+      {ic:'pin',     t:'Arrival Choreography',    d:'From gate to drop-off, received in person by the concierge.'},
+      {ic:'parking', t:'Valet & Visitor Parking', d:'Valet on call, or assisted self-park in the basement.'},
+      {ic:'cup',     t:'Lobby Comfort',           d:'Cold towels, refreshments and a seat the moment you arrive.'}]},
+    sanctuary:{no:'Ⅱ · Home & Upkeep', title:'Sanctuary', ess:'Home kept immaculate, private, restorative.',
+      intro:'Household care across three tiers — Curated, Considered and Complete — keeping the residence pristine without ever being asked.', items:[
+      {ic:'sparkle', t:'Curated Care',          d:'Weekly housekeeping, linen and plant care, quietly scheduled.'},
+      {ic:'layers',  t:'Considered Care',        d:'Monthly deep cleans, upholstery and soft-furnishing attention.'},
+      {ic:'shield',  t:'Complete Care',          d:'Quarterly resets, pest control and full home detailing.'},
+      {ic:'wrench',  t:'Maintenance Desk',       d:'AMC renewals, repairs and trades coordinated for you.'},
+      {ic:'leaf',    t:'Home Detox Reset',       d:'Post-festive deep clean, refresh and re-order.'},
+      {ic:'calendar',t:'Seasonal Readiness',     d:'Pantry restock and the home prepared ahead of the season.'}]},
+    presence:{no:'Ⅲ · Dining & Wellbeing', title:'Presence', ess:'Known by name, served by relationship.',
+      intro:'Dining, wellness and personal services brought into the residence, on your rhythm.', items:[
+      {ic:'chef',    t:'Private Chef in Residence',d:'In-home dining, menus and cook-alongs on request.'},
+      {ic:'glass',   t:'Wine & Spirits',          d:'Curated cellar selections, a mixologist for occasions.'},
+      {ic:'plate',   t:'In-Home Chef Series',     d:'Private dinner experiences arranged around your table.'},
+      {ic:'lotus',   t:'Spa, Massage & Salon',    d:'Vetted therapists and stylists, in your residence.'},
+      {ic:'dumbbell',t:'Personal Training & Yoga', d:'Practice at home or in the residents’ gym.'},
+      {ic:'apple',   t:'Nutrition Consultation',  d:'Guidance and meal planning tailored to you.'}]},
+    connection:{no:'Ⅳ · Gifting & Occasions', title:'Connection', ess:'Moments and people beyond the four walls.',
+      intro:'Curated provisions, gifting and seasonal occasions, thoughtfully sourced and dispatched.', items:[
+      {ic:'gift',    t:'Festive Gifting',        d:'Thoughtful gifts sourced, wrapped and dispatched.'},
+      {ic:'cake',    t:'Bespoke Celebration Cake',d:'Made to order for the occasion.'},
+      {ic:'basket',  t:'Artisanal Provisions',   d:'Specialty sourcing and pantry curation on request.'},
+      {ic:'coffee',  t:'Daily Provisions',       d:'Coffee, flowers and essentials delivered to schedule.'},
+      {ic:'star',    t:'Seasonal Moments',       d:'Occasions and celebrations curated through the year.'},
+      {ic:'pin',     t:'Experiences Desk',       d:'Reservations, tickets and city access arranged.'}]}
+  };
+
+  var chNo=document.getElementById('chNo'), chTitle=document.getElementById('chTitle'),
+      chEss=document.getElementById('chEss'), chIntro=document.getElementById('chIntro');
+
+  function boxHTML(it,i){ return '<div class="kd-box" style="--gd:'+(i*0.05).toFixed(2)+'s"><i class="kb-ic">'+(ICON[it.ic]||'')+'</i><b>'+it.t+'</b><span>'+it.d+'</span></div>'; }
+
+  // ── SERVICE DETAIL = master-detail: 4 pillar buttons (left, non-selected faded + inert) + that pillar's boxes (right) ──
+  var KD_ORDER=['ease','sanctuary','presence','connection'], KD_ICON={ease:'car', sanctuary:'sparkle', presence:'chef', connection:'gift'};
+  function buildKd(){ var nav=document.getElementById('kdNav'); if(!nav||nav.children.length) return;
+    KD_ORDER.forEach(function(name,i){ var k=KEYS_DATA[name]; if(!k) return; var btn=document.createElement('button');
+      btn.className='anav-btn'+(i===0?' sel':''); btn.dataset.k=name; btn.style.setProperty('--d',(i*0.07).toFixed(2)+'s');
+      btn.innerHTML='<span class="an-ic">'+(ICON[KD_ICON[name]]||'')+'</span><span class="an-t">'+k.title+'</span>';
+      btn.addEventListener('click', function(){ selectKey(name); }); nav.appendChild(btn); });
+  }
+  function selectKey(name){ var k=KEYS_DATA[name]; if(!k) return;
+    document.querySelectorAll('#kdNav .anav-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.k===name); });
+    chNo.textContent=k.no; chTitle.textContent=k.title; chEss.textContent=k.ess; chIntro.textContent=k.intro;
+    var grid=document.getElementById('kdGrid'); if(!grid) return; grid.classList.remove('in');
+    grid.innerHTML=k.items.map(boxHTML).join('');
+    void grid.offsetWidth; requestAnimationFrame(function(){ grid.classList.add('in'); });
+  }
+  buildKd();
+
+  function openDetail(go){
+    show('keydetail'); selectKey(go);
+    var kn=document.getElementById('kdNav'); if(kn){ kn.classList.remove('in'); void kn.offsetWidth; kn.classList.add('in'); }
+  }
+
+  // ── HUB cards: champagne scale+tint pop → service detail ──
+  var keys4El=document.querySelector('.keys4'), HOVER=matchMedia('(hover:hover)').matches;
+  document.querySelectorAll('.kcard').forEach(function(c, ci2){
+    var sh=document.createElement('span'); sh.className='kshine'; sh.style.setProperty('--sd', (ci2*1.4).toFixed(1)+'s'); c.appendChild(sh);  // looping card shine, staggered
+    function rest(){ c.classList.remove('tilt'); c.style.transform=''; }
+    if(HOVER){
+      c.addEventListener('pointermove', function(e){ if(c.dataset.busy) return; var r=c.getBoundingClientRect();
+        var px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
+        c.classList.add('tilt'); c.style.transform='translateY(-8px) rotateX('+(-py*9).toFixed(2)+'deg) rotateY('+(px*11).toFixed(2)+'deg) scale(1.02)'; });
+      c.addEventListener('pointerleave', rest);
+    }
+    c.addEventListener('click', function(){ if(c.dataset.busy) return; rest(); c.dataset.busy='1'; var go=c.dataset.go;
+      keys4El.classList.add('dim'); c.classList.add('pop');
+      setTimeout(function(){ openDetail(go); }, 360);
+      setTimeout(function(){ c.classList.remove('pop'); keys4El.classList.remove('dim'); delete c.dataset.busy; }, 760);
+    });
+  });
+
+  // ── CARE TIERS — three tiers (Curated · Considered · Complete), sidebar toggles in place ──
+  /* PLACEHOLDER COPY — illustrative managed-living inclusions, pending the client's final
+     service specification. Entries tagged `// PLACEHOLDER COPY` are invented for layout and
+     tone; verify or swap before presenting as contractual inclusions. No prices implied. */
+  var CARE_DATA=[
+    {title:'Curated Care', ic:'sparkle', no:'Tier I · Curated Care', cap:'The foundation of managed living.',
+      items:[
+      {ic:'sparkle', t:'Weekly Housekeeping',  d:'Scheduled cleaning of every room, surfaces and floors.'},   // PLACEHOLDER COPY
+      {ic:'basket',  t:'Linen & Laundry',      d:'Bed and bath linen changed, laundered and returned.'},       // PLACEHOLDER COPY
+      {ic:'leaf',    t:'Plant & Greenery Care', d:'Indoor planting watered, tended and kept healthy.'},         // PLACEHOLDER COPY
+      {ic:'id',      t:'Concierge Desk',        d:'A familiar concierge for requests, bookings and guidance.'},
+      {ic:'signal',  t:'Smart-Home Support',    d:'Connectivity and in-home systems kept running.'},            // PLACEHOLDER COPY
+      {ic:'cup',     t:'Welcome Provisions',    d:'Pantry essentials and refreshments kept stocked.'}]},        // PLACEHOLDER COPY
+    {title:'Considered Care', ic:'layers', no:'Tier II · Considered Care', cap:'Care that anticipates.',
+      items:[
+      {ic:'layers',  t:'Fortnightly Deep Clean',d:'Considered cleaning of kitchens, baths and detail areas.'},  // PLACEHOLDER COPY
+      {ic:'shield',  t:'Soft-Furnishing Care',  d:'Upholstery, drapery and carpets refreshed in rotation.'},    // PLACEHOLDER COPY
+      {ic:'wrench',  t:'Maintenance & AMC',     d:'Appliance servicing, repairs and renewals coordinated.'},    // PLACEHOLDER COPY
+      {ic:'car',     t:'Errands & Provisioning', d:'Groceries, pharmacy and parcels run on your behalf.'},       // PLACEHOLDER COPY
+      {ic:'chef',    t:'Dining Arrangements',   d:'In-residence chef and reservations on request.'},
+      {ic:'calendar',t:'On-Call Concierge',     d:'Extended hours for requests as they arise.'}]},              // PLACEHOLDER COPY
+    {title:'Complete Care', ic:'shield', no:'Tier III · Complete Care', cap:'Fully managed. Fully serviced.',
+      items:[
+      {ic:'star',    t:'Dedicated Residence Manager', d:'A single point of contact who knows your household.'},  // PLACEHOLDER COPY
+      {ic:'sparkle', t:'Les Clefs d’Or Concierge', d:'Globally certified concierge for the exceptional request.'},
+      {ic:'chef',    t:'Full Household Staffing', d:'Housekeeping, kitchen and service staff arranged and managed.'}, // PLACEHOLDER COPY
+      {ic:'lotus',   t:'In-Residence Wellness',  d:'Spa, training and therapies brought to your door.'},
+      {ic:'leaf',    t:'Seasonal Home Reset',    d:'Detox, refresh and readiness through the year.'},           // PLACEHOLDER COPY
+      {ic:'pin',     t:'Travel & Lifestyle Desk', d:'Itineraries, access and pre-arrival readiness handled.'}]}  // PLACEHOLDER COPY
+  ];
+  var alaTierCap=document.getElementById('alaTierCap');
+  function buildAla(){ var host=document.getElementById('alaClusters'); if(!host||host.children.length) return;
+    var nav='<div class="ala-nav">';
+    CARE_DATA.forEach(function(cat,i){ nav+='<button class="anav-btn'+(i===0?' sel':'')+'" data-i="'+i+'" style="--d:'+(i*0.07).toFixed(2)+'s"><span class="an-ic">'+(ICON[cat.ic]||'')+'</span><span class="an-t">'+cat.title+'</span></button>'; });
+    nav+='</div>';
+    host.innerHTML=nav+'<div class="kd-grid" id="alaGrid"></div>';
+    host.querySelectorAll('.anav-btn').forEach(function(btn){ btn.addEventListener('click', function(){ selectCluster(+btn.dataset.i); }); });
+  }
+  function selectCluster(i){ if(i<0||i>=CARE_DATA.length) return; var cat=CARE_DATA[i];
+    document.querySelectorAll('#alaClusters .anav-btn').forEach(function(b,j){ b.classList.toggle('sel', j===i); });
+    if(alaTierCap) alaTierCap.textContent=cat.cap||'';
+    var grid=document.getElementById('alaGrid'); if(!grid) return; grid.classList.remove('in');
+    grid.innerHTML=cat.items.map(boxHTML).join('');
+    void grid.offsetWidth; requestAnimationFrame(function(){ grid.classList.add('in'); });
+  }
+  buildAla();
+  function alaPlay(){ if(cur!=='alacarte') return;
+    var nav=document.querySelector('#alaClusters .ala-nav'); if(nav){ nav.classList.remove('in'); void nav.offsetWidth; requestAnimationFrame(function(){ nav.classList.add('in'); }); }
+    selectCluster(0);
+  }
+
+  // group zoom: pinch (touch) / wheel (desktop) + drag-pan over the whole Care Tiers cluster group
+  var azG=document.getElementById('alaClusters'), azS=1, azX=0, azY=0, azPD=0, azPS=1, azDrag=false, azLX=0, azLY=0, vAla=document.getElementById('vAla');
+  function azApply(){ if(azG) azG.style.transform='translate('+azX.toFixed(0)+'px,'+azY.toFixed(0)+'px) scale('+azS.toFixed(3)+')'; }
+  function azReset(){ azS=1; azX=0; azY=0; azApply(); }
+  function azClamp(){ azS=Math.max(0.6,Math.min(2.8,azS)); }
+  if(vAla){
+    vAla.addEventListener('wheel', function(e){ if(cur!=='alacarte') return; e.preventDefault(); azS-=e.deltaY*0.0016; azClamp(); azApply(); }, {passive:false});
+    vAla.addEventListener('touchmove', function(e){ if(cur!=='alacarte') return; if(e.touches.length===2){ e.preventDefault();
+      var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      if(!azPD){ azPD=d; azPS=azS; } azS=azPS*(d/azPD); azClamp(); azApply(); } }, {passive:false});
+    vAla.addEventListener('touchend', function(e){ if(e.touches.length<2) azPD=0; });
+    vAla.addEventListener('pointerdown', function(e){ if(cur!=='alacarte'||azS<=1.02||(e.target.closest&&e.target.closest('.anav-btn'))) return; azDrag=true; azLX=e.clientX; azLY=e.clientY; });
+    vAla.addEventListener('pointermove', function(e){ if(!azDrag) return; azX+=e.clientX-azLX; azY+=e.clientY-azLY; azLX=e.clientX; azLY=e.clientY; azApply(); });
+    window.addEventListener('pointerup', function(){ azDrag=false; });
+  }
+  var alaBtn=document.getElementById('alaBtn'); if(alaBtn) alaBtn.addEventListener('click', function(){ azReset(); show('alacarte'); requestAnimationFrame(alaPlay); });
+
+  // any [data-hub] → back to hub
+  document.querySelectorAll('[data-hub]').forEach(function(b){ b.addEventListener('click', function(){ azReset(); show('hub'); }); });
+
+  // RETURN: from detail / care tiers → hub; from hub/threshold → close to home
+  function backAction(){
+    if(cur==='keydetail'||cur==='alacarte'){ if(cur==='alacarte') azReset(); show('hub'); }
+    else { try{ parent.postMessage('eo-screen-close','*'); }catch(e){} }
+  }
+  backBtn.addEventListener('click', backAction);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ backAction(); } });
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label="bespoke-services"></script>
+</body>
+</html>

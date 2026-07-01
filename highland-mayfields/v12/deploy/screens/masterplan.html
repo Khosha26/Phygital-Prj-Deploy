@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Masterplan — Highland Mayfields</title>
+<link rel="stylesheet" href="../styles/brand.css">
+<link rel="stylesheet" href="../assets/css/hm-tools.css">
+<link rel="stylesheet" href="_kit.css">
+<style>
+  /* ============================================================
+     MASTERPLAN — single master-layout plan, cinematically presented.
+     Map scales-in, floats centred under a soft glow; eight glowing
+     numbered medallions mark the towers — tap one to open Inventory.
+     No view toggle, no legend: focused purely on the plan. NO SCROLL.
+     ============================================================ */
+
+  /* ---------- stage = the explorable surface ---------- */
+  .mp-stage{ position:absolute; inset:0; overflow:hidden; border-radius:var(--r-tile);
+    background:radial-gradient(120% 120% at 50% 44%, var(--hm-espresso-2), #161010 78%);
+    touch-action:none; cursor:grab; -webkit-tap-highlight-color:transparent; }
+  .mp-stage.grabbing{ cursor:grabbing; }
+  /* inner vignette frame */
+  .mp-stage::after{ content:""; position:absolute; inset:0; pointer-events:none; z-index:5;
+    box-shadow:inset 0 0 0 1px var(--hairline-soft),
+               inset 0 70px 150px -70px rgba(16,11,9,.7),
+               inset 0 -70px 150px -70px rgba(16,11,9,.7),
+               inset 0 0 220px -40px rgba(16,11,9,.6); border-radius:inherit; }
+
+  /* ---------- layered presentation wrappers (each owns ONE transform) ---------- */
+  .mp-entry{ position:absolute; inset:0; transform-origin:50% 50%;
+    opacity:0; transform:scale(.9);
+    transition:opacity 1s var(--ease-soft), transform 1.15s var(--ease-soft); }
+  .mp-entry.in{ opacity:1; transform:scale(1); }
+
+  /* soft radial glow that gives the plan prominence */
+  .mp-glow{ position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(ellipse 56% 60% at 50% 49%,
+        rgba(207,184,141,.13), rgba(207,184,141,.05) 42%, transparent 66%);
+    mix-blend-mode:screen; }
+
+  /* continuous gentle float (separate layer so it never fights pan/zoom) */
+  .mp-drift{ position:absolute; inset:0; z-index:1; transform-origin:50% 50%;
+    animation:mp-drift 9s ease-in-out infinite; }
+  @keyframes mp-drift{ 0%,100%{ transform:translateY(-4px) } 50%{ transform:translateY(5px) } }
+
+  /* the pan/zoom target (image + medallions ride together) */
+  .mp-fit{ position:absolute; left:0; top:0; will-change:transform; transform-origin:50% 50%; }
+  .mp-fit .mp-img{ display:block; width:100%; height:100%; object-fit:fill;
+    border-radius:2px; -webkit-user-drag:none; user-select:none; pointer-events:none;
+    box-shadow:0 30px 90px -30px rgba(0,0,0,.7), 0 0 0 1px rgba(207,184,141,.10); }
+  .mp-hs{ position:absolute; inset:0; pointer-events:none; }
+
+  /* ============================================================
+     TOWER MEDALLIONS — glowing numbered beacons.
+     Children of .mp-fit (so they pan with the plan), but the visual
+     core is counter-scaled (--inv = 1/zoom) so medallions hold a
+     constant on-screen size at every zoom level.
+     ============================================================ */
+  .hotspot{ position:absolute; transform:translate(-50%,-50%); pointer-events:auto;
+    width:54px; height:54px; display:grid; place-items:center; padding:0;
+    background:none; border:0; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .hs-inner{ position:relative; width:46px; height:46px; display:grid; place-items:center;
+    transform:scale(var(--inv,1)); transform-origin:50% 50%; }
+
+  /* beacon rings */
+  .hs-inner .beacon{ position:absolute; inset:0; border-radius:50%;
+    border:1.5px solid var(--accent); opacity:0;
+    animation:hs-beacon 2.6s ease-out infinite; }
+  .hs-inner .beacon.b2{ animation-delay:.9s; }
+  .hs-inner .beacon.b3{ animation-delay:1.8s; }
+  @keyframes hs-beacon{ 0%{ transform:scale(.5); opacity:.7 } 80%{ opacity:0 } 100%{ transform:scale(2.5); opacity:0 } }
+
+  /* medallion */
+  .hs-medal{ position:relative; width:42px; height:42px; border-radius:50%;
+    display:grid; place-items:center; z-index:2;
+    background:
+      radial-gradient(circle at 36% 30%, var(--hm-gold-bright), var(--hm-gold) 58%, #8c6f43 100%);
+    border:1.5px solid rgba(255,244,222,.55);
+    box-shadow:
+      0 0 0 4px rgba(207,184,141,.16),
+      0 0 22px rgba(207,184,141,.6),
+      0 6px 16px rgba(0,0,0,.55),
+      inset 0 1px 1px rgba(255,255,255,.5),
+      inset 0 -4px 8px rgba(80,56,28,.55);
+    transition:transform .3s var(--ease-soft), box-shadow .3s var(--ease-soft); }
+  .hs-medal .num{ font-family:var(--font-display); font-weight:500; font-size:19px; line-height:1;
+    color:#2a1f15; text-shadow:0 1px 0 rgba(255,245,225,.45); }
+  .hs-medal::after{ content:""; position:absolute; left:18%; top:12%; width:42%; height:30%;
+    border-radius:50%; background:linear-gradient(180deg, rgba(255,255,255,.7), transparent);
+    filter:blur(1px); opacity:.85; pointer-events:none; }
+
+  /* tracked TOWER caplet under the medallion */
+  .hs-tag{ position:absolute; top:calc(50% + 26px); left:50%; transform:translateX(-50%);
+    font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--hm-cream); white-space:nowrap;
+    background:rgba(18,13,11,.92); border:1px solid var(--hairline-soft); border-radius:var(--r-pill);
+    padding:.16em .55em;
+    box-shadow:0 2px 6px rgba(0,0,0,.4); }
+
+  @media(hover:hover){
+    .hotspot:hover .hs-medal{ transform:scale(1.12);
+      box-shadow:0 0 0 5px rgba(207,184,141,.22),0 0 30px rgba(207,184,141,.85),0 8px 20px rgba(0,0,0,.6),inset 0 1px 1px rgba(255,255,255,.6),inset 0 -4px 8px rgba(80,56,28,.55); }
+  }
+  .hotspot:active .hs-medal{ transform:scale(.93); }
+
+  /* lit state — medallion stays bright while its popup is open */
+  .hotspot.hs-lit{ z-index:4; }
+  .hotspot.hs-lit .hs-medal{ transform:scale(1.16);
+    box-shadow:0 0 0 6px rgba(207,184,141,.24),0 0 34px rgba(207,184,141,.95),0 8px 20px rgba(0,0,0,.6),inset 0 1px 1px rgba(255,255,255,.6),inset 0 -4px 8px rgba(80,56,28,.55); }
+  .hotspot.hs-lit .beacon{ border-color:var(--hm-gold-bright); }
+
+  /* ============================================================
+     TOWER INFO POPUP — anchored glass callout with a pointer tail.
+     Positioned in JS opposite/above the tapped medallion; auto-flips
+     near stage edges; rAF-tracked so it stays glued while the plan
+     drifts / zooms. Mirrors the pearl + landscape callout language.
+     ============================================================ */
+  .mp-pop{ position:absolute; z-index:8; display:none; width:clamp(288px,23vw,372px);
+    background:rgba(24,18,16,.97); border:1px solid var(--hairline); border-radius:12px;
+    box-shadow:0 30px 80px rgba(0,0,0,.64), 0 0 0 1px rgba(0,0,0,.25);
+    opacity:0; transform:scale(.92); transform-origin:50% 100%; pointer-events:none;
+    transition:opacity .3s var(--ease-soft), transform .44s var(--ease-settle); }
+  .mp-pop.on{ opacity:1; transform:scale(1); pointer-events:auto; }
+  /* gold hairline accent along the top edge */
+  .mp-pop::before{ content:""; position:absolute; left:14px; right:14px; top:0; height:2px; border-radius:2px; z-index:4;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent); opacity:.9; }
+
+  /* pointer tail (solid triangle, colour-matched to the card) */
+  .mp-pop .pop-tail{ position:absolute; width:0; height:0; z-index:1; }
+  .mp-pop.pl-above .pop-tail{ bottom:-9px; border-left:9px solid transparent; border-right:9px solid transparent; border-top:9px solid rgba(26,20,18,.92); }
+  .mp-pop.pl-below .pop-tail{ top:-9px;   border-left:9px solid transparent; border-right:9px solid transparent; border-bottom:9px solid rgba(26,20,18,.92); }
+  .mp-pop.pl-right .pop-tail{ left:-9px;   border-top:9px solid transparent;  border-bottom:9px solid transparent; border-right:9px solid rgba(26,20,18,.92); }
+  .mp-pop.pl-left  .pop-tail{ right:-9px;  border-top:9px solid transparent;  border-bottom:9px solid transparent; border-left:9px solid rgba(26,20,18,.92); }
+
+  .mp-pop .pop-x{ position:absolute; top:.45rem; right:.45rem; z-index:5; width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(20,15,13,.9); border:1px solid var(--hairline-soft); border-radius:50%;
+    color:var(--hm-cream); cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:transform .25s var(--ease-soft), color .25s var(--ease-soft), border-color .25s var(--ease-soft); }
+  .mp-pop .pop-x svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+  @media(hover:hover){ .mp-pop .pop-x:hover{ color:var(--hm-gold-bright); border-color:var(--hairline); transform:scale(1.08); } }
+  .mp-pop .pop-x:active{ transform:scale(.92); }
+
+  .mp-pop .pop-media{ position:relative; aspect-ratio:16/9; overflow:hidden; border-radius:11px 11px 0 0;
+    background:#0e0b0a; border-bottom:1px solid var(--hairline-soft); }
+  .mp-pop .pop-media img{ width:100%; height:100%; object-fit:cover; display:block;
+    transform:scale(1.05); transition:transform 7s var(--ease-soft); }
+  .mp-pop.on .pop-media img{ transform:scale(1.12); }
+  .mp-pop .pop-media::after{ content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(180deg, rgba(20,15,13,.06), transparent 40%, rgba(20,15,13,.74)); }
+  .mp-pop .pop-tag{ position:absolute; left:.6rem; bottom:.55rem; z-index:1;
+    font-family:var(--font-label); font-size:9px; font-weight:500; letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--hm-cream); background:rgba(20,15,13,.9);
+    border:1px solid var(--hairline-soft); border-radius:var(--r-pill); padding:.3em .7em; }
+  .mp-pop .pop-parcel{ position:absolute; right:.6rem; bottom:.55rem; z-index:1;
+    font-family:var(--font-label); font-size:9px; font-weight:500; letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--accent); background:rgba(20,15,13,.9);
+    border:1px solid var(--hairline-soft); border-radius:var(--r-pill); padding:.3em .7em; }
+
+  .mp-pop .pop-body{ padding:.85rem 1rem 1rem; }
+  .mp-pop .pop-h{ display:flex; align-items:baseline; gap:.55em;
+    padding-bottom:.6rem; margin-bottom:.65rem; border-bottom:1px solid var(--hairline-soft); }
+  .mp-pop .pop-h .tw{ font-family:var(--font-display); font-weight:300; font-size:clamp(1.3rem,1.7vw,1.6rem);
+    color:var(--ink); line-height:1; }
+  .mp-pop .pop-h .cfg{ margin-left:auto; font-family:var(--font-label); font-size:9px; font-weight:600;
+    letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--hm-espresso);
+    background:var(--accent); border-radius:var(--r-pill); padding:.4em .7em; }
+  .mp-pop .pop-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.55rem .9rem; }
+  .mp-pop .pop-grid .r{ display:flex; flex-direction:column; gap:.2em; min-width:0; }
+  .mp-pop .pop-grid .r span{ font-family:var(--font-label); font-size:8.5px; letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink-dim); }
+  .mp-pop .pop-grid .r b{ font-family:var(--font-display); font-weight:300; font-size:1.02rem;
+    color:var(--ink); line-height:1.1; }
+  .mp-pop .pop-line{ margin:.8rem 0 0; font-family:var(--font-body); font-weight:300;
+    font-size:.9rem; line-height:1.52; color:var(--ink-dim); }
+  .mp-pop .pop-ind{ margin-top:.75rem; display:flex; align-items:center; gap:.5em;
+    font-family:var(--font-label); font-size:8.5px; letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink-dim); opacity:.72; }
+  .mp-pop .pop-ind::before{ content:""; width:4px; height:4px; border-radius:50%; background:var(--accent); flex:0 0 auto; }
+
+  /* ============================================================
+     FLOATING OVERLAY FURNITURE (anchored to stage corners)
+     ============================================================ */
+  .mp-float{ position:absolute; z-index:6; background:rgba(24,18,16,.94);
+    border:1px solid var(--hairline-soft); border-radius:6px;
+    box-shadow:0 14px 40px rgba(0,0,0,.4); }
+
+  /* zoom controls — right edge, vertically centred */
+  .mp-zoom{ right:clamp(.6rem,1.6vw,1.1rem); top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:.4rem; padding:.45rem; }
+  .mp-zbtn{ width:46px; height:46px; border-radius:8px; display:grid; place-items:center;
+    background:rgba(34,26,24,.55); border:1px solid var(--hairline-soft); color:var(--ink);
+    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:border-color .25s, background .25s, color .25s, transform .15s; }
+  .mp-zbtn:hover{ border-color:var(--hairline); background:rgba(48,36,32,.7); }
+  .mp-zbtn:active{ transform:scale(.94); }
+  .mp-zbtn:disabled{ opacity:.35; cursor:default; }
+  .mp-zbtn svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .mp-zpct{ font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide);
+    color:var(--accent); padding:.15em 0; min-width:36px; text-align:center; font-variant-numeric:tabular-nums; }
+
+  /* caption pill — bottom-centre (affordance, not clutter) */
+  .mp-cap{ left:50%; bottom:clamp(.6rem,1.8vh,1.1rem); transform:translateX(-50%);
+    padding:.5rem 1.1rem; display:flex; align-items:center; gap:.7em; white-space:nowrap;
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink-dim); }
+  .mp-cap b{ color:var(--ink); font-weight:500; }
+  .mp-cap .dot{ width:4px; height:4px; border-radius:50%; background:var(--accent); opacity:.7; }
+
+  /* ---------- responsive ---------- */
+  @media (orientation:portrait), (max-width:760px){
+    .mp-zoom{ top:auto; bottom:clamp(.6rem,1.8vh,1.1rem); transform:none; flex-direction:row; }
+    .mp-cap{ display:none; }
+  }
+  @media (max-height:560px){
+    .mp-zoom{ top:auto; bottom:clamp(.5rem,2vh,1rem); transform:none; flex-direction:row; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .mp-entry{ transition:opacity .5s linear; transform:none; }
+    .mp-entry.in{ transform:none; }
+    .mp-drift{ animation:none; }
+    .hs-inner .beacon{ animation:none; opacity:0; }
+    .mp-pop{ transition:opacity .16s linear; transform:none !important; }
+    .mp-pop .pop-media img{ transition:none; transform:none; }
+  }
+</style>
+</head>
+<body data-screen="masterplan">
+  <div class="scr">
+    <header class="scr-top">
+      <button class="scr-back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Home</button>
+      <div class="scr-head">
+        <span class="k-eyebrow">The eight towers</span>
+        <h1 class="scr-name">Masterplan</h1>
+      </div>
+      <div class="scr-side"><img class="scr-crest" src="../assets/logo-crest.webp" alt="" onerror="this.style.display='none'"></div>
+    </header>
+
+    <main class="scr-body">
+      <div class="scr-wrap fill" data-reveal>
+        <div class="mp-stage" id="mpStage">
+
+          <!-- cinematic, floating presentation of the master-layout plan -->
+          <div class="mp-entry" id="mpEntry">
+            <div class="mp-glow"></div>
+            <div class="mp-drift" id="mpDrift">
+              <div class="mp-fit" id="mpFit">
+                <img class="mp-img" id="mpImg" src="../assets/screens/master-plan-clean.webp" alt="Highland Mayfields master site layout">
+                <div class="mp-hs" id="mpHs"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- zoom controls (right-centre) -->
+          <div class="mp-float mp-zoom mp-ctl" id="mpZoom" role="group" aria-label="Zoom controls">
+            <button class="mp-zbtn" id="zIn" type="button" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></button>
+            <span class="mp-zpct" id="zPct">100%</span>
+            <button class="mp-zbtn" id="zOut" type="button" aria-label="Zoom out" disabled><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+            <button class="mp-zbtn" id="zReset" type="button" aria-label="Reset view"><svg viewBox="0 0 24 24"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg></button>
+          </div>
+
+          <!-- caption (bottom-centre) -->
+          <div class="mp-float mp-cap mp-ctl" id="mpCap"></div>
+
+          <!-- tower info popup — anchored to the tapped medallion (JS-placed) -->
+          <div class="mp-pop mp-ctl" id="mpPop" role="dialog" aria-label="Tower detail"></div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="_kit.js"></script>
+  <script>
+  (function(){
+    'use strict';
+
+    /* ---- Tower identities (id only drives the medallion + label). ---- */
+    var TOWERS = [1,2,3,4,5,6,7,8];
+
+    /* Indicative % positions, calibrated against master-layout.webp (the tower numerals).
+       DO NOT MOVE — these are the load-bearing calibration values. */
+    var POS = {
+      1:{x:11.1,y:40.5}, 2:{x:11.1,y:33.6}, 3:{x:10.7,y:26.2},
+      4:{x:16.1,y:21.7}, 5:{x:23.1,y:21.7}, 6:{x:34.0,y:21.7},
+      7:{x:67.0,y:69.3}, 8:{x:67.0,y:84.9}
+    };
+
+    /* natural aspect of master-plan-clean.webp (cropped to the site) */
+    var ASPECT = 1922/1571;
+
+    function el(id){ return document.getElementById(id); }
+
+    /* ---- FAB "This Screen" info ---- */
+    window.HM_SCREEN_INFO = { title:'Masterplan', html:
+      '<p class="k-lede">Highland Mayfields is laid out across two linked parcels on a 15-acre estate &mdash; eight slender G+22 towers, three clubhouses and 70&ndash;80% open green.</p>'+
+      '<ul style="list-style:none;padding:0;margin:.7rem 0;display:flex;flex-direction:column;gap:.5rem">'+
+      '<li><b>West parcel</b> &middot; L-shaped, on PR-7 Airport Road (200&prime;) &middot; Towers 1&ndash;6, The Pearl clubhouse, central green, school site &amp; commercial at the main gate</li>'+
+      '<li><b>East parcel</b> &middot; triangular, linked by a green corridor, on PR-6 (150&prime;) &middot; Towers 7&ndash;8 with their own amenity pod, future-expansion reserve &amp; SE commercial block</li>'+
+      '<li>Double-basement parking &middot; 440 apartments planned</li></ul>'+
+      '<p class="k-swipe-hint">Pinch / scroll to zoom &middot; drag to pan &middot; tap a tower to open its details. Tower positions are indicative.</p>' };
+
+    /* ============================================================
+       Explorable canvas: contain-fit + bounded zoom / pan / pinch
+       ============================================================ */
+    var stage = el('mpStage'), fit = el('mpFit'), hs = el('mpHs');
+    var sc = 1, tx = 0, ty = 0;
+    var curW = 0, curH = 0, stageW = 0, stageH = 0;
+    var MIN = 1, MAX = 4.5;
+
+    function measure(){
+      stageW = stage.clientWidth; stageH = stage.clientHeight;
+      if(!stageW || !stageH) return;
+      if(stageW / stageH > ASPECT){ curH = stageH; curW = curH * ASPECT; }
+      else { curW = stageW; curH = curW / ASPECT; }
+      fit.style.width = curW + 'px'; fit.style.height = curH + 'px';
+      fit.style.left = ((stageW - curW) / 2) + 'px';
+      fit.style.top  = ((stageH - curH) / 2) + 'px';
+    }
+    function clampPan(){
+      var sw = curW * sc, sh = curH * sc;
+      var mx = Math.max(0, (sw - stageW) / 2), my = Math.max(0, (sh - stageH) / 2);
+      if(tx > mx) tx = mx; if(tx < -mx) tx = -mx;
+      if(ty > my) ty = my; if(ty < -my) ty = -my;
+    }
+    function apply(animate){
+      fit.style.transition = animate ? 'transform .32s var(--ease-soft)' : 'none';
+      clampPan();
+      fit.style.transform = 'translate(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px) scale(' + sc.toFixed(4) + ')';
+      /* counter-scale the medallions so they stay a constant on-screen size */
+      hs.style.setProperty('--inv', (1 / sc).toFixed(4));
+      el('zPct').textContent = Math.round(sc * 100) + '%';
+      el('zOut').disabled = sc <= MIN + 0.001;
+    }
+    function zoomAt(cx, cy, newSc, animate){
+      newSc = Math.max(MIN, Math.min(MAX, newSc));
+      if(newSc === sc) return;
+      var r = stage.getBoundingClientRect();
+      var ox = (cx - r.left) - stageW / 2, oy = (cy - r.top) - stageH / 2;
+      var lx = (ox - tx) / sc, ly = (oy - ty) / sc;
+      tx = ox - lx * newSc; ty = oy - ly * newSc; sc = newSc;
+      apply(animate);
+    }
+    function centerZoom(factor){
+      var r = stage.getBoundingClientRect();
+      zoomAt(r.left + stageW / 2, r.top + stageH / 2, sc * factor, true);
+    }
+    function resetView(){ sc = 1; tx = 0; ty = 0; apply(true); }
+
+    el('zIn').addEventListener('click', function(){ closePopup(); centerZoom(1.6); });
+    el('zOut').addEventListener('click', function(){ closePopup(); centerZoom(1/1.6); });
+    el('zReset').addEventListener('click', function(){ closePopup(); resetView(); });
+
+    stage.addEventListener('wheel', function(e){
+      e.preventDefault();
+      closePopup();
+      zoomAt(e.clientX, e.clientY, sc * (e.deltaY < 0 ? 1.14 : 0.88), false);
+    }, {passive:false});
+
+    /* pointer pan + pinch (ignore controls + medallions so their taps still fire) */
+    var pts = new Map(), last = null, pinch = null, gStart = null, gMoved = false;
+    function isCtl(t){ return t.closest('.mp-ctl') || t.closest('.hotspot'); }
+    function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+    stage.addEventListener('pointerdown', function(e){
+      if(isCtl(e.target)) return;
+      pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      try{ stage.setPointerCapture(e.pointerId); }catch(err){}
+      stage.classList.add('grabbing');
+      if(pts.size === 1){ last = {x:e.clientX, y:e.clientY}; gStart = {x:e.clientX, y:e.clientY}; gMoved = false; }
+      else if(pts.size === 2){
+        gMoved = true;
+        closePopup();
+        var a = Array.from(pts.values());
+        pinch = { d: dist(a[0], a[1]), sc: sc };
+      }
+    });
+    stage.addEventListener('pointermove', function(e){
+      if(!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      if(pts.size >= 2 && pinch){
+        var a = Array.from(pts.values());
+        var d = dist(a[0], a[1]);
+        var mid = { x:(a[0].x+a[1].x)/2, y:(a[0].y+a[1].y)/2 };
+        if(pinch.d > 0) zoomAt(mid.x, mid.y, pinch.sc * (d / pinch.d), false);
+      } else if(pts.size === 1 && last){
+        if(gStart && dist(gStart, {x:e.clientX, y:e.clientY}) > 8) gMoved = true;
+        tx += e.clientX - last.x; ty += e.clientY - last.y;
+        last = {x:e.clientX, y:e.clientY};
+        apply(false);
+      }
+    });
+    function endPtr(e){
+      pts.delete(e.pointerId);
+      if(pts.size < 2) pinch = null;
+      if(pts.size === 1){ var a = Array.from(pts.values())[0]; last = {x:a.x, y:a.y}; }
+      if(pts.size === 0){ last = null; stage.classList.remove('grabbing'); gStart = null; }
+    }
+    stage.addEventListener('pointerup', endPtr);
+    stage.addEventListener('pointercancel', endPtr);
+
+    /* double-tap / double-click to toggle zoom */
+    stage.addEventListener('dblclick', function(e){
+      if(isCtl(e.target)) return;
+      if(sc > 1.05){ resetView(); }
+      else zoomAt(e.clientX, e.clientY, 2.4, true);
+    });
+
+    /* ============================================================
+       Tower medallions → open an ANCHORED INFO POPUP (no navigation).
+       Per-tower facts are drawn verbatim from the inventory data set
+       (config / parcel / homes-per-floor); areas & price are shown as
+       "On Request" (kd Law 3 — no fabrication). Images are the two
+       honest per-parcel tower renders the inventory screen already uses.
+       ============================================================ */
+    var TW = {
+      1:{ parcel:'west', cfg:'3 BHK'      }, 2:{ parcel:'west', cfg:'3+1 BHK' },
+      3:{ parcel:'west', cfg:'4 BHK'      }, 4:{ parcel:'west', cfg:'4+1 BHK' },
+      5:{ parcel:'west', cfg:'4+1 BHK'    }, 6:{ parcel:'west', cfg:'4+1 BHK' },
+      7:{ parcel:'east', cfg:'3 BHK + 3W' }, 8:{ parcel:'east', cfg:'3 BHK + 3W' }
+    };
+
+    var pop = el('mpPop');
+    var popOpen = false, curId = null, curSide = 'above', rafOn = false, hideTimer = null;
+    var btnById = {};
+
+    function popHtml(id, t){
+      var west = t.parcel === 'west';
+      var img = west ? '../assets/screens/tower-west.webp' : '../assets/screens/tower-east.webp';
+      var parcelLab = west ? 'West &middot; T1&ndash;6' : 'East &middot; T7&ndash;8';
+      var apts = west ? '2' : '4';
+      var grade = west ? 'Grand Villa' : 'Lobby &amp; Club';
+      var line = west
+        ? 'A slender tower crowned by a duplex penthouse, rising over a private grand villa at grade and facing the central green.'
+        : 'A tower over a grand arrival lobby &amp; tower club, opening onto the eastern water gardens.';
+      return ''+
+        '<button class="pop-x" type="button" aria-label="Close">'+
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+        '<span class="pop-tail" aria-hidden="true"></span>'+
+        '<div class="pop-media"><img src="'+img+'" alt="Highland Mayfields &mdash; '+(west?'West':'East')+' tower render" '+
+            'loading="eager" onerror="this.closest(\'.pop-media\').style.display=\'none\'">'+
+          '<span class="pop-tag">Representative render</span>'+
+          '<span class="pop-parcel">'+parcelLab+'</span></div>'+
+        '<div class="pop-body">'+
+          '<div class="pop-h"><span class="tw">Tower '+id+'</span><span class="cfg">'+t.cfg+'</span></div>'+
+          '<div class="pop-grid">'+
+            '<div class="r"><span>Configuration</span><b>'+t.cfg+'</b></div>'+
+            '<div class="r"><span>Height</span><b>G+22</b></div>'+
+            '<div class="r"><span>Homes / floor</span><b>'+apts+'</b></div>'+
+            '<div class="r"><span>At grade</span><b>'+grade+'</b></div>'+
+            '<div class="r"><span>Super area</span><b>On Request</b></div>'+
+            '<div class="r"><span>Price</span><b>On Request</b></div>'+
+          '</div>'+
+          '<p class="pop-line">'+line+'</p>'+
+          '<div class="pop-ind">Indicative &middot; positions &amp; details subject to confirmation</div>'+
+        '</div>';
+    }
+
+    /* --- geometry: pin centre + stage size, relative to the stage box --- */
+    function geom(id){
+      var b = btnById[id], r = b.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+      return { px:r.left + r.width/2 - sr.left, py:r.top + r.height/2 - sr.top, W:sr.width, H:sr.height };
+    }
+    function decideSide(id){
+      var g = geom(id), pw = pop.offsetWidth, ph = pop.offsetHeight, gap = 20, M = 14;
+      if(g.py - gap - ph - M >= 0) return 'above';
+      if(g.py + gap + ph + M <= g.H) return 'below';
+      if(g.px + gap + pw + M <= g.W) return 'right';
+      if(g.px - gap - pw - M >= 0) return 'left';
+      return 'above';
+    }
+    function placePop(id, side){
+      var g = geom(id), pw = pop.offsetWidth, ph = pop.offsetHeight, gap = 20, M = 14, TB = 16;
+      var tail = pop.querySelector('.pop-tail'), left, top;
+      if(side === 'above' || side === 'below'){
+        left = Math.max(M, Math.min(g.px - pw/2, g.W - pw - M));
+        top  = (side === 'above') ? (g.py - gap - ph) : (g.py + gap);
+        var tx = Math.max(TB, Math.min(g.px - left, pw - TB));
+        if(tail){ tail.style.left = (tx - 9) + 'px'; tail.style.top = ''; }
+        pop.style.transformOrigin = tx + 'px ' + (side === 'above' ? '100%' : '0');
+      } else {
+        top  = Math.max(M, Math.min(g.py - ph/2, g.H - ph - M));
+        left = (side === 'right') ? (g.px + gap) : (g.px - gap - pw);
+        var ty = Math.max(TB, Math.min(g.py - top, ph - TB));
+        if(tail){ tail.style.top = (ty - 9) + 'px'; tail.style.left = ''; }
+        pop.style.transformOrigin = (side === 'right' ? '0' : '100%') + ' ' + ty + 'px';
+      }
+      pop.style.left = left + 'px';
+      pop.style.top  = top + 'px';
+    }
+
+    function markLit(id){
+      Object.keys(btnById).forEach(function(k){
+        var on = (String(k) === String(id));
+        btnById[k].classList.toggle('hs-lit', on);
+        btnById[k].setAttribute('aria-expanded', on ? 'true' : 'false');
+      });
+    }
+
+    function track(){
+      if(!popOpen){ rafOn = false; return; }
+      placePop(curId, curSide);
+      requestAnimationFrame(track);
+    }
+
+    function openPopup(id){
+      if(!TW[id]) return;
+      if(popOpen && curId === id){ closePopup(); return; }   // toggle same pin
+      curId = id; popOpen = true;
+      markLit(id);
+      pop.innerHTML = popHtml(id, TW[id]);
+      var xb = pop.querySelector('.pop-x');
+      if(xb) xb.addEventListener('click', function(ev){ ev.stopPropagation(); closePopup(); });
+      if(window.HMKit) HMKit.bindRipples(pop);
+      if(hideTimer){ clearTimeout(hideTimer); hideTimer = null; }
+      pop.style.display = 'block';
+      pop.classList.remove('on');
+      requestAnimationFrame(function(){
+        var side = decideSide(id); curSide = side;
+        pop.className = 'mp-pop mp-ctl pl-' + side;
+        placePop(id, side);
+        /* reveal only once the tower render has actually decoded (no black flash) */
+        var reveal = function(){ pop.classList.add('on'); };
+        var popImg = pop.querySelector('.pop-media img');
+        (window.HMKit && HMKit.gate && popImg) ? HMKit.gate(popImg, reveal) : reveal();
+      });
+      if(!rafOn){ rafOn = true; requestAnimationFrame(track); }
+    }
+
+    function closePopup(){
+      if(!popOpen) return;
+      popOpen = false; curId = null;
+      markLit(null);
+      pop.classList.remove('on');
+      if(hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(function(){ if(!popOpen) pop.style.display = 'none'; }, 460);
+    }
+
+    /* build the eight medallions; tapping one opens its popup */
+    TOWERS.forEach(function(id){
+      var p = POS[id] || {x:50,y:50};
+      var b = document.createElement('button');
+      b.className = 'hotspot';
+      b.type = 'button';
+      b.style.left = p.x + '%'; b.style.top = p.y + '%';
+      b.setAttribute('aria-haspopup', 'dialog');
+      b.setAttribute('aria-expanded', 'false');
+      b.setAttribute('aria-label', 'Tower ' + id + ' — view tower details');
+      b.innerHTML =
+        '<span class="hs-inner">'+
+          '<span class="beacon"></span><span class="beacon b2"></span><span class="beacon b3"></span>'+
+          '<span class="hs-medal"><span class="num">'+id+'</span></span>'+
+          '<span class="hs-tag">Tower '+id+'</span>'+
+        '</span>';
+      b.addEventListener('click', function(e){ e.stopPropagation(); openPopup(id); });
+      hs.appendChild(b);
+      btnById[id] = b;
+    });
+
+    /* Warm EVERY image this screen can show into THIS document's decoded cache —
+       the master-plan map (hero) + both per-parcel tower popup renders — so tapping
+       any medallion reveals its popup image instantly with no black/blur flash. */
+    if(window.HMKit && HMKit.preload) HMKit.preload([
+      '../assets/screens/master-plan-clean.webp',   // master site plan (hero map)
+      '../assets/screens/tower-west.webp',          // West parcel popup render (T1–6)
+      '../assets/screens/tower-east.webp'           // East parcel popup render (T7–8)
+    ]);
+
+    /* dismiss: tap outside the popup (but not on a medallion, which swaps) */
+    stage.addEventListener('pointerdown', function(e){
+      if(!popOpen) return;
+      if(e.target.closest && (e.target.closest('.mp-pop') || e.target.closest('.hotspot'))) return;
+      closePopup();
+    }, true);
+
+    /* dismiss: Esc closes the popup first (before the kit's back-nav) */
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape' && popOpen){ e.stopImmediatePropagation(); e.preventDefault(); closePopup(); }
+    }, true);
+
+    /* ---- caption ---- */
+    el('mpCap').innerHTML = '<b>Site Plan</b><span class="dot"></span>Tap a tower for details<span class="dot"></span>Positions indicative';
+
+    /* ---- init + resize ---- */
+    function relayout(){ measure(); apply(false); }
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        relayout();
+        /* play the cinematic scale-in once layout is settled */
+        el('mpEntry').classList.add('in');
+      });
+    });
+    window.addEventListener('load', relayout);
+    window.addEventListener('resize', relayout);
+    window.addEventListener('orientationchange', function(){ setTimeout(relayout, 250); });
+    if(window.ResizeObserver){ new ResizeObserver(relayout).observe(stage); }
+
+    if(window.HMKit) HMKit.bindRipples(stage);
+  })();
+  </script>
+</body>
+</html>

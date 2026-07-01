@@ -1,0 +1,33 @@
+{
+  "_meta": { "note": "Verbatim from client 'List of AMENITIES.xlsx'. 9 categories. Marketed as 85+.", "total": "85+" },
+  "categories": [
+    { "id": "clubhouse", "name": "Clubhouse", "icon": "club", "items": [
+      "Grand entrance lobby", "Reception & concierge desk", "Business centre", "Ball room", "Multipurpose party hall",
+      "Reading lounge / library", "Co-working zone", "Theatre", "Café & coffee bar", "Private dining",
+      "Rooftop swimming pool", "Kids' pool", "Rooftop bar", "Speakeasy bar", "Waiting lounge", "Doctor room", "Guest room" ] },
+    { "id": "wellness", "name": "Wellness & Fitness", "icon": "wellness", "items": [
+      "Gymnasium", "Salon", "Wellness centre", "Massage centre", "Yoga & meditation", "Pilates", "Zumba / dance",
+      "Steam spa", "Sauna bath", "Cold plunge", "Jacuzzi", "Refreshment bar" ] },
+    { "id": "indoor", "name": "Indoor Games", "icon": "indoor", "items": [
+      "Pool table", "Cards room", "Dart", "Board games", "Table tennis" ] },
+    { "id": "family", "name": "Family & Kids", "icon": "family", "items": [
+      "Kids play area", "Toddlers' zone", "Teen den zone", "Music room" ] },
+    { "id": "outdoor", "name": "Outdoor Sports", "icon": "sports", "items": [
+      "Tennis / multipurpose court", "Badminton court", "Cricket pitch", "Skating rink", "Golf simulator",
+      "Squash court", "Boxing ring", "Jogging track", "Pickle ball", "Paddle ball" ] },
+    { "id": "landscape", "name": "Landscape & Green", "icon": "leaf", "items": [
+      "Open-air amphitheatre", "Pavilions", "Pet-friendly walk", "Water features & fountains",
+      "Outdoor sitting", "Walking paths for seniors", "Reflexology pathway" ] },
+    { "id": "eco", "name": "Sustainability & Eco", "icon": "eco", "items": [
+      "Rainwater harvesting", "Solar panels", "Greywater recycling", "Organic composting pit", "Zen & herb garden",
+      "Energy-efficient lighting", "Smart waste segregation", "EV charging points" ] },
+    { "id": "smart", "name": "Smart & Digital", "icon": "smart", "items": [
+      "Smart access control", "Face recognition entry", "Basement network boosters", "App-based visitor management",
+      "Wi-Fi-enabled clubhouse", "Smart parcel lockers", "Intercom & CCTV coverage", "Boom barriers at gates",
+      "Digital concierge", "App-based maintenance booking" ] },
+    { "id": "infra", "name": "Infrastructure & Utilities", "icon": "infra", "items": [
+      "24×7 power backup", "Water purification system", "Earthquake-resistant structure", "Fire-exit staircases",
+      "Fire safety & sprinklers", "Sewage treatment plant (STP)", "Dedicated visitor parking",
+      "Ventilated basement car park", "Service-lift access", "24×7 security with control room", "Commercial shops" ] }
+  ]
+}

@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Residences — Floor-plan Comparison · Highland Mayfields</title>
+<link rel="stylesheet" href="../styles/brand.css">
+<link rel="stylesheet" href="../assets/css/hm-tools.css">
+<link rel="stylesheet" href="_kit.css">
+<style>
+  /* ===== root: full-height flex, no page scroll (NO-SCROLL LAW) ===== */
+  .scr-wrap.fill{ max-width:2200px; margin-inline:auto; }
+  .cmp-root{ height:100%; display:flex; flex-direction:column; min-height:0;
+    gap:clamp(.55rem,1.3vh,1rem); }
+
+  /* ===== toolbar (compact, flex:0) ===== */
+  .cmp-bar{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    gap:1rem; flex-wrap:wrap; }
+  .cmp-bar .lead{ display:flex; align-items:baseline; gap:.9rem; min-width:0; flex-wrap:wrap; }
+  .cmp-bar .lead .k-eyebrow{ display:block; }
+  .cmp-bar .hint{ font-family:var(--font-body); font-weight:300; font-size:var(--t-micro);
+    color:var(--ink-dim); letter-spacing:.02em; }
+  .cmp-ctl{ flex:0 0 auto; display:flex; align-items:center; gap:.8rem; }
+  .cmp-count{ font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink-dim); font-variant-numeric:tabular-nums; }
+  .cmp-add{ display:inline-flex; align-items:center; gap:.6em; min-height:40px; padding:.5em 1.2em;
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase;
+    color:var(--hm-espresso); background:var(--accent); border:1px solid var(--accent); border-radius:var(--r-pill);
+    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:opacity .25s, transform .15s, filter .25s; }
+  .cmp-add:hover{ filter:brightness(1.06); }
+  .cmp-add:active{ transform:translateY(1px); }
+  .cmp-add svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+  .cmp-add[disabled]{ pointer-events:none; opacity:.35; }
+
+  /* ===== stage: columns side by side, fills remaining height ===== */
+  .cmp-stage{ flex:1 1 auto; min-height:0; display:grid;
+    grid-template-rows:minmax(0,1fr); grid-auto-flow:column; grid-auto-columns:minmax(0,1fr);
+    gap:clamp(.6rem,1.3vw,1.3rem); }
+
+  .cmp-col{ min-width:0; min-height:0; display:flex; flex-direction:column;
+    gap:clamp(.45rem,.9vh,.75rem); background:rgba(30,24,22,.5);
+    border:1px solid var(--hairline-soft); border-radius:var(--r-tile);
+    padding:clamp(.6rem,1vw,1rem); transition:border-color .3s; }
+  .cmp-col.lead-col{ border-color:var(--hairline); }
+
+  /* column head: selector + remove */
+  .col-head{ flex:0 0 auto; display:flex; align-items:center; gap:.55rem; }
+  .col-sel{ -webkit-appearance:none; appearance:none; flex:1 1 auto; min-width:0;
+    font-family:var(--font-display); font-weight:300; font-size:clamp(1.05rem,1.5vw,1.55rem);
+    line-height:1.1; color:var(--ink); background:rgba(34,26,24,.6);
+    border:1px solid var(--hairline); border-radius:var(--r-tile);
+    padding:.45em 2.1em .45em .75em; cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ac8c55' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat; background-position:right .65em center; background-size:13px;
+    transition:border-color .25s; }
+  .col-sel:focus{ outline:none; border-color:var(--accent); }
+  .col-sel:hover{ border-color:var(--accent-soft); }
+  .col-sel option{ background:#1e1816; color:var(--ink); }
+  .col-remove{ flex:0 0 auto; width:34px; height:34px; border-radius:50%; display:grid; place-items:center;
+    color:var(--ink-dim); background:rgba(34,26,24,.5); border:1px solid var(--hairline-soft);
+    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:color .25s, border-color .25s; font-size:1rem; }
+  .col-remove:hover{ color:var(--hm-copper-hi); border-color:var(--hairline); }
+
+  /* column sub-row: towers + badges */
+  .col-sub{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:.5rem; min-height:20px; }
+  .col-tw{ font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .col-badges{ display:flex; gap:.4rem; flex:0 0 auto; }
+  .col-badge{ font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase;
+    padding:.25em .65em; border-radius:var(--r-pill); white-space:nowrap; }
+  .col-badge.lg{ color:var(--hm-espresso); background:var(--accent); }
+  .col-badge.sp{ color:var(--hm-copper-hi); border:1px solid var(--hairline); }
+
+  /* plan viewport — fills the flex space, contains the drawing on a dark mat (zoom/pan surface) */
+  .col-plan{ flex:1 1 auto; min-height:0; position:relative; overflow:hidden;
+    border-radius:var(--r-tile); border:1px solid var(--hairline-soft); background:#120e0d;
+    touch-action:none; -webkit-user-select:none; user-select:none; cursor:default; }
+  .col-plan.zoomed{ cursor:grab; }
+  .col-plan.zoomed.dragging{ cursor:grabbing; }
+  .col-plan img{ width:100%; height:100%; object-fit:contain; display:block; padding:.45rem;
+    box-sizing:border-box; transform-origin:center center; will-change:transform;
+    -webkit-user-drag:none; user-select:none; transition:transform .28s var(--ease-soft), opacity .4s; }
+  .col-plan.dragging img{ transition:opacity .4s; }
+
+  /* zoom / enlarge control cluster */
+  .plan-ctl{ position:absolute; top:.6rem; right:.6rem; z-index:3; display:flex; flex-direction:column; gap:.45rem;
+    opacity:.92; transition:opacity .25s; }
+  @media(hover:hover){ .col-plan:hover .plan-ctl{ opacity:1; } }
+  .plan-ctl button{ width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
+    color:var(--ink); background:rgba(28,21,19,.74); border:1px solid var(--hairline); backdrop-filter:blur(5px);
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:color .2s, border-color .2s, transform .15s, opacity .2s; }
+  .plan-ctl button:hover{ color:var(--accent); border-color:var(--accent-soft); }
+  .plan-ctl button:active{ transform:scale(.9); }
+  .plan-ctl button[disabled]{ opacity:.32; pointer-events:none; }
+  .plan-ctl button svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .plan-ctl .pc-exp{ margin-bottom:.15rem; }
+
+  .col-plan .ptag{ position:absolute; left:.6rem; bottom:.6rem; z-index:2; font-family:var(--font-label); font-size:10px;
+    letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent);
+    background:rgba(18,14,13,.72); border:1px solid var(--hairline-soft); border-radius:var(--r-pill); padding:.32em .75em;
+    transition:opacity .25s; pointer-events:none; }
+  .col-plan.zoomed .ptag{ opacity:0; }
+
+  /* specs — every data point gets EQUAL prominence: one consistent larger size,
+     clear labels, generous spacing, aligned across columns */
+  .col-specs{ flex:0 0 auto; }
+  .col-stats{ display:flex; flex-direction:column; }
+  .col-stats .srow{ display:flex; align-items:baseline; justify-content:space-between; gap:1rem;
+    padding:clamp(.42rem,.95vh,.72rem) .1rem; border-bottom:1px solid var(--hairline-soft); }
+  .col-stats .srow:last-child{ border-bottom:none; }
+  .col-stats .srow .lab{ font-family:var(--font-label); font-size:clamp(.78rem,.92vw,.94rem);
+    letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); white-space:nowrap; }
+  .col-stats .srow .val{ font-family:var(--font-display); font-weight:300;
+    font-size:clamp(1.4rem,1.85vw,1.72rem); color:var(--ink); line-height:1;
+    font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+  .col-stats .srow .val small{ font-size:.46em; color:var(--ink-dim); letter-spacing:.08em; margin-left:.3em; text-transform:lowercase; }
+
+  .col-bar{ margin-top:.7rem; }
+  .col-bar .lbl{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:.3rem; }
+  .col-bar .lbl span{ font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  .col-bar .lbl b{ font-family:var(--font-display); font-weight:300; font-size:.95rem; color:var(--accent-text); font-variant-numeric:tabular-nums; }
+  .col-bar .trk{ height:5px; border-radius:var(--r-pill); background:rgba(172,140,85,.14); overflow:hidden; }
+  .col-bar .fil{ height:100%; border-radius:var(--r-pill);
+    background:linear-gradient(90deg,var(--hm-gold-soft),var(--hm-gold-bright)); width:0; transition:width .8s var(--ease-settle); }
+
+  .col-meta{ display:flex; flex-wrap:wrap; gap:.5rem .95rem; margin-top:.7rem;
+    padding-top:.6rem; border-top:1px solid var(--hairline-soft); }
+  .col-meta .m{ display:flex; flex-direction:column; gap:.1em; }
+  .col-meta .m span{ font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  .col-meta .m b{ font-family:var(--font-body); font-weight:400; font-size:var(--t-micro); color:var(--ink); font-variant-numeric:tabular-nums; }
+  .col-note{ margin-top:.55rem; font-family:var(--font-body); font-weight:300; font-size:var(--t-micro);
+    color:var(--accent-text); line-height:1.45; }
+
+  /* ===== summary bar (flex:0) ===== */
+  .cmp-summary{ flex:0 0 auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:.5rem 1.4rem; align-items:center; background:rgba(30,24,22,.55);
+    border:1px solid var(--hairline-soft); border-radius:var(--r-tile);
+    padding:clamp(.55rem,1.1vh,.95rem) clamp(.9rem,1.8vw,1.5rem); }
+  .sum-cell span{ display:block; font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--accent); margin-bottom:.25em; }
+  .sum-cell b{ font-family:var(--font-display); font-weight:300; font-size:clamp(1rem,1.5vw,1.35rem);
+    color:var(--ink); line-height:1; font-variant-numeric:tabular-nums; }
+  .sum-cell b small{ font-size:.62em; color:var(--ink-dim); letter-spacing:.04em; }
+  .sum-cell .d{ font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--accent-text); margin-left:.4em; }
+
+  /* ===== zoom lightbox (self-contained, zoom/pan capable) ===== */
+  .cmp-lb{ position:fixed; inset:0; z-index:1000; display:none; flex-direction:column;
+    background:rgba(10,8,7,.95); backdrop-filter:blur(10px); }
+  .cmp-lb.on{ display:flex; animation:cmplb-in .32s var(--ease-soft); }
+  @keyframes cmplb-in{ from{ opacity:0 } to{ opacity:1 } }
+  .cmp-lb .lb-stage{ flex:1 1 auto; position:relative; overflow:hidden;
+    margin:clamp(1rem,3vh,2.2rem) clamp(3.4rem,7vw,5.5rem) 0;
+    touch-action:none; -webkit-user-select:none; user-select:none; cursor:default; }
+  .cmp-lb .lb-stage.zoomed{ cursor:grab; }
+  .cmp-lb .lb-stage.zoomed.dragging{ cursor:grabbing; }
+  .cmp-lb .lb-stage img{ width:100%; height:100%; object-fit:contain; display:block;
+    transform-origin:center center; will-change:transform; -webkit-user-drag:none;
+    transition:transform .28s var(--ease-soft); }
+  .cmp-lb .lb-stage.dragging img{ transition:none; }
+  .cmp-lb .lb-close{ position:absolute; top:clamp(.9rem,3vh,1.8rem); right:clamp(.9rem,3vw,1.8rem); z-index:5;
+    width:48px; height:48px; border-radius:50%; display:grid; place-items:center; color:var(--ink);
+    background:rgba(28,21,19,.7); border:1px solid var(--hairline); cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:color .2s, border-color .2s, transform .15s; }
+  .cmp-lb .lb-close:hover{ color:var(--accent); border-color:var(--accent-soft); }
+  .cmp-lb .lb-close:active{ transform:scale(.9); }
+  .cmp-lb .lb-close svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; }
+  .cmp-lb .lb-nav{ position:absolute; top:50%; transform:translateY(-50%); z-index:5; width:54px; height:54px; border-radius:50%;
+    display:grid; place-items:center; background:rgba(28,21,19,.7); border:1px solid var(--hairline); color:var(--ink);
+    font-family:var(--font-display); font-size:1.9rem; line-height:1; cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:color .2s, border-color .2s; }
+  .cmp-lb .lb-nav:hover{ color:var(--accent); border-color:var(--accent-soft); }
+  .cmp-lb .lb-nav.prev{ left:clamp(.6rem,2.2vw,1.6rem); } .cmp-lb .lb-nav.next{ right:clamp(.6rem,2.2vw,1.6rem); }
+  .cmp-lb .lb-foot{ flex:0 0 auto; display:flex; align-items:center; justify-content:center; gap:clamp(1rem,3vw,2.4rem);
+    flex-wrap:wrap; padding:clamp(.9rem,2.2vh,1.5rem) 1.5rem clamp(1rem,2.6vh,1.8rem); }
+  .cmp-lb .lb-cap{ font-family:var(--font-display); font-weight:300; color:var(--ink); font-size:var(--t-sub);
+    text-align:center; letter-spacing:.01em; }
+  .cmp-lb .lb-zoom{ display:flex; align-items:center; gap:.55rem; }
+  .cmp-lb .lb-zoom button{ height:46px; border-radius:var(--r-pill); color:var(--ink);
+    background:rgba(28,21,19,.7); border:1px solid var(--hairline); cursor:pointer; -webkit-tap-highlight-color:transparent;
+    display:grid; place-items:center; transition:color .2s, border-color .2s, transform .15s, opacity .2s; }
+  .cmp-lb .lb-zoom .lz-in, .cmp-lb .lb-zoom .lz-out{ width:46px; }
+  .cmp-lb .lb-zoom .lz-reset{ min-width:74px; padding:0 1.1em; font-family:var(--font-label);
+    font-size:var(--t-micro); letter-spacing:var(--track-wide); font-variant-numeric:tabular-nums; }
+  .cmp-lb .lb-zoom button:hover{ color:var(--accent); border-color:var(--accent-soft); }
+  .cmp-lb .lb-zoom button:active{ transform:scale(.92); }
+  .cmp-lb .lb-zoom button[disabled]{ opacity:.32; pointer-events:none; }
+  .cmp-lb .lb-zoom svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; }
+
+  /* ===== responsive ===== */
+  @media (max-width:680px), (orientation:portrait){
+    .cmp-bar .hint{ display:none; }
+  }
+  @media (max-height:740px){
+    .col-stats .srow{ padding:clamp(.32rem,.7vh,.55rem) .1rem; }
+    .col-stats .srow .val{ font-size:clamp(1.2rem,1.65vw,1.5rem); }
+    .col-bar{ margin-top:.5rem; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .col-plan img, .cmp-lb .lb-stage img{ transition:opacity .3s !important; }
+    .cmp-lb.on{ animation:none; }
+  }
+</style>
+</head>
+<body data-screen="residences">
+  <div class="scr">
+    <header class="scr-top">
+      <button class="scr-back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Home</button>
+      <div class="scr-head">
+        <span class="k-eyebrow">Homes of Stature</span>
+        <h1 class="scr-name">Residences</h1>
+      </div>
+      <div class="scr-side"><img class="scr-crest" src="../assets/logo-crest.png" alt="" onerror="this.style.display='none'"></div>
+    </header>
+
+    <main class="scr-body">
+      <div class="scr-wrap fill">
+        <div class="cmp-root">
+
+          <!-- toolbar -->
+          <div class="cmp-bar" data-reveal>
+            <div class="lead">
+              <div>
+                <span class="k-eyebrow">Floor-plan comparison</span>
+              </div>
+              <span class="hint">Choose a configuration in each column — swap the plan, areas &amp; deltas update live.</span>
+            </div>
+            <div class="cmp-ctl">
+              <span class="cmp-count" id="cmpCount">2 / 3</span>
+              <button class="cmp-add" id="addBtn" type="button">
+                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add a plan
+              </button>
+            </div>
+          </div>
+
+          <!-- comparison stage (columns injected) -->
+          <div class="cmp-stage" id="stage" data-reveal></div>
+
+          <!-- summary / deltas -->
+          <div class="cmp-summary" id="summary" data-reveal></div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="_kit.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    var FP = '../assets/screens/floorplans/';
+    function fmt(n){ return (typeof n==='number') ? n.toLocaleString('en-IN') : n; }
+
+    /* ---------- configurations (client layout book + RERA payment chart; verified from the
+         unit-plan pages — areas in sq.ft, no invented prices · kd Law 3) ---------- */
+    var CONFIGS = [
+      { id:'3bhk', name:'3 BHK', towers:'Tower 1', apf:'2 / floor', special:false,
+        superFt:2890, carpetFt:1394, builtFt:1878, unitFt:1545,
+        superText:'2,890', carpetText:'1,394',
+        plan:'p-09', planTitle:'3 BHK · Tower 1 — Unit Plan',
+        note:'Type 2 (Spacious). Corner Type 1 runs to 3,280 sq.ft super. Three-side open, balcony-wrapped.' },
+      { id:'3p1', name:'3+1 BHK', towers:'Tower 2', apf:'2 / floor', special:false,
+        superFt:3675, carpetFt:1783, builtFt:2379, unitFt:1991,
+        superText:'3,675', carpetText:'1,783',
+        plan:'p-11', planTitle:'3+1 BHK · Tower 2 — Unit Plan',
+        note:'A +1 utility / study room. Family lounge plus a formal drawing room.' },
+      { id:'4bhk', name:'4 BHK', towers:'Tower 3', apf:'2 / floor', special:false,
+        superFt:4400, carpetFt:2042, builtFt:2846, unitFt:2248,
+        superText:'4,400', carpetText:'2,042',
+        plan:'p-13', planTitle:'4 BHK · Tower 3 — Unit Plan',
+        note:'Type 2 (Corner). Every bedroom a private retreat with attached washroom.' },
+      { id:'4p1', name:'4+1 BHK', towers:'Towers 4 – 6', apf:'2 / floor', special:false,
+        superFt:4850, carpetFt:2355, builtFt:3151, unitFt:2535,
+        superText:'4,750 – 5,250', carpetText:'2,319 – 2,481',
+        plan:'p-15', planTitle:'4+1 BHK · Tower 4 — Unit Plan',
+        note:'The largest layouts (Tower 4 corner shown). Sweeping decks &amp; family lounge open to the greens.' },
+      { id:'3w', name:'3 BHK + 3W', towers:'Towers 7 & 8', apf:'4 / floor', special:true,
+        superFt:2770, carpetFt:1398, builtFt:1957, unitFt:1530,
+        superText:'2,770', carpetText:'1,398',
+        plan:'p-20', planTitle:'3 BHK + 3W · Towers 7 & 8',
+        note:'Special edition — every flat a corner flat, with four balconies and a separate wet kitchen.' }
+    ];
+    function byId(id){ for(var i=0;i<CONFIGS.length;i++){ if(CONFIGS[i].id===id) return CONFIGS[i]; } return CONFIGS[0]; }
+    function superDisp(c){ return c.superText || fmt(c.superFt); }
+    function carpetDisp(c){ return c.carpetText || fmt(c.carpetFt); }
+
+    /* ---------- state: array of selected config ids (2–3) ---------- */
+    var state = ['3bhk','4p1'];
+    var MAX = 3, MIN = 2;
+
+    var stage   = document.getElementById('stage');
+    var summary = document.getElementById('summary');
+    var addBtn  = document.getElementById('addBtn');
+    var countEl = document.getElementById('cmpCount');
+
+    function maxSuper(){ var m=0; state.forEach(function(id){ m=Math.max(m, byId(id).superFt); }); return m||1; }
+    function leadConfigId(){ var best=state[0], bv=-1; state.forEach(function(id){ var v=byId(id).superFt; if(v>bv){bv=v;best=id;} }); return best; }
+
+    /* ---------- reusable pinch / wheel / double-tap / button zoom + drag-pan ----------
+       `frame` is the overflow-hidden viewport, `img` is object-fit:contain inside it.
+       Pan is clamped so the image box always covers the frame (stays in-frame). */
+    function ZoomPan(frame, img, opts){
+      opts = opts||{};
+      var MIN = 1, MAX = opts.max || 4.5;
+      var scale = 1, tx = 0, ty = 0;
+      var pts = {}, pinch = null, moved = false, downX = 0, downY = 0, lastTap = 0;
+
+      function clampPan(){
+        var fw = frame.clientWidth, fh = frame.clientHeight;
+        var mx = Math.max(0, (fw*(scale-1))/2), my = Math.max(0, (fh*(scale-1))/2);
+        if(tx >  mx) tx =  mx; if(tx < -mx) tx = -mx;
+        if(ty >  my) ty =  my; if(ty < -my) ty = -my;
+      }
+      function apply(){
+        img.style.transform = 'translate('+tx.toFixed(2)+'px,'+ty.toFixed(2)+'px) scale('+scale.toFixed(4)+')';
+        frame.classList.toggle('zoomed', scale > 1.01);
+        if(opts.onChange) opts.onChange(scale, MIN, MAX);
+      }
+      function zoomTo(ns, px, py){
+        ns = Math.max(MIN, Math.min(MAX, ns));
+        if(px == null){ px = 0; py = 0; }
+        var k = ns/scale;
+        tx = px - (px - tx)*k;
+        ty = py - (py - ty)*k;
+        scale = ns; clampPan(); apply();
+      }
+      function rel(cx, cy){ var r = frame.getBoundingClientRect();
+        return [cx - r.left - r.width/2, cy - r.top - r.height/2]; }
+
+      frame.addEventListener('wheel', function(e){
+        e.preventDefault();
+        var p = rel(e.clientX, e.clientY);
+        zoomTo(scale * Math.exp(-e.deltaY * 0.0015), p[0], p[1]);
+      }, {passive:false});
+
+      frame.addEventListener('pointerdown', function(e){
+        if(e.target.closest && e.target.closest('.plan-ctl,.lb-zoom,.lb-nav,.lb-close')) return;
+        try{ frame.setPointerCapture(e.pointerId); }catch(_){}
+        pts[e.pointerId] = {x:e.clientX, y:e.clientY};
+        moved = false; downX = e.clientX; downY = e.clientY;
+        var ids = Object.keys(pts);
+        if(ids.length === 2){
+          var a = pts[ids[0]], b = pts[ids[1]];
+          pinch = { dist:Math.hypot(a.x-b.x, a.y-b.y) || 1, scale:scale };
+        }
+        frame.classList.add('dragging');
+      });
+      frame.addEventListener('pointermove', function(e){
+        var p = pts[e.pointerId]; if(!p) return;
+        var dx = e.clientX - p.x, dy = e.clientY - p.y;
+        p.x = e.clientX; p.y = e.clientY;
+        if(Math.abs(e.clientX-downX) + Math.abs(e.clientY-downY) > 6) moved = true;
+        var ids = Object.keys(pts);
+        if(ids.length >= 2 && pinch){
+          var a = pts[ids[0]], b = pts[ids[1]];
+          var dist = Math.hypot(a.x-b.x, a.y-b.y);
+          var mid = rel((a.x+b.x)/2, (a.y+b.y)/2);
+          zoomTo(pinch.scale * (dist/pinch.dist), mid[0], mid[1]);
+        } else if(ids.length === 1 && scale > 1.01){
+          tx += dx; ty += dy; clampPan(); apply();
+        }
+      });
+      function up(e){
+        var tracked = !!pts[e.pointerId];   /* control-button taps were never tracked → ignore */
+        var wasTap = !moved;
+        if(tracked) delete pts[e.pointerId];
+        var n = Object.keys(pts).length;
+        if(n < 2) pinch = null;
+        if(n === 0) frame.classList.remove('dragging');
+        if(tracked && wasTap && n === 0){
+          var now = Date.now();
+          if(now - lastTap < 320){                 /* double-tap toggles zoom */
+            var p = rel(e.clientX, e.clientY);
+            if(scale > 1.01) zoomTo(MIN); else zoomTo(2.6, p[0], p[1]);
+            lastTap = 0;
+          } else lastTap = now;
+        }
+      }
+      frame.addEventListener('pointerup', up);
+      frame.addEventListener('pointercancel', up);
+
+      apply();
+      return {
+        reset:  function(){ scale = MIN; tx = 0; ty = 0; apply(); },
+        zoomIn: function(){ zoomTo(scale * 1.5); },
+        zoomOut:function(){ zoomTo(scale / 1.5); }
+      };
+    }
+
+    /* ---------- self-contained zoom lightbox (HMKit's has no zoom) ---------- */
+    var EXP_SVG  = '<svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg>';
+    var PLUS_SVG = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>';
+    var MIN_SVG  = '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/></svg>';
+    var X_SVG    = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+    var lbEl, lbImg, lbCap, lbZP, lbItems = [], lbIdx = 0;
+    function ensureLb(){
+      if(lbEl) return;
+      lbEl = document.createElement('div'); lbEl.className = 'cmp-lb';
+      lbEl.innerHTML =
+        '<button class="lb-close" type="button" aria-label="Close">'+X_SVG+'</button>'+
+        '<button class="lb-nav prev" type="button" aria-label="Previous plan">&lsaquo;</button>'+
+        '<div class="lb-stage"><img alt=""></div>'+
+        '<button class="lb-nav next" type="button" aria-label="Next plan">&rsaquo;</button>'+
+        '<div class="lb-foot">'+
+          '<div class="lb-cap"></div>'+
+          '<div class="lb-zoom">'+
+            '<button class="lz-out" type="button" aria-label="Zoom out">'+MIN_SVG+'</button>'+
+            '<button class="lz-reset" type="button" aria-label="Reset zoom"><span class="lzpct">100%</span></button>'+
+            '<button class="lz-in" type="button" aria-label="Zoom in">'+PLUS_SVG+'</button>'+
+          '</div>'+
+        '</div>';
+      document.body.appendChild(lbEl);
+      lbImg = lbEl.querySelector('img'); lbCap = lbEl.querySelector('.lb-cap');
+      var pct = lbEl.querySelector('.lzpct');
+      var bOut = lbEl.querySelector('.lz-out'), bIn = lbEl.querySelector('.lz-in');
+      lbZP = ZoomPan(lbEl.querySelector('.lb-stage'), lbImg, { max:6, onChange:function(s, mn, mx){
+        pct.textContent = Math.round(s*100) + '%';
+        bOut.disabled = s <= mn + 0.01; bIn.disabled = s >= mx - 0.01;
+      }});
+      lbEl.querySelector('.lb-close').addEventListener('click', closeLb);
+      lbEl.querySelector('.prev').addEventListener('click', function(){ lbGo(-1); });
+      lbEl.querySelector('.next').addEventListener('click', function(){ lbGo(1); });
+      bOut.addEventListener('click', function(){ lbZP.zoomOut(); });
+      bIn.addEventListener('click',  function(){ lbZP.zoomIn(); });
+      lbEl.querySelector('.lz-reset').addEventListener('click', function(){ lbZP.reset(); });
+      /* capture-phase Esc/arrows so HMKit's "Esc → back" doesn't fire while open */
+      document.addEventListener('keydown', function(e){
+        if(!lbEl || !lbEl.classList.contains('on')) return;
+        if(e.key === 'Escape'){ e.stopImmediatePropagation(); e.preventDefault(); closeLb(); }
+        else if(e.key === 'ArrowRight'){ lbGo(1); }
+        else if(e.key === 'ArrowLeft'){ lbGo(-1); }
+      }, true);
+    }
+    function lbShow(){
+      var it = lbItems[lbIdx] || {};
+      lbImg.src = it.src || ''; lbCap.textContent = it.title || '';
+      lbZP.reset();
+      var multi = lbItems.length > 1;
+      lbEl.querySelector('.prev').style.display = multi ? '' : 'none';
+      lbEl.querySelector('.next').style.display = multi ? '' : 'none';
+    }
+    function lbGo(d){ lbIdx = (lbIdx + d + lbItems.length) % lbItems.length; lbShow(); }
+    function openPlans(i){
+      ensureLb();
+      lbItems = state.map(function(id){ var c = byId(id); return { src:FP+c.plan+'.webp', title:c.planTitle }; });
+      lbIdx = i || 0; lbShow(); lbEl.classList.add('on');
+    }
+    function closeLb(){ if(lbEl){ lbEl.classList.remove('on'); lbZP.reset(); } }
+
+    /* ---------- build one column ---------- */
+    function buildColumn(id, i){
+      var c = byId(id);
+      var col = document.createElement('div');
+      col.className = 'cmp-col' + (id===leadConfigId() ? ' lead-col':'');
+
+      /* selector options */
+      var opts = CONFIGS.map(function(o){
+        return '<option value="'+o.id+'"'+(o.id===id?' selected':'')+'>'+o.name+'</option>';
+      }).join('');
+
+      var canRemove = state.length > MIN;
+      var isLead = id===leadConfigId() && state.length>1;
+
+      var badges = '';
+      if(isLead) badges += '<span class="col-badge lg">Largest</span>';
+      if(c.special) badges += '<span class="col-badge sp">Special</span>';
+
+      col.innerHTML =
+        '<div class="col-head">'+
+          '<select class="col-sel" aria-label="Choose configuration">'+opts+'</select>'+
+          (canRemove ? '<button class="col-remove" type="button" aria-label="Remove this plan">&#10005;</button>' : '')+
+        '</div>'+
+        '<div class="col-sub">'+
+          '<span class="col-tw">'+c.towers+' &middot; '+c.apf+'</span>'+
+          '<span class="col-badges">'+badges+'</span>'+
+        '</div>'+
+        '<div class="col-plan" aria-label="'+c.name+' floor plan — pinch, scroll or double-tap to zoom">'+
+          '<img src="'+FP+c.plan+'.webp" alt="'+c.planTitle+'" loading="lazy" onerror="this.style.opacity=0">'+
+          '<div class="plan-ctl">'+
+            '<button class="pc-exp" type="button" aria-label="Open full screen">'+EXP_SVG+'</button>'+
+            '<button class="pc-in"  type="button" aria-label="Zoom in">'+PLUS_SVG+'</button>'+
+            '<button class="pc-out" type="button" aria-label="Zoom out">'+MIN_SVG+'</button>'+
+          '</div>'+
+          '<span class="ptag">Pinch / scroll to zoom &middot; &#9974; enlarge</span>'+
+        '</div>'+
+        '<div class="col-specs">'+
+          '<div class="col-stats">'+
+            '<div class="srow"><span class="lab">Carpet area</span><b class="val">'+carpetDisp(c)+'<small>sq.ft</small></b></div>'+
+            '<div class="srow"><span class="lab">Built-up area</span><b class="val">'+fmt(c.builtFt)+'<small>sq.ft</small></b></div>'+
+            '<div class="srow"><span class="lab">Unit area</span><b class="val">'+fmt(c.unitFt)+'<small>sq.ft</small></b></div>'+
+            '<div class="srow"><span class="lab">Super area</span><b class="val">'+superDisp(c)+'<small>sq.ft</small></b></div>'+
+            '<div class="srow"><span class="lab">Homes / floor</span><b class="val">'+c.apf.replace(' / floor','')+'</b></div>'+
+          '</div>'+
+          '<div class="col-bar">'+
+            '<div class="lbl"><span>Relative scale</span><b>'+Math.round(c.superFt/maxSuper()*100)+'%</b></div>'+
+            '<div class="trk"><div class="fil" data-w="'+(c.superFt/maxSuper()*100)+'"></div></div>'+
+          '</div>'+
+          '<p class="col-note">'+c.note+'</p>'+
+        '</div>';
+
+      /* selector → swap live */
+      col.querySelector('.col-sel').addEventListener('change', function(e){
+        state[i] = e.target.value; render();
+      });
+      /* remove */
+      var rm = col.querySelector('.col-remove');
+      if(rm) rm.addEventListener('click', function(){ if(state.length>MIN){ state.splice(i,1); render(); } });
+      /* zoom / pan on the thumbnail + enlarge button */
+      var plan = col.querySelector('.col-plan');
+      var zp = ZoomPan(plan, plan.querySelector('img'), { max:4.5, onChange:function(s, mn, mx){
+        col.querySelector('.pc-out').disabled = s <= mn + 0.01;
+        col.querySelector('.pc-in').disabled  = s >= mx - 0.01;
+      }});
+      col.querySelector('.pc-exp').addEventListener('click', function(){ openPlans(i); });
+      col.querySelector('.pc-in').addEventListener('click',  function(){ zp.zoomIn(); });
+      col.querySelector('.pc-out').addEventListener('click', function(){ zp.zoomOut(); });
+
+      return col;
+    }
+
+    /* ---------- summary / deltas ---------- */
+    function renderSummary(){
+      var smin=Infinity, smax=-Infinity, cmin=Infinity, cmax=-Infinity;
+      state.forEach(function(id){ var c=byId(id);
+        smin=Math.min(smin,c.superFt); smax=Math.max(smax,c.superFt);
+        cmin=Math.min(cmin,c.carpetFt); cmax=Math.max(cmax,c.carpetFt);
+      });
+      var lead = byId(leadConfigId());
+      var dS = smax-smin, dC = cmax-cmin;
+      summary.innerHTML =
+        '<div class="sum-cell"><span>Comparing</span><b>'+state.length+' <small>configurations</small></b></div>'+
+        '<div class="sum-cell"><span>Super area spread</span><b>'+fmt(smin)+' &ndash; '+fmt(smax)+'<small> sq.ft</small>'+(dS?'<span class="d">&Delta; '+fmt(dS)+'</span>':'')+'</b></div>'+
+        '<div class="sum-cell"><span>Carpet area spread</span><b>'+fmt(cmin)+' &ndash; '+fmt(cmax)+'<small> sq.ft</small>'+(dC?'<span class="d">&Delta; '+fmt(dC)+'</span>':'')+'</b></div>'+
+        '<div class="sum-cell"><span>Largest home</span><b>'+lead.name+' <small>'+lead.towers+'</small></b></div>';
+    }
+
+    /* ---------- full render ---------- */
+    function render(){
+      stage.innerHTML='';
+      state.forEach(function(id,i){ stage.appendChild(buildColumn(id,i)); });
+      renderSummary();
+      countEl.textContent = state.length + ' / ' + MAX;
+      addBtn.disabled = state.length >= MAX;
+      if(window.HMKit && HMKit.bindRipples) HMKit.bindRipples(stage);
+      if(window.HMKit && HMKit.bindRipples) HMKit.bindRipples(summary);
+      /* animate the relative-scale bars in */
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){
+        Array.prototype.forEach.call(stage.querySelectorAll('.col-bar .fil'), function(f){ f.style.width = f.getAttribute('data-w')+'%'; });
+      }); });
+    }
+
+    /* ---------- add a plan ---------- */
+    addBtn.addEventListener('click', function(){
+      if(state.length>=MAX) return;
+      var next = CONFIGS[0].id;
+      for(var i=0;i<CONFIGS.length;i++){ if(state.indexOf(CONFIGS[i].id)===-1){ next=CONFIGS[i].id; break; } }
+      state.push(next); render();
+    });
+
+    /* ---------- FAB "This Screen" info ---------- */
+    window.HM_SCREEN_INFO = { title:'Residences · Floor-plan comparison', html:
+      '<p class="k-lede">Place any two — or three — configurations side by side and read the plans, areas and deltas at a glance.</p>'+
+      '<ul style="list-style:none;padding:0;margin:.7rem 0;display:flex;flex-direction:column;gap:.5rem">'+
+      '<li>5 configurations across 8 towers · G+22</li>'+
+      '<li>3 BHK 2,890 &middot; 3+1 BHK 3,675 &middot; 4 BHK 4,400</li>'+
+      '<li>4+1 BHK 4,750&ndash;5,250 &middot; 3 BHK + 3W 2,770 (special edition)</li>'+
+      '<li>RERA &middot; PBRERA-SAS80-PR1041</li></ul>'+
+      '<p class="k-lede" style="font-size:var(--t-micro)">All areas are approximate (super sq.ft), per the sanctioned layout book &amp; Apartment Buyer Agreement. Pricing on request.</p>' };
+
+    render();
+  })();
+  </script>
+</body>
+</html>

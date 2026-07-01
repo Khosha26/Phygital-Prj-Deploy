@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>The Pearl — Highland Mayfields</title>
+<link rel="stylesheet" href="../styles/brand.css">
+<link rel="stylesheet" href="../assets/css/hm-tools.css">
+<link rel="stylesheet" href="_kit.css">
+<style>
+  /* ============================================================
+     THE PEARL — no-scroll hero frame + interactive amenity pins
+     The clubhouse render fills the screen. Each pin is a tactile
+     hotspot; tapping it opens an ANCHORED POPOVER (over the pin,
+     with a pointer/tail) carrying a relevant image + the amenity
+     list. No modal, no scrollbar — one viewport.
+     ============================================================ */
+
+  /* ---- the render fills the whole body as one hero frame ---- */
+  .pearl-hero{ position:relative; height:100%; border-radius:var(--r-tile); overflow:hidden;
+    border:1px solid var(--hairline-soft); background:#0e0b0a;
+    display:flex; flex-direction:column; justify-content:space-between;
+    touch-action:none; -webkit-tap-highlight-color:transparent; }
+
+  /* zoomable / pannable STAGE — render + pins ride together so a pin can be
+     cinematically brought toward centre. JS owns the transform (origin 0,0). */
+  .pearl-stage{ position:absolute; inset:0; transform-origin:0 0; will-change:transform;
+    transform:translate3d(0,0,0) scale(1); }
+  .pearl-stage .render{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;
+    transform:scale(1.04); transform-origin:60% 42%; }
+  .scr.ready .pearl-stage .render{ animation:pearl-kb 30s var(--ease-soft) forwards; }
+  .pearl-hero.is-zoom .pearl-stage .render{ animation-play-state:paused; }
+  /* PAUSE the render kenburns while a card is open (crisp, no live re-raster under blur) */
+  .pearl-hero.card-open .pearl-stage .render{ animation-play-state:paused; }
+  @keyframes pearl-kb{ 0%{ transform:scale(1.04) translate(0,0); } 100%{ transform:scale(1.1) translate(-1.2%,-1.2%); } }
+  .pearl-stage .veil{ position:absolute; inset:0; pointer-events:none; z-index:2;
+    background:linear-gradient(180deg, rgba(20,15,13,.55) 0%, rgba(20,15,13,.12) 30%, rgba(20,15,13,.55) 66%, rgba(20,15,13,.96) 100%); }
+  .pearl-stage .veil2{ position:absolute; inset:0; pointer-events:none; z-index:2;
+    background:linear-gradient(92deg, rgba(20,15,13,.7), rgba(20,15,13,.18) 52%, transparent 78%); }
+  .pearl-stage .latt{ position:absolute; inset:0; pointer-events:none; z-index:3; opacity:.05; mix-blend-mode:overlay;
+    background-image:var(--hm-lattice); background-size:clamp(96px,9vw,140px); }
+
+  /* ---- explorable hotspots over the render (positions are indicative) ---- */
+  .pearl-spots{ position:absolute; inset:0; pointer-events:none; z-index:4; }
+  .hotspot{ position:absolute; transform:translate(-50%,-50%); pointer-events:auto;
+    display:flex; flex-direction:column; align-items:center; gap:.42em;
+    min-width:44px; min-height:44px; justify-content:center; padding:0;
+    background:none; border:0; cursor:pointer; -webkit-tap-highlight-color:transparent; line-height:1;
+    transition:transform .3s var(--ease-soft); }
+  .hotspot .hdot{ position:relative; width:16px; height:16px; }
+  .hotspot .hdot .ring{ position:absolute; inset:-5px; border-radius:50%; border:1.5px solid var(--accent);
+    animation:hs-pulse 2.4s ease-out infinite; }
+  .hotspot .hdot .ring.r2{ animation-delay:1.2s; }
+  /* persistent soft halo so the pin reads as "live" + grows on hover/open */
+  .hotspot .hdot .halo{ position:absolute; inset:-9px; border-radius:50%;
+    background:radial-gradient(circle, rgba(207,184,141,.34), transparent 68%);
+    opacity:.5; transform:scale(.7); transition:opacity .3s var(--ease-soft), transform .3s var(--ease-soft); }
+  .hotspot .hdot .core{ position:absolute; inset:0; border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, var(--hm-gold-bright), var(--hm-gold));
+    border:2px solid rgba(20,15,13,.78); box-shadow:0 0 12px rgba(207,184,141,.7), 0 1px 3px rgba(0,0,0,.5);
+    transition:transform .3s var(--ease-soft), box-shadow .3s var(--ease-soft); }
+  .hotspot .hlab{ font-family:var(--font-label); font-size:11px; font-weight:500;
+    letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--hm-cream);
+    background:rgba(20,15,13,.9); border:1px solid var(--hairline-soft); border-radius:var(--r-pill);
+    padding:.2em .62em; backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+    box-shadow:0 2px 6px rgba(0,0,0,.4); white-space:nowrap; display:inline-flex; align-items:center; gap:.42em;
+    transition:color .25s var(--ease-soft), border-color .25s var(--ease-soft), background .25s var(--ease-soft); }
+  .hotspot .hlab .ct{ font-family:var(--font-display); font-weight:300; color:var(--accent-text);
+    letter-spacing:0; font-size:1.08em; }
+  @keyframes hs-pulse{ 0%{ transform:scale(.7); opacity:.85 } 100%{ transform:scale(2.6); opacity:0 } }
+  @media(hover:hover){
+    .hotspot:hover{ transform:translate(-50%,-50%) scale(1.06); }
+    .hotspot:hover .core{ transform:scale(1.22); box-shadow:0 0 18px rgba(207,184,141,.9), 0 1px 3px rgba(0,0,0,.5); }
+    .hotspot:hover .halo{ opacity:.9; transform:scale(1.1); }
+    .hotspot:hover .hlab{ color:var(--hm-gold-bright); border-color:var(--hairline); background:rgba(20,15,13,.9); }
+  }
+  .hotspot:active{ transform:translate(-50%,-50%) scale(.96); }
+  .hotspot:active .core{ transform:scale(.9); }
+  /* OPEN state — pin stays lit while its popover is showing */
+  .hotspot.is-open .core{ transform:scale(1.28); box-shadow:0 0 22px rgba(207,184,141,1), 0 1px 4px rgba(0,0,0,.55); }
+  .hotspot.is-open .halo{ opacity:1; transform:scale(1.25); }
+  .hotspot.is-open .ring{ border-color:var(--hm-gold-bright); }
+  .hotspot.is-open .hlab{ color:var(--hm-espresso); background:var(--accent); border-color:var(--accent); }
+  .hotspot.is-open .hlab .ct{ color:rgba(34,26,24,.72); }
+  /* staggered entrance after the screen settles */
+  .scr .hotspot{ opacity:0; }
+  .scr.ready .hotspot{ animation:hs-in .7s var(--ease-settle) forwards; animation-delay:var(--hd,620ms); }
+  @keyframes hs-in{ from{ opacity:0; } to{ opacity:1; } }
+
+  /* ---- SIDE CARD (positioned in JS on the side OPPOSITE the pin) ---- */
+  .pearl-pop{ position:absolute; z-index:8; display:none;
+    width:clamp(360px, 18vw, 520px); max-height:78%;
+    flex-direction:column; overflow:hidden;
+    background:rgba(26,20,18,.94); border:1px solid var(--hairline); border-radius:12px;
+    box-shadow:0 32px 84px rgba(0,0,0,.66), 0 0 0 1px rgba(0,0,0,.25);
+    /* solid panel — no backdrop blur (the render is already veiled); avoids heavy re-raster on open */
+    opacity:0; transform:scale(.96); transform-origin:center;
+    transition:opacity .34s var(--ease-soft), transform .46s var(--ease-settle); }
+  .pearl-pop.on{ opacity:1; transform:scale(1); }
+  /* category accent hairline along the top edge */
+  .pearl-pop::before{ content:""; position:absolute; left:14px; right:14px; top:0; height:2px; border-radius:2px; z-index:4;
+    background:linear-gradient(90deg, transparent, var(--cat,var(--accent)), transparent); opacity:.95; }
+
+  .pearl-pop .pop-x{ position:absolute; top:.5rem; right:.5rem; z-index:5;
+    width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+    background:rgba(20,15,13,.82); border:1px solid var(--hairline-soft); border-radius:50%;
+    color:var(--hm-cream); cursor:pointer; -webkit-tap-highlight-color:transparent;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+    transition:transform .25s var(--ease-soft), color .25s var(--ease-soft), border-color .25s var(--ease-soft); }
+  .pearl-pop .pop-x svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+  @media(hover:hover){ .pearl-pop .pop-x:hover{ color:var(--hm-gold-bright); border-color:var(--hairline); transform:scale(1.08); } }
+  .pearl-pop .pop-x:active{ transform:scale(.92); }
+
+  .pearl-pop .pop-media{ position:relative; flex:0 0 auto; aspect-ratio:16/9; overflow:hidden;
+    border-radius:11px 11px 0 0; background:#0e0b0a; border-bottom:1px solid var(--hairline-soft); }
+  .pearl-pop .pop-media img{ width:100%; height:100%; object-fit:cover; display:block;
+    transform:scale(1.04); transition:transform 7s var(--ease-soft); }
+  .pearl-pop.on .pop-media img{ transform:scale(1.12); }
+  .pearl-pop .pop-media::after{ content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(180deg, rgba(20,15,13,.12), transparent 38%, rgba(20,15,13,.66)); }
+  .pearl-pop .pop-media.noimg{ display:none; }
+  .pearl-pop .pop-tag{ position:absolute; left:.7rem; bottom:.6rem; z-index:1;
+    font-family:var(--font-label); font-size:9.5px; font-weight:500; letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--hm-cream); background:rgba(20,15,13,.62);
+    border:1px solid var(--hairline-soft); border-radius:var(--r-pill); padding:.3em .75em;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); }
+
+  .pearl-pop .pop-body{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column;
+    padding:.9rem 1.05rem 1.05rem; }
+  .pearl-pop .pop-h{ display:flex; align-items:center; gap:.6em; flex:0 0 auto;
+    padding-bottom:.7rem; margin-bottom:.7rem; border-bottom:1px solid var(--hairline-soft); }
+  .pearl-pop .pdot{ width:10px; height:10px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 11px -1px currentColor; }
+  .pearl-pop .pname{ font-family:var(--font-label); font-size:calc(var(--t-micro) + 1px); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink); font-weight:500; line-height:1.2; }
+  .pearl-pop .pcount{ margin-left:auto; font-family:var(--font-display); font-weight:200;
+    font-size:clamp(1.4rem,2vw,1.9rem); color:var(--accent-text); line-height:1; }
+  .pearl-pop .pop-list{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+    list-style:none; margin:0; padding:0;
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.42rem .7rem; align-content:start; }
+  .pearl-pop .pop-list::-webkit-scrollbar{ width:5px; }
+  .pearl-pop .pop-list::-webkit-scrollbar-thumb{ background:var(--hairline-soft); border-radius:3px; }
+  .pearl-pop .pop-list li{ display:flex; align-items:center; gap:.55em; min-width:0;
+    font-family:var(--font-body); font-size:.9rem; line-height:1.3; color:var(--ink);
+    padding:.2em 0; }
+  .pearl-pop .pop-list li .pad{ width:5px; height:5px; border-radius:50%; flex:0 0 auto; opacity:.92; }
+  .pearl-pop .pop-list li span:last-child{ overflow:hidden; text-overflow:ellipsis; }
+
+  /* ---- connector line from pin → card (origin-aware, decorative) ---- */
+  .pearl-leader{ position:absolute; inset:0; z-index:6; pointer-events:none; width:100%; height:100%;
+    opacity:0; transition:opacity .4s var(--ease-soft); }
+  .pearl-leader.on{ opacity:1; }
+  .pearl-leader .ll{ stroke:var(--accent); stroke-width:1.25; stroke-dasharray:3 5; opacity:.55; }
+  .pearl-leader .ln{ fill:none; stroke:var(--accent); stroke-width:1.5; opacity:.85; }
+
+  /* ---- zoom controls (free pinch/wheel/double-tap exploration) ---- */
+  /* container is NEVER hit-testable — only its buttons are, so it can't occlude a pin beneath it */
+  .zoomctl{ position:absolute; z-index:7; right:clamp(1rem,2vw,1.9rem); top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:.45rem; opacity:0; pointer-events:none;
+    transition:opacity .3s var(--ease-soft); }
+  .scr.ready .zoomctl{ opacity:1; }
+  .pearl-hero.card-open .zoomctl{ opacity:0; }
+  .zoomctl button{ width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+    background:rgba(26,20,18,.82); border:1px solid var(--hairline-soft); border-radius:50%;
+    color:var(--hm-cream); cursor:pointer; -webkit-tap-highlight-color:transparent; pointer-events:none;
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+    box-shadow:0 6px 20px rgba(0,0,0,.4);
+    transition:transform .25s var(--ease-soft), color .25s var(--ease-soft), border-color .25s var(--ease-soft); }
+  .scr.ready .zoomctl button{ pointer-events:auto; }
+  .pearl-hero.card-open .zoomctl button{ pointer-events:none; }
+  .zoomctl button svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+  @media(hover:hover){ .zoomctl button:hover{ color:var(--hm-gold-bright); border-color:var(--hairline); transform:scale(1.08); } }
+  .zoomctl button:active{ transform:scale(.9); }
+  .scr.ready .zoomctl button.zreset{ opacity:.45; pointer-events:none; transition:opacity .25s var(--ease-soft); }
+  .pearl-hero.is-zoom .zoomctl button.zreset{ opacity:1; pointer-events:auto; }
+
+  /* ---- editorial overlay (top-left) ---- */
+  /* purely editorial — must NOT catch taps (its box + ::before scrim otherwise occlude pins below it).
+     No interactive children live here; re-enable explicitly if any are ever added. */
+  .hero-head{ position:relative; z-index:3; padding:clamp(1.2rem,3.4vw,3rem) clamp(1.2rem,3.4vw,3rem) 0; max-width:60ch;
+    pointer-events:none; }
+  /* local scrim so the head stays readable even when the stage zooms/pans away */
+  .hero-head::before{ content:""; position:absolute; inset:-1.4rem -3rem -1.6rem -1.8rem; z-index:-1; pointer-events:none;
+    background:radial-gradient(125% 135% at 2% 4%, rgba(20,15,13,.86), rgba(20,15,13,.5) 44%, transparent 74%); }
+  .hero-head .k-title{ font-size:clamp(1.9rem,4.2vw,3.6rem); margin:.22em 0 .42em; }
+  .hero-head .k-lede{ max-width:46ch; }
+
+  /* ---- count-up stats strip (overlaid, airy — no boxes) ---- */
+  .hero-stats{ display:flex; flex-wrap:wrap; gap:clamp(1.4rem,4vw,3.4rem); margin-top:clamp(1rem,2.4vh,1.8rem); }
+  .hstat b{ display:block; font-family:var(--font-display); font-weight:200; line-height:.9;
+    font-size:clamp(1.8rem,4vw,3.2rem); color:var(--ink);
+    text-shadow:0 2px 22px rgba(10,8,7,.55); }
+  .hstat b .pl{ color:var(--accent); font-size:.6em; vertical-align:.18em; margin-left:.04em; }
+  .hstat span{ display:block; margin-top:.45em; font-family:var(--font-label); font-size:var(--t-micro);
+    letter-spacing:var(--track-label); text-transform:uppercase; color:var(--ink-dim); }
+
+  /* ---- floating explore field (glass, anchored bottom) ---- */
+  .pearl-field{ position:relative; z-index:3; margin:0 clamp(1rem,3vw,2.4rem) clamp(1rem,3vw,2.4rem);
+    padding:clamp(.95rem,1.8vw,1.35rem) clamp(1.1rem,2.2vw,1.6rem);
+    background:rgba(26,20,18,.9); border:1px solid var(--hairline-soft); border-radius:6px;
+    /* solid glass — heavy backdrop blur removed (compositing cost); box is non-interactive so it can't
+       occlude pins beneath it — only the chips re-enable pointer events */
+    box-shadow:0 22px 60px rgba(0,0,0,.42); pointer-events:none; }
+  .pearl-field .pearl-chips{ pointer-events:auto; }
+  .pearl-field .flab{ display:flex; align-items:baseline; gap:.8em; margin-bottom:.7rem; pointer-events:none; }
+  .pearl-field .flab .k-eyebrow{ flex:0 0 auto; }
+  .pearl-field .flab .hint{ margin-left:auto; font-family:var(--font-label); font-size:var(--t-micro);
+    letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); opacity:.7; }
+  .pearl-chips{ display:flex; flex-wrap:wrap; gap:.5rem; }
+  .pearl-chips .k-chip{ background:rgba(34,26,24,.55); }
+  .pearl-chips .k-chip .ct{ font-family:var(--font-display); font-weight:300; color:var(--accent-text);
+    margin-left:.15em; font-size:1.02em; letter-spacing:0; text-transform:none; }
+  .pearl-chips .k-chip.active{ color:var(--hm-espresso); background:var(--accent); border-color:var(--accent); }
+  .pearl-chips .k-chip.active .dot{ background:var(--hm-espresso); }
+  .pearl-chips .k-chip.active .ct{ color:rgba(34,26,24,.72); }
+  .pearl-chips .k-chip.viewall{ color:var(--hm-espresso); background:var(--accent); border-color:var(--accent); }
+  .pearl-chips .k-chip.viewall .ct{ color:rgba(34,26,24,.7); }
+
+  /* ---- View-all overview (kept as a deliberate centered float) ---- */
+  .pop-all{ columns:2; column-gap:1.6rem; }
+  .pop-cat{ break-inside:avoid; margin:0 0 1.1rem; }
+  .pop-cat h4{ display:flex; align-items:baseline; gap:.6em; margin:0 0 .5rem; padding-bottom:.4rem;
+    border-bottom:1px solid var(--hairline-soft);
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:var(--ink); font-weight:400; }
+  .pop-cat h4 .cd{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
+  .pop-cat h4 .cn{ margin-left:auto; font-family:var(--font-display); font-weight:200; color:var(--accent-text); }
+  .pop-cat ul{ list-style:none; margin:0; padding:0; }
+  .pop-cat li{ font-family:var(--font-body); font-size:.92rem; line-height:1.55; color:var(--ink-dim); }
+
+  /* ---- responsive / portrait — still one screen, no scroll ---- */
+  @media (orientation:portrait){
+    .hero-head{ max-width:none; }
+    .hero-stats{ gap:clamp(1rem,5vw,2rem); }
+    .pearl-pop{ width:clamp(300px, 56vw, 420px); max-height:68%; }
+    .zoomctl{ right:clamp(.7rem,2vw,1.2rem); }
+  }
+  @media (max-width:680px){
+    .pop-all{ columns:1; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .pearl-pop{ transition:opacity .14s linear; transform:none !important; }
+    .pearl-pop .pop-media img{ transition:none; transform:none; }
+    .pearl-leader{ transition:opacity .14s linear; }
+    .pearl-stage{ transition:none !important; }
+    .scr.ready .pearl-stage .render{ animation:none; }
+  }
+</style>
+</head>
+<body data-screen="pearl">
+  <div class="scr">
+    <header class="scr-top">
+      <button class="scr-back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Home</button>
+      <div class="scr-head">
+        <span class="k-eyebrow">Eighty-five amenities</span>
+        <h1 class="scr-name">The Pearl</h1>
+      </div>
+      <div class="scr-side"><img class="scr-crest" src="../assets/logo-crest.png" alt="" onerror="this.style.display='none'"></div>
+    </header>
+
+    <main class="scr-body">
+      <div class="scr-wrap fill">
+
+        <!-- HERO FRAME — the render fills the screen -->
+        <section class="pearl-hero" data-reveal>
+
+          <!-- ZOOM/PAN STAGE — render + pins transform together (JS-driven) -->
+          <div class="pearl-stage" id="stage">
+            <img class="render" src="../assets/screens/clubhouse.webp" alt="Highland Mayfields clubhouse"
+                 loading="eager" draggable="false" onerror="this.style.display='none'">
+            <div class="veil"></div><div class="veil2"></div><div class="latt"></div>
+
+            <!-- EXPLORABLE HOTSPOTS — one per amenity world (positions indicative) -->
+            <div class="pearl-spots" id="spots"></div>
+          </div>
+
+          <!-- connector line from the tapped pin to its side card -->
+          <svg class="pearl-leader" id="leader" aria-hidden="true" preserveAspectRatio="none">
+            <line class="ll" x1="0" y1="0" x2="0" y2="0"></line>
+            <circle class="ln" cx="0" cy="0" r="5"></circle>
+          </svg>
+
+          <!-- SIDE CARD — placed opposite the pin in JS -->
+          <div class="pearl-pop" id="pop" role="dialog" aria-label="Amenity detail"></div>
+
+          <!-- ZOOM CONTROLS (free exploration) -->
+          <div class="zoomctl" id="zoomctl" role="group" aria-label="Zoom the render">
+            <button type="button" data-z="in" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button type="button" class="zreset" data-z="reset" aria-label="Reset zoom"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5"/></svg></button>
+            <button type="button" data-z="out" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+          </div>
+
+          <!-- editorial + count-up stats -->
+          <div class="hero-head">
+            <span class="k-eyebrow">Three clubhouses · 50,000 sq.ft</span>
+            <h2 class="k-title">The Pearl,<br>fully serviced.</h2>
+            <div class="k-rule"></div>
+            <p class="k-lede">Eighty-five-plus amenities across nine worlds — three dedicated clubhouses
+              spanning fifty thousand square feet of indoor leisure, wellness and play.</p>
+
+            <div class="hero-stats">
+              <div class="hstat"><b><span data-count="85">0</span><span class="pl">+</span></b><span>Amenities</span></div>
+              <div class="hstat"><b><span data-count="9">0</span></b><span>Worlds</span></div>
+              <div class="hstat"><b><span data-count="3">0</span></b><span>Clubhouses</span></div>
+              <div class="hstat"><b><span data-count="50">0</span>,000</b><span>Sq.ft Club</span></div>
+            </div>
+          </div>
+
+          <!-- FLOATING EXPLORE FIELD -->
+          <div class="pearl-field">
+            <div class="flab">
+              <span class="k-eyebrow">Explore the nine worlds</span>
+              <span class="hint">Tap a point to focus · pinch / double-tap to zoom · positions indicative</span>
+            </div>
+            <div class="pearl-chips" id="chips"></div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="_kit.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    window.HM_SCREEN_INFO = { title:'The Pearl', html:
+      '<p class="k-lede">Highland Mayfields · 85+ amenities curated across nine worlds.</p>'+
+      '<ul style="list-style:none;padding:0;margin:.6rem 0;display:flex;flex-direction:column;gap:.5rem">'+
+      '<li>Three dedicated clubhouses · 50,000 sq.ft</li><li>Nine curated amenity worlds</li>'+
+      '<li>Wellness, indoor games, family &amp; kids zones</li><li>Smart, sustainable &amp; secure by design</li></ul>' };
+
+    // category accent tones — tokens only (two-lane gold/copper discipline)
+    var TONE = {
+      clubhouse:'var(--hm-gold-bright)', wellness:'var(--hm-copper)', indoor:'var(--hm-gold-soft)',
+      family:'var(--hm-copper-hi)', outdoor:'var(--hm-gold)', landscape:'var(--hm-copper-t2)',
+      eco:'var(--hm-gold-bright)', smart:'var(--hm-copper)', infra:'var(--hm-gold)'
+    };
+
+    // indicative hotspot positions over the clubhouse render (x%, y%) + short label
+    var SPOT = {
+      clubhouse:{ x:50, y:30, lab:'Clubhouse' },
+      wellness: { x:70, y:24, lab:'Wellness' },
+      indoor:   { x:86, y:36, lab:'Indoor Games' },
+      family:   { x:33, y:43, lab:'Family & Kids' },
+      outdoor:  { x:60, y:50, lab:'Outdoor Sports' },
+      landscape:{ x:88, y:55, lab:'Landscape' },
+      eco:      { x:44, y:60, lab:'Eco' },
+      smart:    { x:74, y:62, lab:'Smart & Digital' },
+      infra:    { x:80, y:72, lab:'Utilities' }   /* nudged left of the global bottom-right FAB (kit chrome) */
+    };
+
+    // honest image map (kd Law 3). "Project render" = an actual Highland Mayfields
+    // render of that amenity; "Representative" = a render that conveys the experience
+    // but is not a literal photo of that exact facility; "Master plan" = locator only.
+    var BASE = '../assets/screens/';
+    var IMG = {
+      clubhouse:{ src:BASE+'clubhouse.webp',          tag:'Project render',  alt:'Highland Mayfields clubhouse render' },
+      wellness: { src:BASE+'tower-top.webp',          tag:'Representative',   alt:'Rooftop terrace — representative of the wellness & relaxation experience' },
+      indoor:   { src:BASE+'master-layout.webp',      tag:'Master plan',     alt:'Master plan — indoor game zones sit within the clubhouses' },
+      family:   { src:BASE+'norwood-night.webp',      tag:'Representative',   alt:'Landscaped residential setting — representative of family & kids zones' },
+      outdoor:  { src:BASE+'landscape-1.webp',        tag:'Project render',  alt:'Sports court render' },
+      landscape:{ src:BASE+'landscape-3.webp',        tag:'Representative',   alt:'Garden pavilion & water feature — representative of the landscaped greens' },
+      eco:      { src:BASE+'mayfield-bird-night.webp',tag:'Representative',   alt:'Aerial of the green township — representative of the sustainability strategy' },
+      smart:    { src:BASE+'mayfield-eye-2.webp',     tag:'Representative',   alt:'Arrival lobby — representative of smart access, concierge & digital entry' },
+      infra:    { src:BASE+'day-aerial.webp',         tag:'Representative',   alt:'Aerial of the completed development — representative of the core infrastructure' }
+    };
+
+    var chipsEl  = document.getElementById('chips');
+    var spotsEl  = document.getElementById('spots');
+    var popEl    = document.getElementById('pop');
+    var heroEl   = document.querySelector('.pearl-hero');
+    var stageEl  = document.getElementById('stage');
+    var leaderEl = document.getElementById('leader');
+    var leadLn   = leaderEl.querySelector('.ll');
+    var leadDot  = leaderEl.querySelector('.ln');
+    var zoomEl   = document.getElementById('zoomctl');
+    var reduce   = matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function tone(id){ return TONE[id] || 'var(--accent)'; }
+    function clamp(a,v,b){ return Math.max(a, Math.min(v, b)); }
+
+    var byId = {}, pinById = {}, currentId = null, cardOpen = false, hideTimer = null;
+
+    fetch('../data/amenities.json').then(function(r){ return r.json(); }).then(build)
+      .catch(function(){ chipsEl.innerHTML='<p class="k-lede">Amenities list unavailable.</p>'; });
+
+    /* ============================================================
+       ZOOM / PAN ENGINE — the stage (render + pins) is one transform.
+       view = {scale,x,y}; origin 0,0; always clamped to cover the frame.
+       ============================================================ */
+    var view = { scale:1, x:0, y:0 };
+    var MINS = 1, MAXS = 3.2, FOCUS_Z = 1.55;
+    var hostR = { left:0, top:0, width:0, height:0 };
+    function hr(){ hostR = heroEl.getBoundingClientRect(); return hostR; }
+
+    function clampView(s, x, y){
+      var W = hostR.width, H = hostR.height;
+      if(s <= 1.0001){ return [0, 0]; }
+      return [ clamp(W - W*s, x, 0), clamp(H - H*s, y, 0) ];
+    }
+    function applyView(anim){
+      stageEl.style.transition = (anim && !reduce) ? 'transform .7s var(--ease-settle)' : 'none';
+      stageEl.style.transform  = 'translate3d('+view.x+'px,'+view.y+'px,0) scale('+view.scale+')';
+      heroEl.classList.toggle('is-zoom', view.scale > 1.001);
+    }
+    function setView(s, x, y, anim){
+      s = clamp(MINS, s, MAXS);
+      var c = clampView(s, x, y);
+      view.scale = s; view.x = c[0]; view.y = c[1];
+      applyView(anim);
+    }
+    function zoomAt(ns, cx, cy, anim){
+      ns = clamp(MINS, ns, MAXS);
+      var contentX = (cx - view.x) / view.scale, contentY = (cy - view.y) / view.scale;
+      setView(ns, cx - contentX*ns, cy - contentY*ns, anim);
+    }
+    function resetView(anim){ setView(1, 0, 0, anim); }
+
+    // bring a pin (fraction fx,fy of the stage) toward centre, card on the open side
+    function focusPin(fx, fy, side){
+      if(reduce) return;            // reduced-motion: no cinematic transform
+      hr();
+      var W = hostR.width, H = hostR.height, Z = FOCUS_Z;
+      var targetX = (side === 'right') ? W*0.36 : W*0.64;
+      var targetY = H*0.46;
+      setView(Z, targetX - fx*W*Z, targetY - fy*H*Z, true);
+    }
+
+    /* ---------- side-card content ---------- */
+    function cardHtml(c){
+      var im = IMG[c.id] || {};
+      var items = (c.items||[]).map(function(it){
+        return '<li><span class="pad" style="background:'+tone(c.id)+'"></span><span>'+esc(it)+'</span></li>';
+      }).join('');
+      var media = im.src
+        ? '<div class="pop-media"><img src="'+im.src+'" alt="'+esc(im.alt||c.name)+'" loading="eager" '+
+            'onerror="this.closest(\'.pop-media\').classList.add(\'noimg\')">'+
+            '<span class="pop-tag">'+esc(im.tag||'Representative')+'</span></div>'
+        : '';
+      return '<button class="pop-x" type="button" aria-label="Close">'+
+               '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+             media+
+             '<div class="pop-body">'+
+               '<div class="pop-h">'+
+                 '<span class="pdot" style="background:'+tone(c.id)+';color:'+tone(c.id)+'"></span>'+
+                 '<span class="pname">'+esc(c.name)+'</span>'+
+                 '<span class="pcount">'+(c.items?c.items.length:0)+'</span>'+
+               '</div>'+
+               '<ul class="pop-list">'+items+'</ul>'+
+             '</div>';
+    }
+
+    /* ---------- place the card on the side OPPOSITE the pin (origin-aware) ---------- */
+    function drawLeader(px, py, ex, ey){
+      leadLn.setAttribute('x1', px); leadLn.setAttribute('y1', py);
+      leadLn.setAttribute('x2', ex); leadLn.setAttribute('y2', ey);
+      leadDot.setAttribute('cx', px); leadDot.setAttribute('cy', py);
+    }
+    function placeCard(side, fx, fy){
+      hr();
+      var W = hostR.width, H = hostR.height;
+      var pinX = view.x + fx*W*view.scale;     // pin's final on-screen point
+      var pinY = view.y + fy*H*view.scale;
+      var cw = popEl.offsetWidth, ch = popEl.offsetHeight;
+      var M = Math.max(26, W*0.014);
+      var left = (side === 'right') ? (W - cw - M) : M;
+      var top  = clamp(M, (H - ch)/2, H - ch - M);
+      popEl.style.left = left + 'px';
+      popEl.style.top  = top  + 'px';
+      // leader lands on the card edge at the pin's height (transform-origin stays 'center' — simple reveal)
+      var oy = clamp(0, pinY - top, ch);
+      drawLeader(clamp(0,pinX,W), clamp(0,pinY,H), (side==='right'? left : left+cw), top + oy);
+    }
+
+    function markPin(id){
+      Object.keys(pinById).forEach(function(k){
+        var on = (k===id);
+        pinById[k].classList.toggle('is-open', on);
+        pinById[k].setAttribute('aria-expanded', on ? 'true':'false');
+      });
+      Array.prototype.forEach.call(chipsEl.querySelectorAll('.k-chip'), function(ch){
+        if(ch.hasAttribute('data-all')) return;
+        ch.classList.toggle('active', ch.dataset.cat===id);
+      });
+    }
+
+    function openCard(id){
+      var c = byId[id], pin = pinById[id];
+      if(!c || !pin) return;
+      if(currentId===id && cardOpen){ closeCard(); return; }
+      if(hideTimer){ clearTimeout(hideTimer); hideTimer=null; }
+      currentId = id; cardOpen = true;
+      var sp = SPOT[id] || { x:50, y:50 };
+      var fx = sp.x/100, fy = sp.y/100;
+      var side = (fx < 0.5) ? 'right' : 'left';   // card OPPOSITE the pin
+
+      focusPin(fx, fy, side);
+      markPin(id);
+
+      popEl.className = 'pearl-pop side-' + side;
+      popEl.style.setProperty('--cat', tone(id));
+      popEl.style.transformOrigin = 'center';   // simple centered scale-in
+      popEl.innerHTML = cardHtml(c);
+      popEl.style.display = 'flex';
+      popEl.style.visibility = 'hidden';
+      heroEl.classList.add('card-open');
+      if(window.HMKit) HMKit.bindRipples(popEl);
+
+      var xbtn = popEl.querySelector('.pop-x');
+      if(xbtn) xbtn.addEventListener('click', function(ev){ ev.stopPropagation(); closeCard(); });
+
+      requestAnimationFrame(function(){
+        placeCard(side, fx, fy);
+        popEl.style.visibility = '';
+        // reveal only AFTER the media image has decoded — so the card appears crisp + whole,
+        // never half-painted or blurred on the first frames. Fallback timeout guards a slow/failed decode.
+        var popImg = popEl.querySelector('.pop-media img');
+        var openId = id;
+        function reveal(){
+          if(currentId!==openId || !cardOpen) return;   // closed or switched while decoding
+          requestAnimationFrame(function(){ popEl.classList.add('on'); leaderEl.classList.add('on'); });
+        }
+        if(popImg && popImg.decode){
+          var fired = false;
+          var go = function(){ if(fired) return; fired = true; reveal(); };
+          var to = setTimeout(go, 300);
+          popImg.decode().then(function(){ clearTimeout(to); go(); }, function(){ clearTimeout(to); go(); });
+        } else { reveal(); }
+      });
+    }
+
+    function closeCard(){
+      if(!cardOpen && !popEl.classList.contains('on')) return;
+      cardOpen = false; currentId = null;
+      popEl.classList.remove('on');
+      leaderEl.classList.remove('on');
+      heroEl.classList.remove('card-open');
+      markPin(null);
+      resetView(true);
+      if(hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(function(){
+        if(!popEl.classList.contains('on')) popEl.style.display='none';
+      }, 460);
+    }
+    // expose for chip wiring
+    function openPop(id){ openCard(id); }
+    function closePop(){ closeCard(); }
+
+    /* ---------- View all (deliberate centered overview) ---------- */
+    function allHtml(cats){
+      var total = cats.reduce(function(n,c){ return n + (c.items?c.items.length:0); }, 0);
+      var cols = cats.map(function(c){
+        var lis = (c.items||[]).map(function(it){ return '<li>'+esc(it)+'</li>'; }).join('');
+        return '<div class="pop-cat"><h4><span class="cd" style="background:'+tone(c.id)+'"></span>'+
+                 esc(c.name)+'<span class="cn">'+(c.items?c.items.length:0)+'</span></h4>'+
+                 '<ul>'+lis+'</ul></div>';
+      }).join('');
+      return '<p class="k-lede" style="margin:0 0 1rem">Nine worlds · '+total+' amenities, every one curated for everyday life at Highland Mayfields.</p>'+
+             '<div class="pop-all">'+cols+'</div>';
+    }
+
+    function build(D){
+      var cats = D.categories || [];
+
+      // ---- chips (bottom field) ----
+      var frag = '';
+      cats.forEach(function(c){
+        frag += '<button class="k-chip" data-cat="'+esc(c.id)+'">'+
+                  '<span class="dot" style="background:'+tone(c.id)+'"></span>'+
+                  esc(c.name)+'<span class="ct">'+(c.items?c.items.length:0)+'</span></button>';
+      });
+      frag += '<button class="k-chip viewall" data-all="1">View all<span class="ct">'+(D._meta&&D._meta.total||'85+')+'</span></button>';
+      chipsEl.innerHTML = frag;
+
+      // ---- explorable hotspots on the render (one per world) ----
+      var sf = '';
+      cats.forEach(function(c, i){
+        byId[c.id] = c;
+        var p = SPOT[c.id] || { x:50, y:50, lab:c.name };
+        sf += '<button class="hotspot" data-cat="'+esc(c.id)+'" aria-haspopup="dialog" aria-expanded="false" '+
+                'style="left:'+p.x+'%;top:'+p.y+'%;--hd:'+(620+i*90)+'ms" '+
+                'aria-label="'+esc(c.name)+' · '+(c.items?c.items.length:0)+' amenities">'+
+                '<span class="hdot"><span class="halo"></span><span class="ring"></span><span class="ring r2"></span>'+
+                  '<span class="core" style="background:radial-gradient(circle at 40% 35%,var(--hm-gold-bright),'+tone(c.id)+')"></span></span>'+
+                '<span class="hlab">'+esc(p.lab)+'<span class="ct">'+(c.items?c.items.length:0)+'</span></span>'+
+              '</button>';
+      });
+      spotsEl.innerHTML = sf;
+      Array.prototype.forEach.call(spotsEl.querySelectorAll('.hotspot'), function(b){ pinById[b.dataset.cat]=b; });
+
+      if(window.HMKit){ HMKit.bindRipples(chipsEl); HMKit.bindRipples(spotsEl); }
+
+      // ---- pin / chip wiring ----
+      spotsEl.addEventListener('click', function(e){
+        var btn = e.target.closest('.hotspot'); if(!btn) return;
+        e.stopPropagation();
+        if(suppressClick) return;          // a drag-pan happened — don't open
+        openCard(btn.dataset.cat);
+      });
+      chipsEl.addEventListener('click', function(e){
+        var btn = e.target.closest('.k-chip'); if(!btn) return;
+        if(btn.hasAttribute('data-all')){
+          closeCard();
+          if(window.HMKit) HMKit.openFloat('Eighty-five amenities', allHtml(cats), {center:true, wide:true});
+          return;
+        }
+        openCard(btn.dataset.cat);         // focuses the matching pin + side card
+      });
+
+      // ---- zoom control buttons ----
+      zoomEl.addEventListener('click', function(e){
+        var b = e.target.closest('button'); if(!b) return;
+        hr(); var cx = hostR.width/2, cy = hostR.height/2;
+        if(b.dataset.z==='in')        zoomAt(view.scale*1.45, cx, cy, true);
+        else if(b.dataset.z==='out')  zoomAt(view.scale/1.45, cx, cy, true);
+        else                          resetView(true);
+      });
+
+      // ============================================================
+      //  GESTURE ENGINE — pinch / wheel / double-tap zoom + drag-pan,
+      //  with tap-vs-drag detection so empty taps dismiss the card.
+      // ============================================================
+      var pointers = new Map();
+      var dragStart = null, pinchStart = null, moved = false;
+      var lastTap = 0, lastXY = null;
+      var DRAG_TH = 6;
+      function pdist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+      function pmid(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; }
+      function inChrome(t){ return !!(t.closest('.pearl-pop')||t.closest('.pearl-field')||t.closest('.hero-head')||t.closest('.zoomctl')||t.closest('.scr-top')); }
+
+      heroEl.addEventListener('pointerdown', function(e){
+        if(inChrome(e.target)) return;
+        hr();
+        pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+        if(pointers.size===1){
+          dragStart = { x:e.clientX, y:e.clientY, vx:view.x, vy:view.y, onPin:!!e.target.closest('.hotspot') };
+          moved = false;
+        } else if(pointers.size===2){
+          var p = Array.prototype.slice.call(pointers.values());
+          pinchStart = { dist:pdist(p[0],p[1]), scale:view.scale };
+          dragStart = null; moved = true;
+          if(cardOpen) closeCard();
+          // capture both for a stable pinch (does not affect taps)
+          pointers.forEach(function(_,id){ try{ heroEl.setPointerCapture(id); }catch(_){} });
+        }
+        // NB: do NOT capture on a single pointer — it would steal the pin's click.
+      });
+
+      heroEl.addEventListener('pointermove', function(e){
+        if(!pointers.has(e.pointerId)) return;
+        pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+        if(pinchStart && pointers.size>=2){
+          var p = Array.prototype.slice.call(pointers.values());
+          var ns = pinchStart.scale * (pdist(p[0],p[1]) / pinchStart.dist);
+          var m  = pmid(p[0],p[1]);
+          zoomAt(ns, m.x-hostR.left, m.y-hostR.top, false);
+          e.preventDefault(); return;
+        }
+        if(dragStart){
+          var dx = e.clientX-dragStart.x, dy = e.clientY-dragStart.y;
+          if(Math.abs(dx)>DRAG_TH || Math.abs(dy)>DRAG_TH){
+            if(!moved){ try{ heroEl.setPointerCapture(e.pointerId); }catch(_){} } // capture once a real drag begins
+            moved = true;
+          }
+          if(view.scale>1.001 && moved){
+            if(cardOpen) closeCard();
+            setView(view.scale, dragStart.vx+dx, dragStart.vy+dy, false);
+            e.preventDefault();
+          }
+        }
+      });
+
+      function endPointer(e){
+        if(!pointers.has(e.pointerId)) return;
+        pointers.delete(e.pointerId);
+        try{ heroEl.releasePointerCapture(e.pointerId); }catch(_){}
+        if(pointers.size<2) pinchStart = null;
+        if(pointers.size>0) return;
+
+        var ds = dragStart; dragStart = null;
+        if(moved){ suppressClick = true; setTimeout(function(){ suppressClick=false; }, 60); moved=false; return; }
+        moved = false;
+        if(ds && ds.onPin) return;              // pin tap → handled by click → openCard
+
+        // empty-area tap: double-tap zoom, else dismiss any open card
+        var now = Date.now(), x = e.clientX, y = e.clientY;
+        var dbl = (now-lastTap < 320) && lastXY && Math.hypot(x-lastXY.x, y-lastXY.y) < 44;
+        lastTap = now; lastXY = { x:x, y:y };
+        if(dbl){
+          hr(); var cx = x-hostR.left, cy = y-hostR.top;
+          if(view.scale>1.05) resetView(true);
+          else { closeCard(); zoomAt(2.2, cx, cy, true); }
+          return;
+        }
+        if(cardOpen) closeCard();
+      }
+      heroEl.addEventListener('pointerup', endPointer);
+      heroEl.addEventListener('pointercancel', endPointer);
+
+      heroEl.addEventListener('wheel', function(e){
+        if(inChrome(e.target)) return;
+        e.preventDefault();
+        hr();
+        if(cardOpen) closeCard();
+        zoomAt(view.scale * Math.exp(-e.deltaY*0.0015), e.clientX-hostR.left, e.clientY-hostR.top, false);
+      }, { passive:false });
+
+      // Esc closes the card first (must NOT bubble to kit's back-nav)
+      document.addEventListener('keydown', function(e){
+        if(e.key==='Escape'){
+          if(cardOpen){ e.stopImmediatePropagation(); e.preventDefault(); closeCard(); }
+          else if(view.scale>1.05){ e.stopImmediatePropagation(); e.preventDefault(); resetView(true); }
+        }
+      }, true);
+
+      // re-layout safety: reset on viewport/orientation change
+      window.addEventListener('resize', function(){ closeCard(); resetView(false); });
+    }
+    var suppressClick = false;
+  })();
+  </script>
+</body>
+</html>

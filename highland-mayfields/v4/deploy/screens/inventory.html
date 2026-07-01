@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Inventory — Highland Mayfields</title>
+<link rel="stylesheet" href="../styles/brand.css">
+<link rel="stylesheet" href="../assets/css/hm-tools.css">
+<link rel="stylesheet" href="_kit.css">
+<style>
+  /* ============================================================
+     INVENTORY — interactive Tower → Floor → Unit drilldown.
+     NO-SCROLL LAW: every step fits the viewport (.scr-body is overflow:hidden).
+     Shell = flex column: breadcrumb · legend/compare · FLEX stage · fixed footer.
+     All config / areas sourced ONLY from data/inventory.json (kd Law 3).
+     Availability is INDICATIVE: deterministically seeded by tower+floor+unit.
+     Fits 1280×800 · 1366×1024 · 1440×900 · 3840×2160 · portrait 834×1112.
+     ============================================================ */
+
+  :root{
+    /* status — green / amber / red per DESIGN-CONVENTIONS (desaturated, gold-adjacent, not neon) */
+    --st-ok:     oklch(0.64 0.105 150);            /* available — green   */
+    --st-no:     oklch(0.57 0.12  28);             /* sold      — red     */
+    --st-hold-c: oklch(0.74 0.125 78);             /* on hold   — amber   */
+    --st-avail:  var(--st-ok);
+    --st-hold:   var(--st-hold-c);
+    --st-sold:   oklch(0.57 0.10 28 / .62);        /* muted red */
+    --st-sold-ink: oklch(0.72 0.07 28 / .85);
+  }
+
+  .scr-hero-wash{ background-image:url("../assets/screens/pocketc-entry.webp"); }
+
+  /* ---- shell: fills scr-body, never scrolls ---- */
+  .inv-wrap{ height:100%; display:flex; flex-direction:column; gap:clamp(.45rem,1.1vh,.9rem); min-height:0; }
+
+  /* ---- breadcrumb (fixed) ---- */
+  .inv-crumb{ flex:0 0 auto; display:flex; align-items:center; flex-wrap:wrap; gap:.15rem; min-height:30px; }
+  .inv-crumb .cr{ display:inline-flex; align-items:center; min-height:30px; padding:.28em .65em;
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase;
+    color:var(--ink-dim); background:none; border:0; border-radius:var(--r-pill); cursor:pointer;
+    -webkit-tap-highlight-color:transparent; transition:color .25s,background .25s; white-space:nowrap; }
+  .inv-crumb .cr.link:hover{ color:var(--ink); background:rgba(34,26,24,.5); }
+  .inv-crumb .cr.cur{ color:var(--accent); cursor:default; }
+  .inv-crumb .sep{ color:var(--hairline); font-size:var(--t-micro); padding:0 .05em; }
+
+  /* ---- legend + hint + compare opener (fixed) ---- */
+  .inv-keyrow{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:.8rem 1rem; flex-wrap:wrap; }
+  .inv-key{ display:flex; flex-wrap:wrap; gap:.35rem 1.1rem; align-items:center; }
+  .inv-key .k-leg-item .sw{ border:1px solid rgba(20,15,13,.5); }
+  .inv-keyrow .right{ display:flex; align-items:center; gap:.7rem 1rem; flex-wrap:wrap; }
+  .cmp-open{ display:none; align-items:center; gap:.55em; min-height:32px; padding:.3em .9em;
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase;
+    color:var(--hm-espresso); background:var(--accent); border:1px solid var(--accent); border-radius:var(--r-pill);
+    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:filter .25s; }
+  .cmp-open.on{ display:inline-flex; }
+  .cmp-open:hover{ filter:brightness(1.06); }
+  .cmp-open svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ---- animated stage (FLEX, owns remaining height, clips by design) ---- */
+  .inv-stage{ flex:1 1 auto; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+  .inv-stage.in{ animation:inv-in .42s var(--ease-settle); }
+  @keyframes inv-in{ from{ opacity:0; transform:translateY(8px) } to{ opacity:1; transform:none } }
+
+  .inv-step{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:clamp(.5rem,1.4vh,1rem); }
+  .inv-step-head{ flex:0 0 auto; display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .inv-step-head .k-eyebrow{ display:block; }
+  .inv-step-head .k-title{ margin:.1em 0 0; font-size:clamp(1.15rem,2vw,1.7rem); }
+  .inv-step-body{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:clamp(.6rem,1.6vh,1.2rem); }
+
+  /* ---- STEP 0 · towers ---- */
+  .twr-group{ flex:0 0 auto; }
+  .twr-grouphd{ display:flex; align-items:center; gap:.7rem; margin-bottom:.55rem; }
+  .twr-grouphd .ttl{ font-family:var(--font-display); font-weight:300; font-size:clamp(.98rem,1.5vw,1.3rem); color:var(--ink); white-space:nowrap; }
+  .twr-grouphd .ln{ flex:1 1 auto; height:1px; background:linear-gradient(90deg,var(--hairline),transparent); }
+  .twr-grouphd .cl{ font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent-text); white-space:nowrap; }
+  .twr-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(150px,15.5vw,200px)),1fr)); gap:clamp(.55rem,1.1vw,.9rem); }
+  .twr-card.k-card{ display:flex; flex-direction:column; gap:.45rem; padding:clamp(.7rem,1.1vw,1.05rem); }
+  .twr-card .tnum{ display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; }
+  .twr-card .tnum b{ font-family:var(--font-display); font-weight:300; font-size:clamp(1.15rem,1.7vw,1.55rem); color:var(--ink); line-height:1; }
+  .twr-card .tnum .cfg{ font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent); }
+  .twr-card .meta{ display:flex; gap:1.1rem; }
+  .twr-card .meta .m span{ display:block; font-family:var(--font-label); font-size:8.5px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); margin-bottom:.2em; }
+  .twr-card .meta .m b{ font-family:var(--font-display); font-weight:300; font-size:clamp(.92rem,1.3vw,1.12rem); color:var(--ink); font-variant-numeric:tabular-nums; }
+  .twr-card .meta .m small{ font-size:.6em; color:var(--ink-dim); letter-spacing:.04em; }
+  .avbar{ display:flex; height:6px; border-radius:var(--r-pill); overflow:hidden; background:rgba(245,241,235,.06); border:1px solid var(--hairline-soft); }
+  .avbar i{ display:block; height:100%; }
+  .avbar i.av{ background:var(--st-avail); } .avbar i.hd{ background:var(--st-hold); } .avbar i.sd{ background:var(--st-sold); }
+  .avlbl{ display:flex; justify-content:space-between; gap:.5rem; font-family:var(--font-label); font-size:8.5px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  .avlbl .av{ color:var(--st-avail); } .avlbl .ind{ color:var(--accent-text); }
+  .twr-card .go{ display:inline-flex; align-items:center; gap:.5em; margin-top:auto; padding-top:.15rem;
+    font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent-text); }
+  .twr-card .go svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ---- STEP 1 · floors (tight tile grid + ground bar) ---- */
+  .flr-grid{ flex:0 1 auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(82px,8vw,118px)),1fr));
+    gap:clamp(.4rem,.9vw,.7rem); align-content:start; }
+  .flr-tile{ display:flex; flex-direction:column; gap:.3rem; padding:.55em .6em; text-align:left;
+    background:rgba(34,26,24,.42); border:1px solid var(--hairline-soft); border-radius:var(--r-tile);
+    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:border-color .25s, background .25s, transform .25s; }
+  @media(hover:hover){ .flr-tile:hover{ border-color:var(--hairline); background:rgba(40,30,27,.6); transform:translateY(-2px); } }
+  .flr-tile.premium{ background:linear-gradient(160deg,rgba(172,140,85,.14),rgba(34,26,24,.42) 70%); }
+  .flr-tile .ftop{ display:flex; align-items:baseline; justify-content:space-between; gap:.3rem; }
+  .flr-tile .ftop b{ font-family:var(--font-display); font-weight:300; font-size:clamp(1.05rem,1.6vw,1.45rem); color:var(--ink); line-height:1; font-variant-numeric:tabular-nums; }
+  .flr-tile .ftop span{ font-family:var(--font-label); font-size:8px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent-text); }
+  .flr-tile .fdots{ display:flex; gap:4px; }
+  .flr-tile .fdots i{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+  .flr-tile .fdots i.av{ background:var(--st-avail); } .flr-tile .fdots i.hd{ background:var(--st-hold); } .flr-tile .fdots i.sd{ background:var(--st-sold); }
+  .flr-tile .fmeta{ font-family:var(--font-label); font-size:8px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  .flr-ground{ flex:0 0 auto; display:flex; align-items:center; gap:.8rem; margin-top:auto; padding:.55em .9em;
+    background:rgba(20,15,13,.5); border:1px solid var(--hairline-soft); border-radius:var(--r-tile); }
+  .flr-ground .g{ font-family:var(--font-display); font-weight:300; font-size:1.1rem; color:var(--ink); line-height:1; }
+  .flr-ground .gu{ flex:1 1 auto; font-family:var(--font-body); font-weight:300; font-size:var(--t-micro); color:var(--ink-dim); }
+  .flr-ground .flr-tag{ font-family:var(--font-label); font-size:8px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent-text);
+    border:1px solid var(--hairline-soft); border-radius:var(--r-pill); padding:.2em .6em; white-space:nowrap; }
+
+  /* ---- STEP 2 · units ---- */
+  .unit-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(140px,16vw,196px)),1fr));
+    gap:clamp(.6rem,1.2vw,1rem); max-width:920px; align-content:start; }
+  .unit{ position:relative; display:flex; flex-direction:column; gap:.4rem; min-height:100px; padding:.85em .9em;
+    border:1px solid var(--hairline-soft); border-radius:var(--r-tile); background:rgba(34,26,24,.45);
+    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:border-color .25s, transform .25s, background .25s; }
+  @media(hover:hover){ .unit.sel:hover{ border-color:var(--hairline); transform:translateY(-3px); } }
+  .unit::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:var(--r-tile) 0 0 var(--r-tile); }
+  .unit.av::before{ background:var(--st-avail); } .unit.hd::before{ background:var(--st-hold); } .unit.sd::before{ background:var(--st-sold); }
+  .unit .uno{ font-family:var(--font-display); font-weight:300; font-size:clamp(1.15rem,1.9vw,1.5rem); color:var(--ink); line-height:1; font-variant-numeric:tabular-nums; }
+  .unit .ucfg{ font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  .unit .uft{ margin-top:auto; font-family:var(--font-display); font-weight:300; font-size:var(--t-micro); color:var(--ink); font-variant-numeric:tabular-nums; }
+  .unit .ust{ font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; }
+  .unit.av .ust{ color:var(--st-avail); } .unit.hd .ust{ color:var(--st-hold); }
+  .unit.sd{ cursor:default; background:rgba(28,22,20,.32); }
+  .unit.sd .uno, .unit.sd .uft{ color:var(--st-sold-ink); }
+  .unit.sd .ust{ color:var(--st-sold-ink); }
+
+  /* ---- STEP 3 · unit detail (compact, inline, centered) ---- */
+  .ud{ display:grid; grid-template-columns:1.05fr 1fr; gap:clamp(.8rem,1.8vw,1.4rem); align-items:stretch; max-width:1060px; margin:0 auto; width:100%; }
+  .ud-id{ padding:clamp(.85rem,1.6vw,1.3rem); }
+  .ud-id .uhead{ display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .ud-id .uhead .big{ font-family:var(--font-display); font-weight:300; font-size:clamp(1.7rem,3.2vw,2.7rem); color:var(--ink); line-height:.95; font-variant-numeric:tabular-nums; }
+  .ud-status{ display:inline-flex; align-items:center; gap:.5em; font-family:var(--font-label); font-size:var(--t-micro);
+    letter-spacing:var(--track-wide); text-transform:uppercase; border:1px solid var(--hairline-soft); border-radius:var(--r-pill); padding:.32em .8em; }
+  .ud-status .dot{ width:9px; height:9px; border-radius:50%; }
+  .ud-status.av{ color:var(--st-avail); } .ud-status.av .dot{ background:var(--st-avail); }
+  .ud-status.hd{ color:var(--st-hold); } .ud-status.hd .dot{ background:var(--st-hold); }
+  .ud-spec{ display:grid; grid-template-columns:repeat(2,1fr); gap:0 1.3rem; margin-top:.7rem; }
+  .ud-spec .sp{ display:flex; justify-content:space-between; gap:1rem; padding:.42em 0; border-bottom:1px solid var(--hairline-soft); }
+  .ud-spec .sp span{ font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  .ud-spec .sp b{ font-family:var(--font-display); font-weight:300; font-size:var(--t-micro); color:var(--ink); text-align:right; font-variant-numeric:tabular-nums; }
+  .ud-price{ padding:clamp(.85rem,1.6vw,1.3rem); display:flex; flex-direction:column; gap:.8rem; }
+  .ud-price .pr{ font-family:var(--font-display); font-weight:300; color:var(--ink); }
+  .ud-price .pr b{ display:block; font-size:clamp(1.6rem,2.8vw,2.4rem); line-height:1; color:var(--ink); }
+  .ud-price .pr span{ font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-label); text-transform:uppercase; color:var(--accent); }
+  .ud-price .actions{ display:flex; flex-wrap:wrap; gap:.6rem; margin-top:auto; }
+  .ud-note{ font-family:var(--font-body); font-weight:300; font-size:var(--t-micro); color:var(--ink-dim); line-height:1.5; }
+
+  /* ---- compare (rendered into a centered floating window) ---- */
+  .cmp-float{ display:flex; flex-direction:column; gap:1rem; }
+  .cmp-float .cmp-wrap2{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .cmp-float .cmp-wrap2::-webkit-scrollbar{ height:7px; } .cmp-float .cmp-wrap2::-webkit-scrollbar-thumb{ background:var(--hairline-soft); border-radius:4px; }
+  .cmp-float .k-cmp{ min-width:560px; }
+  .cmp-float .k-cmp td.cfgcell{ font-family:var(--font-display); font-weight:300; color:var(--ink); white-space:nowrap; }
+  .cmp-float .k-cmp .rm{ background:none; border:0; color:var(--ink-dim); cursor:pointer; font-size:1rem; line-height:1; padding:.2em .4em; }
+  .cmp-float .k-cmp .rm:hover{ color:var(--hm-copper); }
+  .cmp-float .cmp-foot{ display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .cmp-float .cmp-empty{ font-family:var(--font-body); font-weight:300; font-size:var(--t-body); color:var(--ink-dim); padding:1rem 0; text-align:center; }
+
+  /* ---- footer disclaimer (fixed, reserves its own space) ---- */
+  .inv-foot{ flex:0 0 auto; display:flex; flex-direction:column; gap:.15rem; padding-top:clamp(.45rem,1.1vh,.8rem); border-top:1px solid var(--hairline-soft); }
+  .inv-foot p{ margin:0; font-family:var(--font-label); font-size:8.5px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); line-height:1.5; }
+  .inv-foot p .pin{ color:var(--accent-text); }
+
+  /* ---- responsive ---- */
+  @media (max-width:860px), (orientation:portrait){
+    .ud{ grid-template-columns:1fr; }
+    .ud-spec{ grid-template-columns:1fr; }
+  }
+  @media (max-width:520px){
+    .twr-card .meta{ gap:.8rem; }
+  }
+
+  /* ============================================================
+     STEP -1 · SITE ENTRY — night aerial of the whole estate
+     Full-bleed inv-site render + inlined inv-regions.svg overlay.
+     3 glowing tappable regions: West complex → chooser · T7 · T8.
+     ============================================================ */
+  .aerial{ position:fixed; inset:0; z-index:60; overflow:hidden; background:var(--hm-espresso-2);
+    opacity:0; visibility:hidden; transition:opacity .8s var(--ease-settle), visibility .8s; }
+  .aerial.on{ opacity:1; visibility:visible; }
+  .aerial.gone{ opacity:0; visibility:hidden; pointer-events:none; }
+  .aerial *{ -webkit-tap-highlight-color:transparent; }
+
+  /* full-bleed render (object-fit cover, centred) → SVG slice maps 1:1 */
+  .site-bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center;
+    transform:scale(1.03); }
+  .site-veil{ position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(120% 82% at 50% 34%, transparent 38%, rgba(20,15,13,.34) 100%),
+      linear-gradient(to bottom, rgba(20,15,13,.55) 0%, transparent 20% 56%, rgba(20,15,13,.84) 100%); }
+  .site-grain{ position:absolute; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+
+  /* ---- inlined region overlay — KEEPS the client SVG's own gradient colours,
+         animated LOW & breathing (per user). Highlight on hover / number-button hover. ---- */
+  .reg-host{ position:absolute; inset:0; z-index:3; }
+  /* SVG matches the render's fit EXACTLY: same slice as .site-bg (object-fit:cover, centred) AND the
+     same 1.03 zoom the bg carries, so the fills land dead-on the buildings with no drift. */
+  .reg-svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible;
+    transform:scale(1.03); transform-origin:center; }
+  /* regions render as SOLID BREATHING FILLS (NOT outlines), each in its own gradient colour, sitting
+     directly on the buildings; the numbered pointer pins still lead. fill-opacity pulses ~.2↔.5,
+     capped so it never goes garish over the photoreal render. Stroke removed, heavy glow dropped. */
+  .reg-svg > path{ pointer-events:auto; cursor:pointer;
+    fill-opacity:.24; stroke:none;
+    transition:fill-opacity .35s var(--ease-soft), opacity .35s var(--ease-soft);
+    animation:reg-fillpulse 4.6s var(--ease-soft) infinite; }
+  @keyframes reg-fillpulse{ 0%,100%{ opacity:.7; fill-opacity:.2 } 50%{ opacity:.95; fill-opacity:.5 } }
+  /* 2nd screen (chooser) — same solid-fill language, slightly quicker pulse. */
+  #chooseRegHost .reg-svg > path{ animation:reg-fillpulse 4.4s var(--ease-soft) infinite; }
+  #chooseRegHost .reg-svg > path.reg-hot{ fill-opacity:.5 !important; }
+  /* keep the tower fills on the RESIDENCES (tower body) only — trim the bleed into the podium/base
+     (bottom) and the sky above the crown (top), per the residences reference. */
+  #chooseRegHost .reg-svg{ clip-path: inset(4% 0 25% 0); }
+  .reg-svg > path:nth-of-type(2){ animation-delay:.7s; }
+  .reg-svg > path:nth-of-type(3){ animation-delay:1.4s; }
+  .reg-svg > path:nth-of-type(4){ animation-delay:2.1s; }
+  .reg-svg > path:nth-of-type(5){ animation-delay:2.8s; }
+  .reg-svg > path:nth-of-type(6){ animation-delay:3.5s; }
+  .reg-svg > path.reg-hot{ animation:none; opacity:1 !important; fill-opacity:.5 !important; stroke:none; }
+  @media(hover:hover){ .reg-svg > path:hover{ animation:none; opacity:1; fill-opacity:.5; } }
+  .reg-svg > path:focus-visible{ animation:none; opacity:1; fill-opacity:.5; outline:none; }
+  @media (prefers-reduced-motion:reduce){ .reg-svg > path{ animation:none; opacity:.95; fill-opacity:.34; } }
+
+  /* ---- numbered POINTER pins — medallion floats above the tower, stem points down to it ---- */
+  .reg-nums{ position:absolute; inset:0; z-index:4; pointer-events:none; }
+  .reg-pin{ position:absolute; transform:translate(-50%,-100%); pointer-events:auto; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:0; padding:0; border:0; background:none;
+    -webkit-tap-highlight-color:transparent; filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));
+    animation:reg-pin-in .7s var(--ease-settle) both; }
+  @keyframes reg-pin-in{ from{ opacity:0; transform:translate(-50%,-100%) translateY(-12px) }
+    to{ opacity:1; transform:translate(-50%,-100%) } }
+  .reg-pin .med{ position:relative; width:clamp(42px,3vw,56px); height:clamp(42px,3vw,56px); display:grid; place-items:center;
+    border-radius:50%; border:1.5px solid var(--hm-gold-bright); background:rgba(24,17,14,.92);
+    font-family:var(--font-display); font-weight:400; font-size:clamp(1.05rem,1.5vw,1.45rem); color:var(--ink);
+    font-variant-numeric:tabular-nums; box-shadow:0 0 0 4px rgba(201,176,120,.08), inset 0 0 12px rgba(201,176,120,.1);
+    transition:transform .2s var(--ease-soft), background .25s, color .25s, box-shadow .25s; }
+  .reg-pin .med::after{ content:""; position:absolute; inset:-6px; border-radius:50%; border:1.5px solid var(--hm-gold-bright);
+    opacity:.45; animation:reg-ping 2.6s var(--ease-soft) infinite; }
+  @keyframes reg-ping{ 0%{ transform:scale(1); opacity:.5 } 70%{ transform:scale(1.55); opacity:0 } 100%{ opacity:0 } }
+  .reg-pin .stem{ width:2px; height:var(--stem, clamp(26px,3.4vh,52px)); flex:0 0 auto;
+    background:linear-gradient(to bottom, var(--hm-gold-bright), rgba(201,176,120,.14)); }
+  .reg-pin .tip{ width:9px; height:9px; border-radius:50%; margin-top:-1px; flex:0 0 auto; background:var(--hm-gold-bright);
+    box-shadow:0 0 10px 2px rgba(201,176,120,.7); }
+  @media(hover:hover){ .reg-pin:hover .med{ transform:scale(1.1); background:var(--accent); color:var(--hm-espresso);
+    box-shadow:0 0 0 4px rgba(201,176,120,.14), 0 0 26px 5px rgba(201,176,120,.5); } }
+  .reg-pin.hot .med{ background:var(--accent); color:var(--hm-espresso); }
+  .reg-pin:active .med{ transform:scale(.95); }
+  @media (prefers-reduced-motion:reduce){ .reg-pin, .reg-pin .med::after{ animation:none; } }
+
+  /* ---- EXACT SVG-outline cut-out for the floor selector (replaces the ellipse spotlight) ----
+     A single SVG inside .tw-imgwrap: base render + a dark overlay masked to a HOLE in the exact
+     building silhouette + a glowing outline. It zooms/pans with the building as one unit. */
+  .tw-cutsvg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .tw-cutsvg image{ image-rendering:auto; }
+  .tw-cutedge{ fill:none; stroke:var(--hm-gold-bright); stroke-width:2.4; vector-effect:non-scaling-stroke;
+    filter:drop-shadow(0 0 7px rgba(201,176,120,.6)); animation:cut-glow 3.2s var(--ease-soft) infinite; }
+  @keyframes cut-glow{ 0%,100%{ opacity:.5 } 50%{ opacity:1 } }
+  @media (prefers-reduced-motion:reduce){ .tw-cutedge{ animation:none; opacity:.85; } }
+
+  /* ---- shared overlay chrome (title · back · footer) ---- */
+  .ov-head{ position:absolute; left:0; right:0; top:clamp(1.1rem,4vh,2.6rem); z-index:5; text-align:center; pointer-events:none; padding:0 1.5rem; }
+  .ov-head .eb{ display:inline-flex; align-items:center; gap:.7em; font-family:var(--font-label);
+    font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent-text);
+    opacity:0; transform:translateY(-8px); animation:ov-rise 1s var(--ease-settle) .25s forwards; }
+  .ov-head .eb::before,.ov-head .eb::after{ content:""; width:clamp(20px,4vw,46px); height:1px; background:var(--hairline); }
+  .ov-head h1{ margin:.3em 0 0; font-family:var(--font-display); font-weight:300; letter-spacing:.01em;
+    font-size:clamp(1.5rem,3.4vw,2.9rem); color:var(--ink); line-height:1; text-shadow:0 2px 24px rgba(0,0,0,.5);
+    opacity:0; transform:translateY(10px); animation:ov-rise 1.1s var(--ease-settle) .4s forwards; }
+  .ov-head .sub{ margin:.5em 0 0; font-family:var(--font-body); font-style:italic; font-size:var(--t-sub);
+    color:var(--ink-dim); opacity:0; animation:ov-fade 1.1s var(--ease-settle) .7s forwards; }
+  @keyframes ov-rise{ to{ opacity:1; transform:none } }
+  @keyframes ov-fade{ to{ opacity:1 } }
+
+  .ov-back{ position:absolute; left:clamp(1rem,2.4vw,2rem); top:clamp(1rem,2.4vw,2rem); z-index:6;
+    display:inline-flex; align-items:center; gap:.6em; min-height:44px; padding:.5em 1em .5em .8em;
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase;
+    color:var(--ink-dim); background:rgba(26,20,18,.9); border:1px solid var(--hairline-soft); border-radius:var(--r-pill);
+    cursor:pointer; transition:color .25s, border-color .25s, transform .16s var(--ease-soft);
+    opacity:0; animation:ov-fade 1s var(--ease-settle) .5s forwards; }
+  .ov-back:hover{ color:var(--ink); border-color:var(--hairline); }
+  .ov-back:active{ transform:scale(.97); }
+  .ov-back svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+
+  .ov-foot{ position:absolute; left:0; right:0; bottom:clamp(1rem,3.4vh,2.2rem); z-index:6;
+    display:flex; align-items:center; justify-content:center; gap:clamp(.6rem,1.4vw,1.1rem); flex-wrap:wrap; padding:0 1.2rem;
+    opacity:0; animation:ov-rise 1s var(--ease-settle) 1.05s forwards; }
+  .ov-hint{ position:absolute; left:50%; bottom:calc(100% + .7rem); transform:translateX(-50%); white-space:nowrap;
+    font-family:var(--font-label); font-size:8.5px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  .ov-cta{ display:inline-flex; align-items:center; gap:.7em; min-height:48px; padding:.7em 1.5em;
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase;
+    cursor:pointer; border-radius:var(--r-pill); transition:transform .16s var(--ease-soft), filter .25s, border-color .25s, color .25s; }
+  .ov-cta:active{ transform:scale(.97); }
+  .ov-cta.gold{ color:var(--hm-espresso); background:var(--accent); border:1px solid var(--accent); }
+  .ov-cta.gold:hover{ filter:brightness(1.07); }
+  .ov-cta.ghost{ color:var(--ink-dim); background:rgba(26,20,18,.9); border:1px solid var(--hairline-soft); }
+  .ov-cta.ghost:hover{ color:var(--ink); border-color:var(--hairline); }
+  .ov-cta svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ============================================================
+     STEP -0.5 · CHOOSE TOWER — close-up of the West six-tower complex
+     Full-bleed juice-towers render + inlined choose-regions.svg (6 blocks).
+     ============================================================ */
+  .chooser{ position:fixed; inset:0; z-index:62; overflow:hidden; background:var(--hm-espresso-2);
+    opacity:0; visibility:hidden; transition:opacity .6s var(--ease-settle), visibility .6s; }
+  .chooser.on{ opacity:1; visibility:visible; }
+  .chooser.gone{ opacity:0; visibility:hidden; pointer-events:none; }
+  .chooser *{ -webkit-tap-highlight-color:transparent; }
+
+  /* hidden measuring layer for the floor selector (towers 1–6 on juice-towers) */
+  .tw-measure{ position:absolute; inset:0; width:100%; height:100%; visibility:hidden; pointer-events:none; }
+
+  @media (prefers-reduced-motion:reduce){
+    .site-bg{ transform:scale(1.01); }
+    .reg-svg{ transform:scale(1.01); }
+    .reg-path{ animation:none; fill-opacity:.18; stroke-opacity:.7; }
+    .ov-head .eb,.ov-head h1,.ov-head .sub,.ov-foot,.ov-back{ animation:none; opacity:1; transform:none; }
+  }
+
+  /* ============================================================
+     STEP 1 · TOWER — tower image + lift-keypad floor selector
+     ============================================================ */
+  .tw-screen{ flex:1 1 auto; min-height:0; display:flex; flex-direction:row; gap:clamp(.7rem,1.5vw,1.3rem); }
+  .tw-stage{ flex:1 1 auto; min-width:0; position:relative; overflow:hidden; border-radius:var(--r-tile);
+    background:var(--hm-espresso-2); border:1px solid var(--hairline-soft); }
+  /* cinematic focus spotlight: bright tower image (zoom/pans to selected floor) + a FIXED dim vignette
+     that recedes everything outside a tall, tower-shaped ellipse. The dim/glow/ring/level stay in stage
+     coords so the spotlight never drifts while the image zooms underneath. */
+  .tw-imgwrap{ position:absolute; inset:0; will-change:transform; transform:scale(1.06);
+    transition:transform 1.25s var(--ease-settle); }
+  .tw-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 36%;
+    filter:brightness(1.04) saturate(1.06) contrast(1.02); }
+  .tw-dim{ position:absolute; inset:0; z-index:1; pointer-events:none; background:rgba(15,11,9,.76);
+    -webkit-mask-image:radial-gradient(ellipse var(--rx,10%) var(--ry,42%) at var(--mx,50%) var(--my,52%), transparent 42%, #000 82%);
+            mask-image:radial-gradient(ellipse var(--rx,10%) var(--ry,42%) at var(--mx,50%) var(--my,52%), transparent 42%, #000 82%);
+    opacity:0; animation:tw-focus-in 1s var(--ease-settle) .2s forwards; }
+  .tw-spot{ position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:screen;
+    background:radial-gradient(ellipse calc(var(--rx,10%) + 4%) calc(var(--ry,42%) + 4%) at var(--mx,50%) var(--my,52%), rgba(201,176,120,.28), transparent 70%);
+    opacity:0; animation:tw-focus-in 1.5s var(--ease-settle) .35s forwards; }
+  .tw-ring{ position:absolute; z-index:2; transform:translate(-50%,-50%); width:var(--ringw,17%); height:var(--ringh,64%);
+    left:var(--mx,50%); top:var(--my,52%); border-radius:50%; pointer-events:none;
+    box-shadow:0 0 0 1px rgba(201,176,120,.26), 0 0 70px 10px rgba(201,176,120,.12) inset;
+    opacity:0; animation:tw-focus-in 1.6s var(--ease-settle) .5s forwards; }
+  /* floor-level indicator line — animates to the tapped floor's height, clamped within the spotlight band */
+  .tw-level{ position:absolute; z-index:4; left:var(--mx,50%); top:var(--lvl,52%); width:var(--llw,28%);
+    transform:translate(-50%,-50%); pointer-events:none; opacity:0;
+    transition:top .9s var(--ease-settle), opacity .45s var(--ease-soft); }
+  .tw-level.on{ opacity:1; }
+  .tw-level .line{ display:block; height:2px; width:100%; border-radius:2px;
+    background:linear-gradient(90deg, transparent, var(--hm-gold-bright) 20%, var(--hm-gold-bright) 80%, transparent);
+    box-shadow:0 0 12px rgba(201,176,120,.6); }
+  .tw-level .knot{ position:absolute; left:50%; top:50%; width:7px; height:7px; transform:translate(-50%,-50%) rotate(45deg);
+    background:var(--hm-gold-bright); box-shadow:0 0 12px 2px rgba(201,176,120,.7); }
+  .tw-level .tag{ position:absolute; left:calc(100% + 9px); top:50%; transform:translateY(-50%); white-space:nowrap;
+    font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase;
+    color:var(--hm-gold-bright); background:rgba(26,20,18,.9); border:1px solid var(--hairline-soft);
+    border-radius:var(--r-pill); padding:.25em .65em; }
+  /* highlight BAND — a translucent gold slice ~1 floor tall, glued to the facade inside .tw-imgwrap
+     so it travels + zooms with the building. mix-blend:screen brightens the selected floor's slice. */
+  .tw-band{ position:absolute; z-index:3; left:var(--mx,50%); top:var(--blvl,52%); width:var(--bw,26%); height:var(--bh,3.5%);
+    transform:translate(-50%,-50%); pointer-events:none; opacity:0; mix-blend-mode:screen; border-radius:4px;
+    background:linear-gradient(90deg,transparent,rgba(201,176,120,.20) 14%,rgba(232,205,146,.44) 50%,rgba(201,176,120,.20) 86%,transparent);
+    box-shadow:0 0 30px 8px rgba(201,176,120,.22);
+    transition:top .9s var(--ease-settle), height .55s var(--ease-settle), width .55s var(--ease-settle), opacity .5s var(--ease-soft); }
+  .tw-band::before,.tw-band::after{ content:""; position:absolute; left:8%; right:8%; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(230,205,150,.75),transparent); }
+  .tw-band::before{ top:0; } .tw-band::after{ bottom:0; }
+  .tw-band.on{ opacity:1; }
+  @keyframes tw-focus-in{ to{ opacity:1 } }
+  .tw-veil{ position:absolute; inset:0; pointer-events:none; z-index:3;
+    background:linear-gradient(0deg,rgba(20,15,13,.78),transparent 42%); }
+  @media (prefers-reduced-motion:reduce){
+    .tw-imgwrap{ transform:scale(1.04) !important; transition:none; }
+    .tw-dim,.tw-spot,.tw-ring{ animation:none; opacity:1; }
+    .tw-level{ transition:opacity .3s; }
+    .tw-band{ transition:opacity .3s; }
+  }
+  .tw-cap{ position:absolute; left:clamp(1rem,2vw,2rem); bottom:clamp(1rem,2vw,2rem); z-index:2; }
+  .tw-cap h2{ font-family:var(--font-display); font-weight:300; font-size:clamp(1.8rem,3.4vw,3.1rem); color:var(--ink); line-height:1; margin:.12em 0 0; text-shadow:0 2px 20px rgba(0,0,0,.5); }
+  .tw-cap p{ font-family:var(--font-body); font-style:italic; font-size:var(--t-sub); color:var(--ink-dim); margin:.25em 0 0; }
+  .tw-cap .tw-stats{ display:flex; gap:1.3rem; margin-top:.7rem; }
+  .tw-cap .tw-stats .s span{ display:block; font-family:var(--font-label); font-size:8px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); margin-bottom:.2em; }
+  .tw-cap .tw-stats .s b{ font-family:var(--font-display); font-weight:300; font-size:clamp(.95rem,1.4vw,1.2rem); color:var(--ink); font-variant-numeric:tabular-nums; }
+  /* keypad */
+  .kpad{ position:relative; z-index:3; flex:0 0 clamp(228px,22vw,298px); display:flex; flex-direction:column; gap:.65rem; min-height:0;
+    background:rgba(40,30,27,.5); border:1px solid var(--hairline-soft); border-radius:var(--r-tile);
+    padding:clamp(.75rem,1.1vw,1.05rem); backdrop-filter:blur(10px); }
+  .kpad-head{ flex:0 0 auto; }
+  .kdisp{ display:flex; align-items:baseline; gap:.5em; margin-top:.35rem; padding:.45rem .8rem; border-radius:12px;
+    background:rgba(20,15,13,.5); border:1px solid var(--hairline-soft); box-shadow:inset 0 2px 12px rgba(0,0,0,.4); }
+  .kdisp .knum{ font-family:var(--font-display); font-weight:300; font-size:clamp(1.9rem,3.2vw,2.7rem); color:var(--hm-gold-bright); line-height:1; font-variant-numeric:tabular-nums; transition:opacity .12s,transform .12s; }
+  .kdisp .knum.tick{ opacity:.2; transform:translateY(-22%); }
+  .kdisp .klbl{ font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); }
+  /* the grid sizes its buttons to FIT the panel (compact min-heights, ≥44px targets) so no
+     button is ever clipped or hidden behind a nested scroll on the kiosk. overflow-y:auto is a
+     graceful fallback only for extreme small viewports; at 2560×1600 the list fits with margin. */
+  .kgrid{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; display:grid; grid-template-columns:repeat(3,1fr); gap:.42rem; align-content:start; padding-right:.2rem; }
+  .kgrid::-webkit-scrollbar{ width:6px; } .kgrid::-webkit-scrollbar-thumb{ background:var(--hairline-soft); border-radius:3px; }
+  .kbtn{ min-height:clamp(44px,5.2vh,64px); display:grid; place-items:center; position:relative; cursor:pointer; padding:0;
+    border:1px solid var(--hairline-soft); border-radius:9px; background:rgba(245,241,235,.04);
+    font-family:var(--font-display); font-weight:300; font-size:clamp(.85rem,1.25vw,1.1rem); color:var(--ink);
+    font-variant-numeric:tabular-nums; -webkit-tap-highlight-color:transparent; transition:transform .16s var(--ease-soft),background .2s,border-color .2s; }
+  .kbtn .avd{ position:absolute; top:4px; right:4px; width:5px; height:5px; border-radius:50%; }
+  .kbtn.s-hi .avd{ background:var(--st-avail); } .kbtn.s-mid .avd{ background:var(--st-hold); } .kbtn.s-lo .avd{ background:var(--st-sold); }
+  .kbtn.special{ grid-column:span 3; min-height:clamp(44px,4.4vh,56px); font-family:var(--font-label); font-size:9px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--accent-text); gap:.5em; }
+  @media(hover:hover){ .kbtn:hover{ transform:translateY(-2px); border-color:var(--hairline); background:rgba(245,241,235,.1); } }
+  .kbtn.sel{ border-color:var(--accent); background:rgba(184,156,109,.18); color:#fff; box-shadow:0 0 0 1px var(--accent),inset 0 0 12px rgba(184,156,109,.14); }
+  .kbtn:active{ transform:scale(.95); }
+  .kcta{ flex:0 0 auto; min-height:48px; display:flex; align-items:center; justify-content:center; gap:.6em;
+    font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide); text-transform:uppercase;
+    border-radius:var(--r-pill); border:1px solid var(--accent); background:var(--accent); color:var(--hm-espresso); cursor:pointer;
+    transition:filter .2s,transform .16s var(--ease-soft),opacity .2s; }
+  .kcta[disabled]{ opacity:.4; cursor:default; background:transparent; color:var(--ink-dim); border-color:var(--hairline-soft); }
+  .kcta:not([disabled]):hover{ filter:brightness(1.07); } .kcta:not([disabled]):active{ transform:scale(.98); }
+  .kcta svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .knote{ flex:0 0 auto; font-family:var(--font-label); font-size:8px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); line-height:1.7; }
+  .knote b{ color:var(--accent-text); font-weight:400; }
+
+  /* ============================================================
+     STEP 2 · FLOOR PLAN + unit pointers
+     ============================================================ */
+  .fp-stage{ flex:1 1 auto; min-height:0; position:relative; overflow:hidden; border-radius:var(--r-tile);
+    background:var(--hm-espresso-2); border:1px solid var(--hairline-soft); container-type:size; display:grid; place-items:center; padding:clamp(.4rem,1vw,1rem); }
+  /* aspect-locked fit box (contains within the stage, never crops) → marker %-coords map 1:1 onto the drawing */
+  .fp-fit{ position:relative; width:min(100%, calc(100cqh * 1735 / 1083)); aspect-ratio:1735 / 1083; }
+  .fp-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:6px; box-shadow:0 12px 44px rgba(0,0,0,.45); }
+  .fp-marks{ position:absolute; inset:0; pointer-events:none; }
+  .fp-pin{ position:absolute; transform:translate(-50%,-50%); pointer-events:auto; cursor:pointer; background:none; border:0;
+    display:flex; flex-direction:column; align-items:center; gap:6px; -webkit-tap-highlight-color:transparent; z-index:1; }
+  .fp-pin .pno{ position:relative; min-width:clamp(62px,5vw,92px); height:clamp(62px,5vw,92px); padding:0 .5em; display:grid; place-items:center; border-radius:999px;
+    font-family:var(--font-display); font-weight:400; font-size:clamp(1.2rem,1.9vw,1.7rem); color:#fff; font-variant-numeric:tabular-nums;
+    border:2px solid; box-shadow:0 10px 26px rgba(0,0,0,.5); transition:transform .25s var(--ease-soft); }
+  .fp-pin.av .pno{ background:rgba(44,33,29,.94); border-color:var(--st-avail); }
+  .fp-pin.hd .pno{ background:rgba(44,33,29,.94); border-color:var(--st-hold); }
+  .fp-pin.sd .pno{ background:rgba(28,22,20,.9); border-color:var(--st-no); color:oklch(0.74 0.07 28 / .82); }
+  .fp-pin .ring{ position:absolute; inset:-10px; border-radius:50%; border:1.5px solid; opacity:.6; animation:ae-pulse 2.4s var(--ease-soft) infinite; }
+  .fp-pin.av .ring{ border-color:var(--st-avail); } .fp-pin.hd .ring{ border-color:var(--st-hold); } .fp-pin.sd .ring{ display:none; }
+  .fp-pin .pst{ display:flex; align-items:center; gap:.5em; font-family:var(--font-label); font-size:clamp(8.5px,.85vw,10.5px); letter-spacing:var(--track-wide); text-transform:uppercase; padding:.32em .85em; border-radius:999px; background:rgba(20,15,13,.9); white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,.45); }
+  .fp-pin .pst svg{ width:11px; height:11px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .fp-pin.av .pst{ color:var(--st-avail); } .fp-pin.hd .pst{ color:var(--st-hold); } .fp-pin.sd .pst{ color:rgba(245,241,235,.55); }
+  /* gentle POP so tappable (available / on-hold) markers read as interactive; sold = muted, still */
+  @keyframes fp-pop{ 0%,100%{ transform:scale(1) } 50%{ transform:scale(1.08) } }
+  .fp-pin.av .pno, .fp-pin.hd .pno{ animation:fp-pop 2.6s var(--ease-soft) infinite; }
+  .fp-pin.sd .pno{ animation:none; }
+  @media(hover:hover){ .fp-pin:hover .pno{ animation:none; transform:scale(1.1); } }
+  .fp-pin:active .pno{ animation:none; transform:scale(.95); }
+  @media (prefers-reduced-motion:reduce){ .fp-pin .pno{ animation:none !important; } }
+  .fp-note{ position:absolute; right:.8rem; bottom:.7rem; z-index:2; font-family:var(--font-label); font-size:8.5px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--ink-dim); background:rgba(20,15,13,.5); padding:.35em .8em; border-radius:var(--r-pill); }
+
+  /* ============================================================
+     STEP 3 · UNIT PLAN (zoomed) + detail
+     ============================================================ */
+  .up-screen{ flex:1 1 auto; min-height:0; display:flex; flex-direction:row; gap:clamp(.8rem,1.6vw,1.4rem); }
+  .up-plan{ flex:1 1 auto; min-width:0; position:relative; overflow:hidden; border-radius:var(--r-tile);
+    background:var(--hm-espresso-2); border:1px solid var(--hairline-soft); cursor:zoom-in; container-type:size; display:grid; place-items:center; padding:clamp(.4rem,1vw,1rem); }
+  .up-fit{ position:relative; width:min(100%, calc(100cqh * 1735 / 1083)); aspect-ratio:1735 / 1083; transform:scale(2.05); transition:transform .6s var(--ease-soft); }
+  .up-plan.out .up-fit{ transform:scale(1); cursor:zoom-out; }
+  .up-fit img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:6px; box-shadow:0 12px 44px rgba(0,0,0,.45); }
+  /* focus vignette: soft radial spotlight centred on the selected unit, gently receding the surroundings */
+  .up-vig{ position:absolute; inset:0; z-index:1; pointer-events:none; border-radius:var(--r-tile);
+    background:radial-gradient(circle at var(--vx,50%) var(--vy,50%),
+      transparent 0, transparent 17%, rgba(17,12,10,.34) 46%, rgba(14,10,8,.58) 100%);
+    opacity:1; transition:opacity .55s var(--ease-soft); }
+  .up-plan.out .up-vig{ opacity:0; }   /* zoomed out → reveal the whole plate */
+  @media (prefers-reduced-motion:reduce){ .up-fit{ transition:none; } }
+  .up-ztag{ position:absolute; left:.6rem; bottom:.6rem; z-index:2; font-family:var(--font-label); font-size:8px; letter-spacing:var(--track-wide); text-transform:uppercase; color:var(--hm-espresso); opacity:.6; background:rgba(245,241,235,.65); padding:.3em .7em; border-radius:var(--r-pill); pointer-events:none; }
+  .up-detail{ flex:0 0 clamp(290px,31vw,420px); min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:.8rem; }
+  .up-detail::-webkit-scrollbar{ width:6px; } .up-detail::-webkit-scrollbar-thumb{ background:var(--hairline-soft); border-radius:3px; }
+  @media (orientation:portrait), (max-width:900px){
+    .tw-screen,.up-screen{ flex-direction:column; }
+    .kpad,.up-detail{ flex:0 0 auto; }
+    .kgrid{ max-height:34vh; }
+    .up-plan{ min-height:38vh; }
+  }
+</style>
+</head>
+<body data-screen="inventory">
+  <div class="scr-hero-wash"></div>
+  <div class="scr">
+
+    <!-- ===== STEP -1 · SITE ENTRY — night aerial of the whole estate ===== -->
+    <div class="aerial" id="aerial" aria-label="Estate site view">
+      <img class="site-bg" id="siteBg" alt="Highland Mayfields — night aerial">
+      <div class="reg-host" id="siteRegHost"></div>
+      <div class="site-veil"></div>
+      <div class="site-grain"></div>
+
+      <button class="ov-back" id="siteHome" type="button" aria-label="Back to home">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Home
+      </button>
+
+      <div class="ov-head">
+        <span class="eb">Sector 118, Mohali · Eight Towers</span>
+        <h1>The Estate</h1>
+        <p class="sub">Tap the West towers, or Tower 7 &amp; Tower 8</p>
+      </div>
+
+      <div class="ov-foot">
+        <span class="ov-hint">Tap a lit building to explore its residences</span>
+        <button class="ov-cta gold" id="siteAll" type="button">Explore all eight towers
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+
+    <!-- ===== STEP -0.5 · CHOOSE TOWER — the West six-tower complex up close ===== -->
+    <div class="chooser" id="chooser" aria-label="Choose a West tower">
+      <img class="site-bg" id="chooseBg" alt="The West towers">
+      <div class="reg-host" id="chooseRegHost"></div>
+      <div class="site-veil"></div>
+      <div class="site-grain"></div>
+
+      <button class="ov-back" id="chooseBack" type="button" aria-label="Back to the estate">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> The Estate
+      </button>
+
+      <div class="ov-head">
+        <span class="eb">West Parcel · Towers 1 – 6</span>
+        <h1>The West Towers</h1>
+        <p class="sub">Tap a tower to view its floors</p>
+      </div>
+
+      <div class="ov-foot">
+        <span class="ov-hint">Six towers &nbsp;·&nbsp; The Pearl clubhouse</span>
+      </div>
+    </div>
+
+    <header class="scr-top">
+      <button class="scr-back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Home</button>
+      <div class="scr-head">
+        <span class="k-eyebrow">Limited residences</span>
+        <h1 class="scr-name">Inventory</h1>
+      </div>
+      <div class="scr-side"><img class="scr-crest" src="../assets/logo-crest.png" alt="" onerror="this.style.display='none'"></div>
+    </header>
+
+    <main class="scr-body">
+      <div class="scr-wrap" style="height:100%">
+        <div class="inv-wrap">
+
+          <!-- breadcrumb -->
+          <nav class="inv-crumb" id="invCrumb" aria-label="Inventory breadcrumb"></nav>
+
+          <!-- constant legend + compare opener -->
+          <div class="inv-keyrow" data-reveal>
+            <div class="k-legend inv-key">
+              <span class="k-leg-item"><span class="sw" style="background:var(--st-avail)"></span>Available</span>
+              <span class="k-leg-item"><span class="sw" style="background:var(--st-hold)"></span>On hold</span>
+              <span class="k-leg-item"><span class="sw" style="background:var(--st-sold)"></span>Sold</span>
+            </div>
+            <div class="right">
+              <span class="k-swipe-hint" id="invHint">Tap a tower to begin</span>
+              <button class="cmp-open" id="cmpOpen" type="button" aria-label="Open comparison">
+                <svg viewBox="0 0 24 24"><path d="M4 6h7M4 12h7M4 18h7M16 5v14M19 8l-3-3-3 3M14 16l3 3 3-3"/></svg>
+                <span id="cmpOpenLbl">Compare · 0</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- animated content (fills remaining height, no scroll) -->
+          <div class="inv-stage" id="invStage" data-reveal data-d="120ms"></div>
+
+          <!-- persistent disclosures (fixed footer line) -->
+          <div class="inv-foot" data-reveal data-d="220ms">
+            <p>Availability is indicative — please confirm current status &amp; pricing with the sales office.</p>
+            <p><span class="pin">Pocket C possession: October 2027.</span> &nbsp;·&nbsp; Areas approx., per sanctioned plans · Price on request · RERA PBRERA-SAS80-PR1041.</p>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../assets/screens/region-data.js"></script>
+  <script src="_kit.js"></script>
+  <script>
+  (function(){
+    'use strict';
+    var R = window.HM_REGIONS || {site:{paths:[]},choose:{paths:[]}};
+    var CHOOSE_D = {};   /* filled at boot: {1:pathD … 6:pathD} — juice-towers cut-outs, left→right */
+
+    /* ============================================================
+       DATA — copied verbatim from data/inventory.json (kd Law 3, no fabrication).
+       ============================================================ */
+    var SITE = {
+      parcels: [
+        { id:'west', label:'West Parcel', range:'Towers 1 – 6', towers:[1,2,3,4,5,6], clubhouse:'The Pearl clubhouse' },
+        { id:'east', label:'East Parcel', range:'Towers 7 – 8', towers:[7,8], clubhouse:null }
+      ]
+    };
+    var FP = '../assets/screens/floorplans/';
+    /* per-tower model from the client inventory list + layout book.
+       units[] index 0 = unit ·01, index 1 = ·02 … ; hx/hy = pointer position (%) on the typical plan page.
+       floors = typical residential floors; ground = G use; duplex = a 2-floor penthouse above the typical floors. */
+    var TOWERS = {
+      1:{ id:1, parcel:'west', img:'west', plan:'p-09', floors:24, aptsPerFloor:2, config:'3 BHK', ground:'villa', duplex:true,
+          units:[ {conf:'3 BHK', type:'Type 1 · Corner',     sup:3280, car:1368, hx:73, hy:52},
+                  {conf:'3 BHK', type:'Type 2 · Non-corner', sup:2890, car:1394, hx:30, hy:48} ] },
+      2:{ id:2, parcel:'west', img:'west', plan:'p-11', floors:24, aptsPerFloor:2, config:'3+1 BHK', ground:'villa', duplex:true,
+          units:[ {conf:'3+1 BHK', type:'Type 1', sup:3675, car:1783, hx:23, hy:44},
+                  {conf:'3+1 BHK', type:'Type 1', sup:3675, car:1783, hx:33, hy:60} ] },
+      3:{ id:3, parcel:'west', img:'west', plan:'p-13', floors:24, aptsPerFloor:2, config:'4 BHK', ground:'villa', duplex:true,
+          units:[ {conf:'3+1 BHK', type:'Type 1 · Non-corner', sup:3675, car:null, hx:42, hy:38},
+                  {conf:'4 BHK',   type:'Type 2 · Corner',     sup:4400, car:2042, hx:26, hy:56} ] },
+      4:{ id:4, parcel:'west', img:'west', plan:'p-15', floors:24, aptsPerFloor:2, config:'4+1 BHK', ground:'villa', duplex:true,
+          units:[ {conf:'4+1 BHK', type:'Type 2', sup:4750, car:2319, hx:55, hy:38},
+                  {conf:'4+1 BHK', type:'Type 1 · Corner', sup:4850, car:2355, hx:70, hy:54} ] },
+      5:{ id:5, parcel:'west', img:'west', plan:'p-16', floors:24, aptsPerFloor:2, config:'4+1 BHK', ground:'villa', duplex:true,
+          units:[ {conf:'4+1 BHK', type:'Type 1', sup:4750, car:2319, hx:33, hy:48},
+                  {conf:'4+1 BHK', type:'Type 2', sup:4750, car:2319, hx:66, hy:48} ] },
+      6:{ id:6, parcel:'west', img:'west', plan:'p-18', floors:24, aptsPerFloor:2, config:'4+1 BHK', ground:'villa', duplex:true,
+          units:[ {conf:'4+1 BHK', type:'Type 2 · Non-corner', sup:4750, car:2327, hx:33, hy:50},
+                  {conf:'4+1 BHK', type:'Type 1 · Corner',     sup:5250, car:2481, hx:66, hy:50} ] },
+      7:{ id:7, parcel:'east', img:'east', plan:'p-20', floors:22, aptsPerFloor:4, config:'3 BHK + 3W', ground:'lobby', duplex:false,
+          units:[ {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:86, hy:30},
+                  {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:87, hy:85},
+                  {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:61, hy:84},
+                  {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:61, hy:30} ] },
+      8:{ id:8, parcel:'east', img:'east', plan:'p-20', floors:22, aptsPerFloor:4, config:'3 BHK + 3W', ground:'lobby', duplex:false,
+          units:[ {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:86, hy:30},
+                  {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:87, hy:85},
+                  {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:61, hy:84},
+                  {conf:'3 BHK + 3W', type:'Type 4 · Corner', sup:2770, car:1398, hx:61, hy:30} ] }
+    };
+    var GROUND_USE = 'Grand Entrance Lobby & Tower Club';
+    /* focus spotlight per tower (centre %mx/%my + ellipse radii %rx/%ry on the .tw-stage box). Indicative — tune to taste. */
+    /* focus spotlight per tower (centre %mx/%my + tall ellipse radii %rx/%ry on the .tw-stage box).
+       Towers 1–6 share tower-west.webp (one twin-tower mass, centred); 7–8 share tower-east.webp
+       (two prominent centre towers — 7=left, 8=right). Tuned by screenshot. */
+    var TOWER_FOCUS = {
+      1:{mx:45,my:48,rx:8.5,ry:44},
+      2:{mx:47,my:48,rx:8.5,ry:44},
+      3:{mx:49,my:48,rx:8.5,ry:44},
+      4:{mx:50,my:48,rx:8.5,ry:44},
+      5:{mx:52,my:48,rx:8.5,ry:44},
+      6:{mx:54,my:48,rx:8.5,ry:44},
+      7:{mx:38,my:50,rx:9.5,ry:40},
+      8:{mx:55,my:50,rx:9.5,ry:40}
+    };
+    function focusVars(t){ var f=TOWER_FOCUS[t.id]||{mx:50,my:48,rx:9,ry:44};
+      return '--mx:'+f.mx+'%;--my:'+f.my+'%;--rx:'+f.rx+'%;--ry:'+f.ry+'%;--ringw:'+(f.rx*1.9)+'%;--ringh:'+(f.ry*1.4)+'%'; }
+
+    /* ---------- helpers ---------- */
+    function fmt(n){ return (typeof n==='number') ? n.toLocaleString('en-IN') : n; }
+    function tw(id){ return TOWERS[id]; }
+    function unitsTotal(t){ return t.floors * t.aptsPerFloor; }
+    function superRange(t){
+      var s=t.units.map(function(u){return u.sup;}).filter(function(x){return typeof x==='number';});
+      if(!s.length) return 'On Request';
+      var mn=Math.min.apply(null,s), mx=Math.max.apply(null,s);
+      return (mn===mx) ? fmt(mn) : fmt(mn)+'–'+fmt(mx);
+    }
+
+    /* ---------- deterministic INDICATIVE availability (NOT real) ---------- */
+    function seedRand(str){
+      var h=2166136261>>>0;
+      for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+      h^=h>>>13; h=Math.imul(h,0x5bd1e995); h^=h>>>15;
+      return ((h>>>0)%100000)/100000;
+    }
+    function statusOf(towerId, floor, unit){
+      var r=seedRand('hm-'+towerId+'-'+floor+'-'+unit);
+      var availChance = 0.42 + (floor/22)*0.16;
+      var holdChance  = 0.20;
+      if(r < availChance) return 'av';
+      if(r < availChance + holdChance) return 'hd';
+      return 'sd';
+    }
+    var STLABEL = { av:'Available', hd:'On hold', sd:'Sold' };
+    function towerTally(t){
+      var c={av:0,hd:0,sd:0,total:0};
+      for(var f=1; f<=t.floors; f++){ for(var u=1; u<=t.aptsPerFloor; u++){ c[statusOf(t.id,f,u)]++; c.total++; } }
+      return c;
+    }
+    function variantFor(t, floor, unit){ return t.units[(unit-1) % t.units.length]; }
+    var ASPECTS = ['Central green aspect','Pool & avenue aspect','Garden & courtyard aspect','Skyline & green aspect'];
+    function aspectFor(t, floor, unit){
+      return ASPECTS[Math.floor(seedRand('asp-'+t.id+'-'+floor+'-'+unit)*ASPECTS.length)];
+    }
+    function unitNo(floor, unit){ return floor*100 + unit; }
+
+    /* ============================================================
+       STATE MACHINE
+       ============================================================ */
+    var state = { step:0, tower:null, floor:null, unit:null };
+    var compare = [];
+    var stage = document.getElementById('invStage');
+    var crumbEl = document.getElementById('invCrumb');
+    var hintEl = document.getElementById('invHint');
+
+    function go(step){ state.step=step; if(step<3) state.unit=null; if(step<2) state.floor=null; if(step<1) state.tower=null; render(); }
+
+    /* ---------- breadcrumb ---------- */
+    function crumb(){
+      var parts = [ {label:'Towers', step:0} ];
+      if(state.tower!=null) parts.push({label:'Tower '+state.tower, step:1});
+      if(state.floor!=null) parts.push({label:'Floor '+state.floor, step:2});
+      if(state.unit!=null)  parts.push({label:'Unit '+unitNo(state.floor,state.unit), step:3});
+      crumbEl.innerHTML='';
+      parts.forEach(function(p,i){
+        if(i>0){ var s=document.createElement('span'); s.className='sep'; s.textContent='›'; crumbEl.appendChild(s); }
+        var b=document.createElement('button');
+        var cur = (p.step===state.step);
+        b.className='cr '+(cur?'cur':'link'); b.textContent=p.label; b.type='button';
+        if(!cur){ b.addEventListener('click',function(){ go(p.step); }); }
+        crumbEl.appendChild(b);
+      });
+    }
+
+    /* ---------- render dispatcher ---------- */
+    function render(){
+      crumb();
+      var html='';
+      if(state.step===0) html=viewTowers();
+      else if(state.step===1) html=viewTower();
+      else if(state.step===2) html=viewFloorPlan();
+      else html=viewUnitPlan();
+      stage.innerHTML=html;
+      stage.classList.remove('in'); void stage.offsetWidth; stage.classList.add('in');
+      wireStage();
+      if(window.HMKit && HMKit.bindRipples) HMKit.bindRipples(stage);
+    }
+
+    /* ---------- STEP 0 · towers ---------- */
+    function towerCard(id){
+      var t=tw(id), c=towerTally(t), tot=c.total||1;
+      var pAv=(c.av/tot*100), pHd=(c.hd/tot*100), pSd=(c.sd/tot*100);
+      return '<button class="k-card int twr-card" type="button" data-tower="'+id+'">'+
+        '<div class="tnum"><b>Tower '+id+'</b><span class="cfg">'+t.config+'</span></div>'+
+        '<div class="meta">'+
+          '<div class="m"><span>Super sq.ft</span><b>'+superRange(t)+'</b></div>'+
+          '<div class="m"><span>Residences</span><b>'+unitsTotal(t)+' <small>'+t.aptsPerFloor+'/flr</small></b></div>'+
+        '</div>'+
+        '<div class="avbar" role="img" aria-label="Indicative availability">'+
+          '<i class="av" style="width:'+pAv.toFixed(1)+'%"></i>'+
+          '<i class="hd" style="width:'+pHd.toFixed(1)+'%"></i>'+
+          '<i class="sd" style="width:'+pSd.toFixed(1)+'%"></i>'+
+        '</div>'+
+        '<div class="avlbl"><span class="av">'+c.av+' available</span><span class="ind">Indicative</span></div>'+
+        '<span class="go">View floors <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>'+
+      '</button>';
+    }
+    function viewTowers(){
+      hintEl.textContent='Tap a tower to begin';
+      var groups='';
+      SITE.parcels.forEach(function(p){
+        groups+='<section class="twr-group">'+
+          '<div class="twr-grouphd"><span class="ttl">'+p.label+'</span><span class="ln"></span><span class="cl">'+
+            p.range + (p.clubhouse? ' · '+p.clubhouse : '') +'</span></div>'+
+          '<div class="twr-grid">'+ p.towers.map(towerCard).join('') +'</div>'+
+        '</section>';
+      });
+      return '<div class="inv-step">'+
+        '<div class="inv-step-body twr-body">'+groups+'</div>'+
+      '</div>';
+    }
+
+    /* ---------- STEP 1 · TOWER (image + lift-keypad floor selector) ---------- */
+    function floorTally(t,f){ var c={av:0,hd:0,sd:0}; for(var u=1;u<=t.aptsPerFloor;u++){ c[statusOf(t.id,f,u)]++; } return c; }
+    function floorCls(t,f){ var c=floorTally(t,f); return c.av>0?'s-hi':(c.hd>0?'s-mid':'s-lo'); }
+    function floorButtons(t){
+      var h='';
+      if(t.duplex){ h+='<button class="kbtn special" type="button" data-floor="PH">25–26 · Duplex Penthouse</button>'; }
+      for(var f=t.floors; f>=1; f--){
+        h+='<button class="kbtn '+floorCls(t,f)+'" type="button" data-floor="'+f+'"><span class="avd"></span>'+f+'</button>';
+      }
+      h+='<button class="kbtn special" type="button" data-floor="G">Ground · '+(t.ground==='villa'?'Grand Villa':'Lobby &amp; Club')+'</button>';
+      return h;
+    }
+    /* which render + which cut-out path frames a given tower.
+       Towers 1–6 live on juice-towers (West complex); 7–8 on the wide site aerial.
+       The path is the SAME geometry the user tapped to get here → the spotlight
+       is measured from it at runtime so it hugs the exact building. */
+    function twBg(t){
+      if(t.id<=6) return { img:R.choose.img, viewBox:R.choose.viewBox, d:CHOOSE_D[t.id]||null };
+      var key = (t.id===7)?'t7':'t8';
+      var p=null; (R.site.paths||[]).forEach(function(x){ if(x.key===key) p=x; });
+      return { img:R.site.img, viewBox:R.site.viewBox, d:p?p.d:null };
+    }
+    function viewTower(){
+      hintEl.textContent='Pick a floor in the lift panel';
+      var t=tw(state.tower), pl=(t.parcel==='west'?'West Parcel':'East Parcel');
+      var bg=twBg(t);
+      var vbp=(bg.viewBox||'0 0 100 100').split(/\s+/).map(Number), VW=vbp[2]||100, VH=vbp[3]||100, mid='twHole'+t.id;
+      var imgPath='../assets/screens/'+bg.img;
+      /* EXACT SVG-outline cut-out: base render + dark overlay masked to a hole in the building
+         silhouette + a glowing outline. Sits inside .tw-imgwrap so it zooms/pans as one unit. */
+      var cut = bg.d
+        ? '<svg class="tw-cutsvg" viewBox="'+bg.viewBox+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'+
+            '<defs><mask id="'+mid+'" maskUnits="userSpaceOnUse" x="0" y="0" width="'+VW+'" height="'+VH+'">'+
+              '<rect x="0" y="0" width="'+VW+'" height="'+VH+'" fill="#fff"/>'+
+              '<path d="'+bg.d+'" fill="#000"/></mask></defs>'+
+            '<image href="'+imgPath+'" xlink:href="'+imgPath+'" x="0" y="0" width="'+VW+'" height="'+VH+'" preserveAspectRatio="xMidYMid slice"/>'+
+            '<rect x="0" y="0" width="'+VW+'" height="'+VH+'" fill="rgba(9,6,4,0.78)" mask="url(#'+mid+')"/>'+
+            '<path class="tw-cutedge" d="'+bg.d+'"/>'+
+          '</svg>'
+        : '<img class="tw-img" src="'+imgPath+'" alt="Tower '+t.id+'" onerror="this.style.opacity=0">';
+      /* hidden measuring copy at identity (stage coords) → base spotlight/line geometry */
+      var measure = bg.d
+        ? '<svg class="tw-measure" id="twMeasure" viewBox="'+bg.viewBox+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path id="twMeasurePath" d="'+bg.d+'"/></svg>'
+        : '';
+      return '<div class="inv-step">'+
+        '<div class="inv-step-head"><div>'+
+          '<span class="k-eyebrow">'+pl+'</span>'+
+          '<h2 class="k-title">Tower '+t.id+' · '+t.config+'</h2></div>'+
+          '<span class="k-swipe-hint">Tap a floor, then view its plan</span>'+
+        '</div>'+
+        '<div class="inv-step-body tw-screen">'+
+          '<div class="tw-stage" id="twStage" style="'+focusVars(t)+'">'+
+            '<div class="tw-imgwrap" id="twWrap">'+
+              cut+
+              '<div class="tw-band" id="twBand"></div>'+
+              '<div class="tw-level" id="twLevel"><span class="knot"></span><span class="line"></span><span class="tag" id="twLevelTag">Floor</span></div>'+
+            '</div>'+
+            measure+
+            '<div class="tw-veil"></div>'+
+            '<div class="tw-cap"><span class="k-eyebrow">'+pl+'</span><h2>Tower '+t.id+'</h2><p>'+t.config+'</p>'+
+              '<div class="tw-stats">'+
+                '<div class="s"><span>Super sq.ft</span><b>'+superRange(t)+'</b></div>'+
+                '<div class="s"><span>Per floor</span><b>'+t.aptsPerFloor+'</b></div>'+
+                '<div class="s"><span>Height</span><b>G+'+t.floors+(t.duplex?'+PH':'')+'</b></div>'+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+          '<aside class="kpad">'+
+            '<div class="kpad-head"><span class="k-eyebrow">Floor selector</span>'+
+              '<div class="kdisp"><span class="knum" id="kNum">—</span><span class="klbl">Floor</span></div></div>'+
+            '<div class="kgrid" id="kGrid">'+floorButtons(t)+'</div>'+
+            '<button class="kcta" id="kCta" type="button" disabled>Select a floor</button>'+
+            '<div class="knote">Marker colour = <b>indicative</b> availability per floor</div>'+
+          '</aside>'+
+        '</div>'+
+      '</div>';
+    }
+    function openFloorInfo(t,kind){
+      if(!window.HMKit || !HMKit.openFloat) return;
+      var title, body;
+      if(kind==='G'){ title='Ground Level';
+        body = (t.ground==='villa')
+          ? '<p class="k-lede">Tower '+t.id+' opens to a <b>Grand Villa</b> at ground level — a private garden residence beneath the tower. Plans &amp; pricing on request.</p>'
+          : '<p class="k-lede">Tower '+t.id+' ground level is the <b>Grand Entrance Lobby &amp; Tower Club</b>.</p>';
+      } else { title='Duplex Penthouse';
+        body='<p class="k-lede">Floors <b>25 &amp; 26</b> form the <b>Duplex Penthouse</b> crowning Tower '+t.id+' — '+t.aptsPerFloor+' duplex residences. Layouts &amp; pricing released on request.</p>';
+      }
+      var w=document.createElement('div'); w.innerHTML=body;
+      HMKit.openFloat(title, w, {center:true});
+    }
+
+    /* ---------- STEP 2 · FLOOR PLAN + unit pointers ---------- */
+    function viewFloorPlan(){
+      hintEl.textContent='Tap a residence on the plan';
+      var t=tw(state.tower), f=state.floor, pins='';
+      for(var i=0;i<t.aptsPerFloor;i++){
+        var pos=i+1, st=statusOf(t.id,f,pos), u=t.units[i], no=unitNo(f,pos);
+        pins+='<button class="fp-pin '+st+'" style="left:'+u.hx+'%;top:'+u.hy+'%" data-unit="'+pos+'" aria-label="Unit '+no+' — '+STLABEL[st]+'">'+
+          '<span class="pno"><span class="ring"></span>'+no+'</span>'+
+          '<span class="pst">'+STLABEL[st]+(st!=='sd'?' <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>':'')+'</span>'+
+        '</button>';
+      }
+      return '<div class="inv-step">'+
+        '<div class="inv-step-head"><div>'+
+          '<span class="k-eyebrow">Tower '+t.id+' · Floor '+f+'</span>'+
+          '<h2 class="k-title">Select a residence</h2></div>'+
+          '<span class="k-swipe-hint">'+t.aptsPerFloor+' residences on this floor · tap a marker</span>'+
+        '</div>'+
+        '<div class="inv-step-body">'+
+          '<div class="fp-stage" id="fpStage">'+
+            '<div class="fp-fit"><img class="fp-img" src="'+FP+t.plan+'.webp" alt="Typical floor plan — Tower '+t.id+'">'+
+              '<div class="fp-marks">'+pins+'</div></div>'+
+            '<span class="fp-note">Typical floor plan · markers indicative</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }
+
+    /* ---------- STEP 3 · unit detail ---------- */
+    function unitRecord(t, f, u){
+      var v=variantFor(t,f,u);
+      return {
+        key: t.id+'-'+f+'-'+u,
+        t:t.id, f:f, u:u, no:unitNo(f,u),
+        config:v.conf||t.config, type:v.type,
+        superSqft:v.sup, carpetSqft:v.car,
+        facing:'Three-side open', aspect:aspectFor(t,f,u),
+        status:statusOf(t.id,f,u)
+      };
+    }
+    function udPanel(t,rec,sup,car,stCls,stTxt,inCmp,cmpFull){
+      return '<div class="k-panel ud-id">'+
+          '<div class="uhead">'+
+            '<div><span class="k-eyebrow">Tower '+t.id+' · '+rec.config+'</span>'+
+              '<div class="big">Unit '+rec.no+'</div></div>'+
+            '<span class="ud-status '+stCls+'"><span class="dot"></span>'+stTxt+' · indicative</span>'+
+          '</div>'+
+          '<div class="k-rule"></div>'+
+          '<div class="ud-spec">'+
+            '<div class="sp"><span>Tower</span><b>Tower '+t.id+'</b></div>'+
+            '<div class="sp"><span>Floor</span><b>'+rec.f+' of '+t.floors+'</b></div>'+
+            '<div class="sp"><span>Unit no.</span><b>'+rec.no+'</b></div>'+
+            '<div class="sp"><span>Configuration</span><b>'+rec.config+'</b></div>'+
+            '<div class="sp"><span>Layout type</span><b>'+rec.type+'</b></div>'+
+            '<div class="sp"><span>Facing</span><b>'+rec.facing+'</b></div>'+
+            '<div class="sp"><span>Super area</span><b>'+sup+'</b></div>'+
+            '<div class="sp"><span>Carpet area</span><b>'+car+'</b></div>'+
+            '<div class="sp"><span>Aspect</span><b>'+rec.aspect+'</b></div>'+
+            '<div class="sp"><span>Possession</span><b>Oct 2027</b></div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="k-panel ud-price">'+
+          '<div><span class="k-eyebrow">This residence</span>'+
+            '<div class="pr"><span>Price</span><b>On Request</b></div></div>'+
+          '<p class="ud-note">All-inclusive pricing &amp; the applicable payment plan are shared by the sales office. Areas are approximate, subject to sanctioned plans. Status shown is indicative — confirm current availability before booking.</p>'+
+          '<div class="actions">'+
+            '<button class="k-btn gold" id="udPrice" type="button">Open Price &amp; Payment</button>'+
+            '<button class="k-btn" id="udCmp" type="button"'+(cmpFull?' disabled style="opacity:.45;cursor:default"':'')+'>'+
+              (inCmp?'In compare ✓':(cmpFull?'Compare full (3)':'Add to compare'))+'</button>'+
+          '</div>'+
+        '</div>';
+    }
+    function viewUnitPlan(){
+      hintEl.textContent='Residence detail';
+      var t=tw(state.tower), f=state.floor, u=state.unit;
+      var rec=unitRecord(t,f,u), v=t.units[u-1];
+      var sup=(typeof rec.superSqft==='number')? fmt(rec.superSqft)+' sq.ft':'On Request';
+      var car=(typeof rec.carpetSqft==='number')? fmt(rec.carpetSqft)+' sq.ft':'On Request';
+      var stCls=rec.status, stTxt=STLABEL[rec.status];
+      var inCmp = compare.some(function(x){return x.key===rec.key;});
+      var cmpFull = compare.length>=3 && !inCmp;
+      return '<div class="inv-step">'+
+        '<div class="inv-step-head"><div>'+
+          '<span class="k-eyebrow">Tower '+t.id+' · Floor '+f+'</span>'+
+          '<h2 class="k-title">Unit '+rec.no+'</h2></div>'+
+          '<span class="k-swipe-hint">Tap the plan to zoom out</span>'+
+        '</div>'+
+        '<div class="inv-step-body up-screen">'+
+          '<div class="up-plan" id="upPlan" data-hx="'+v.hx+'" data-hy="'+v.hy+'">'+
+            '<div class="up-fit" style="transform-origin:'+v.hx+'% '+v.hy+'%"><img src="'+FP+t.plan+'.webp" alt="Unit plan — Unit '+rec.no+'"></div>'+
+            '<div class="up-vig" id="upVig"></div>'+
+            '<span class="up-ztag">'+rec.type+'</span></div>'+
+          '<div class="up-detail">'+udPanel(t,rec,sup,car,stCls,stTxt,inCmp,cmpFull)+'</div>'+
+        '</div>'+
+      '</div>';
+    }
+
+    /* ---------- stage event wiring (delegated per render) ---------- */
+    function wireStage(){
+      if(state.step===0){
+        Array.prototype.forEach.call(stage.querySelectorAll('[data-tower]'),function(el){
+          el.addEventListener('click',function(){ state.tower=parseInt(el.getAttribute('data-tower'),10); state.floor=null; state.unit=null; go(1); });
+        });
+      } else if(state.step===1){
+        var grid=stage.querySelector('#kGrid'), kNum=stage.querySelector('#kNum'), kCta=stage.querySelector('#kCta'), pending=null;
+        var twWrap=stage.querySelector('#twWrap'), twLevel=stage.querySelector('#twLevel'), twLevelTag=stage.querySelector('#twLevelTag');
+        var twBand=stage.querySelector('#twBand');
+        var twStage=stage.querySelector('#twStage'), mpath=stage.querySelector('#twMeasurePath');
+        var tG=tw(state.tower), tN=tG.floors;
+        var CTA_ARROW=' <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+        /* measure the tapped building's on-screen box → a spotlight that hugs it exactly.
+           getBoundingClientRect honours the object-fit:cover / preserveAspectRatio:slice crop,
+           so the % are relative to the visible stage, not the raw viewBox. */
+        var f = TOWER_FOCUS[state.tower]||{mx:50,my:48,rx:9,ry:44,topP:10,botP:88};
+        function measureFocus(){
+          if(!twStage||!mpath) return null;
+          var sr=twStage.getBoundingClientRect(), pr=mpath.getBoundingClientRect();
+          if(!sr.width||!pr.width) return null;
+          var cx=((pr.left+pr.width/2)-sr.left)/sr.width*100;
+          var cy=((pr.top+pr.height/2)-sr.top)/sr.height*100;
+          var topP=(pr.top-sr.top)/sr.height*100, botP=(pr.bottom-sr.top)/sr.height*100;
+          var halfw=pr.width/sr.width*100/2, halfh=pr.height/sr.height*100/2;
+          return { mx:cx, my:cy, topP:topP, botP:botP, rx:Math.max(5,halfw*1.25), ry:Math.max(18,halfh*1.02) };
+        }
+        function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+        var frame={Zfit:1.06, cx:0.5, cy:0.52};   /* base fit-frame, recomputed on measure */
+        function baseTransform(){
+          var mxf=f.mx/100, myf=f.my/100, Z=frame.Zfit;
+          var Tx=frame.cx-0.5-(mxf-0.5)*Z, Ty=frame.cy-0.5-(myf-0.5)*Z;
+          return 'translate('+(Tx*100).toFixed(2)+'%,'+(Ty*100).toFixed(2)+'%) scale('+Z.toFixed(3)+')';
+        }
+        function applyFocus(){
+          var m=measureFocus(); if(!m) return; f=m;
+          /* fit the cut-out building nicely: scale its height toward ~72% of the stage, then centre it */
+          var hF=Math.max(0.08,(f.botP-f.topP)/100);
+          frame.Zfit=clamp(0.72/hF, 1.0, 1.7);
+          twStage.style.setProperty('--mx', f.mx.toFixed(2)+'%');
+          twStage.style.setProperty('--my', f.my.toFixed(2)+'%');
+          if(twLevel.classList.contains('on')) return;   /* don't yank a live selection */
+          twWrap.style.transform=baseTransform();
+        }
+        requestAnimationFrame(function(){ applyFocus(); requestAnimationFrame(applyFocus); });
+        window.addEventListener('resize', applyFocus, {passive:true});
+        /* the level line lives INSIDE .tw-imgwrap now, so it is glued to the building and travels
+           bottom→top with it. On select: zoom in a touch and ease the chosen floor toward centre. */
+        function showLevel(kind){
+          var top=(f.topP!=null?f.topP:f.my-f.ry), bottom=(f.botP!=null?f.botP:f.my+f.ry), span=(bottom-top)||1;
+          /* the measured bbox spans roof/parapet (crown) + residential FACADE + podium/base. Distribute
+             the floors ONLY within the true facade band — inset from the crown and the base — so floor 1
+             lands near the base of the facade, the top floor near the crown, and floor 12 lands mid-facade. */
+          var CROWN=0.085, BASE=0.12;                                /* fractions of the bbox above / below the facade */
+          var facTop=top+span*CROWN, facBot=bottom-span*BASE, facSpan=(facBot-facTop)||1;
+          var floorH=facSpan/Math.max(1,tN);                         /* on-facade height of one residential floor (%) */
+          var lvlPct, bandCy, bandH, tag;
+          if(kind==='G'){                                            /* Ground → the very base / podium band */
+            lvlPct=bottom-span*(BASE*0.42); bandCy=bottom-span*(BASE*0.50); bandH=span*BASE*0.95;
+            tag=(tG.ground==='villa'?'Ground · Grand Villa':'Ground'); }
+          else if(kind==='PH'){                                      /* Penthouse → the crown band (2 floors) */
+            lvlPct=top+span*(CROWN*0.55); bandCy=top+span*(CROWN*0.62); bandH=Math.max(span*CROWN*1.7, floorH*2.1);
+            tag='Penthouse · 25–26'; }
+          else {                                                     /* numeric floor → interpolate up the facade */
+            var frac=(tN>1)?(kind-1)/(tN-1):0.5; lvlPct=facBot-frac*facSpan; bandCy=lvlPct; bandH=Math.max(floorH*1.06, 1.4);
+            tag='Floor '+kind; }
+          /* line + knot + tag */
+          twLevel.style.setProperty('--lvl', lvlPct.toFixed(2)+'%');
+          twLevel.style.setProperty('--llw', (Math.max(6,(f.rx/1.25)*1.9)).toFixed(1)+'%');
+          twLevelTag.textContent=tag; twLevel.classList.add('on');
+          /* translucent highlight band over the selected floor's facade slice */
+          if(twBand){
+            twBand.style.setProperty('--blvl', bandCy.toFixed(2)+'%');
+            twBand.style.setProperty('--bh', Math.max(1.4, bandH).toFixed(2)+'%');
+            twBand.style.setProperty('--bw', (Math.max(10,(f.rx/1.25)*2.1)).toFixed(1)+'%');
+            twBand.classList.add('on');
+          }
+          /* zoom in DRAMATICALLY and ease the selected floor toward centre */
+          var mxf=f.mx/100, myf=f.my/100, yf=lvlPct/100;
+          var Z=clamp(frame.Zfit*1.62, 1.2, 3.15), blend=0.62;
+          var Tx=frame.cx-0.5-(mxf-0.5)*Z;                          /* keep the tower centred horizontally */
+          var TyBuild=frame.cy-0.5-(myf-0.5)*Z, TyFloor=frame.cy-0.5-(yf-0.5)*Z;
+          var Ty=TyBuild*(1-blend)+TyFloor*blend;                    /* ease the floor toward centre */
+          twWrap.style.transform='translate('+(Tx*100).toFixed(2)+'%,'+(Ty*100).toFixed(2)+'%) scale('+Z.toFixed(3)+')';
+        }
+        function setNum(txt){ kNum.classList.add('tick'); setTimeout(function(){ kNum.textContent=txt; kNum.classList.remove('tick'); },110); }
+        Array.prototype.forEach.call(grid.querySelectorAll('.kbtn'),function(b){
+          b.addEventListener('click',function(){
+            var fv=b.getAttribute('data-floor');
+            Array.prototype.forEach.call(grid.querySelectorAll('.kbtn'),function(x){x.classList.remove('sel');}); b.classList.add('sel');
+            if(fv==='G'){ pending='G'; setNum('G'); kCta.disabled=false; kCta.innerHTML='View '+(tG.ground==='villa'?'Grand Villa':'Lobby &amp; Club')+CTA_ARROW; showLevel('G'); }
+            else if(fv==='PH'){ pending='PH'; setNum('PH'); kCta.disabled=false; kCta.innerHTML='View Duplex Penthouse'+CTA_ARROW; showLevel('PH'); }
+            else { pending=parseInt(fv,10); setNum(pending); kCta.disabled=false; kCta.innerHTML='View Floor '+pending+' plan'+CTA_ARROW; showLevel(pending); }
+          });
+        });
+        kCta.addEventListener('click',function(){
+          if(pending==null) return;
+          if(pending==='G'||pending==='PH'){ openFloorInfo(tG, pending); return; }
+          state.floor=pending; state.unit=null; go(2);
+        });
+      } else if(state.step===2){
+        Array.prototype.forEach.call(stage.querySelectorAll('.fp-pin[data-unit]'),function(el){
+          el.addEventListener('click',function(){ state.unit=parseInt(el.getAttribute('data-unit'),10); go(3); });
+        });
+      } else if(state.step===3){
+        var up=stage.querySelector('#upPlan'), vig=stage.querySelector('#upVig'), fit=up&&up.querySelector('.up-fit');
+        /* centre the focus vignette on the unit: with scale(transform-origin hx/hy), the unit pixel stays
+           put at hx%/hy% of the (unscaled) fit box → map that to the plan stage in px. */
+        function placeVig(){
+          if(!up||!vig||!fit) return;
+          var hx=parseFloat(up.getAttribute('data-hx'))||50, hy=parseFloat(up.getAttribute('data-hy'))||50;
+          var vx=fit.offsetLeft + hx/100*fit.offsetWidth;
+          var vy=fit.offsetTop  + hy/100*fit.offsetHeight;
+          vig.style.setProperty('--vx', vx.toFixed(1)+'px');
+          vig.style.setProperty('--vy', vy.toFixed(1)+'px');
+        }
+        requestAnimationFrame(placeVig);
+        if(up) up.addEventListener('click',function(){ up.classList.toggle('out'); });
+        var pb=stage.querySelector('#udPrice');
+        if(pb) pb.addEventListener('click',function(){ if(window.HMPriceSheet) HMPriceSheet.open(); });
+        var cb=stage.querySelector('#udCmp');
+        if(cb) cb.addEventListener('click',function(){
+          if(cb.hasAttribute('disabled')) return;
+          var rec=unitRecord(tw(state.tower),state.floor,state.unit);
+          toggleCompare(rec); render();   /* re-render to update button label */
+        });
+      }
+    }
+
+    /* ============================================================
+       COMPARE — opener pill + centered floating window
+       ============================================================ */
+    var cmpOpenBtn = document.getElementById('cmpOpen');
+    var cmpOpenLbl = document.getElementById('cmpOpenLbl');
+    cmpOpenBtn.addEventListener('click', openCompareFloat);
+
+    function syncCompareBtn(){
+      cmpOpenLbl.textContent='Compare · '+compare.length;
+      cmpOpenBtn.classList.toggle('on', compare.length>0);
+    }
+    function toggleCompare(rec){
+      var i=-1; compare.forEach(function(x,ix){ if(x.key===rec.key) i=ix; });
+      if(i>=0){ compare.splice(i,1); }
+      else { if(compare.length>=3) return; compare.push(rec); }
+      syncCompareBtn();
+      if(document.querySelector('.k-float .cmp-float')) openCompareFloat();  /* refresh if open */
+    }
+    function compareTableHtml(){
+      if(!compare.length){
+        return '<div class="cmp-float"><p class="cmp-empty">No residences added yet. Open any residence and tap “Add to compare”.</p></div>';
+      }
+      var rows = compare.map(function(r){
+        var sup=(typeof r.superSqft==='number')? fmt(r.superSqft):'On Request';
+        var car=(typeof r.carpetSqft==='number')? fmt(r.carpetSqft):'On Request';
+        return '<tr>'+
+          '<td class="cfgcell">Unit '+r.no+'</td>'+
+          '<td>Tower '+r.t+' · Floor '+r.f+'</td>'+
+          '<td>'+r.config+'</td>'+
+          '<td class="num">'+sup+'</td>'+
+          '<td class="num">'+car+'</td>'+
+          '<td>'+r.facing+'</td>'+
+          '<td><button class="rm" type="button" data-key="'+r.key+'" aria-label="Remove">✕</button></td>'+
+        '</tr>';
+      }).join('');
+      return '<div class="cmp-float">'+
+        '<div class="cmp-wrap2"><table class="k-cmp">'+
+          '<thead><tr><th>Residence</th><th>Tower · Floor</th><th>Config</th><th>Super (sq.ft)</th><th>Carpet (sq.ft)</th><th>Facing</th><th></th></tr></thead>'+
+          '<tbody id="cmpBody">'+rows+'</tbody>'+
+        '</table></div>'+
+        '<div class="cmp-foot">'+
+          '<span class="k-swipe-hint">'+compare.length+' / 3 · areas approx. · price on request</span>'+
+          '<button class="k-btn ghost" id="cmpClear" type="button">Clear all</button>'+
+        '</div>'+
+      '</div>';
+    }
+    function openCompareFloat(){
+      if(!window.HMKit || !HMKit.openFloat) return;
+      var wrap=document.createElement('div');
+      wrap.innerHTML=compareTableHtml();
+      var el=wrap.firstChild;
+      HMKit.openFloat('Compare residences', el, {center:true, wide:true});
+      var clear=el.querySelector('#cmpClear');
+      if(clear) clear.addEventListener('click',function(){ compare=[]; syncCompareBtn(); if(state.step===3) render(); openCompareFloat(); });
+      Array.prototype.forEach.call(el.querySelectorAll('.rm'),function(b){
+        b.addEventListener('click',function(){
+          var k=b.getAttribute('data-key');
+          compare=compare.filter(function(x){return x.key!==k;});
+          syncCompareBtn(); if(state.step===3) render(); openCompareFloat();
+        });
+      });
+    }
+
+    /* ============================================================
+       FAB info + boot
+       ============================================================ */
+    window.HM_SCREEN_INFO = { title:'Inventory', html:
+      '<p class="k-lede">Eight towers across two parcels — West (Towers 1–6, with The Pearl clubhouse) and East (Towers 7–8). Each tower is G+22; Towers 1–6 have 2 residences per floor, Towers 7–8 have 4.</p>'+
+      '<ul style="list-style:none;padding:0;margin:.7rem 0;display:flex;flex-direction:column;gap:.5rem">'+
+      '<li>Drill down: Tower → Floor → Unit</li>'+
+      '<li>Configurations &amp; areas are from the client layout book</li>'+
+      '<li>Availability shown is <b>indicative</b>, generated for demo — confirm with the sales office</li>'+
+      '<li>All pricing is On Request · Pocket C possession Oct 2027</li></ul>'+
+      '<p class="k-lede" style="font-size:var(--t-micro)">RERA · PBRERA-SAS80-PR1041. Areas approximate, subject to sanctioned plans.</p>' };
+
+    /* ============================================================
+       SITE ENTRY + CHOOSE TOWER — inlined SVG region overlays
+       Screen A (aerial): tap the West complex → chooser · tap T7 / T8 → floor selector.
+       Screen B (chooser): the six West towers, ordered left→right → floor selector.
+       Region paths come from region-data.js and glow; the SAME path frames the
+       building again in the floor selector, where its spotlight is measured at runtime.
+       ============================================================ */
+    (function initSite(){
+      var aerial=document.getElementById('aerial'), chooser=document.getElementById('chooser');
+      if(!aerial) return;
+      var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+      var SVGNS='http://www.w3.org/2000/svg';
+
+      var sb=document.getElementById('siteBg'); if(sb) sb.src='../assets/screens/'+R.site.img;
+      var cbg=document.getElementById('chooseBg'); if(cbg) cbg.src='../assets/screens/'+R.choose.img;
+
+      /* inject the client SVG (defs + gradient-filled paths) so regions keep their OWN colours */
+      function buildRegions(host, cfg){
+        if(!host) return null;
+        host.innerHTML='';
+        var svg=document.createElementNS(SVGNS,'svg');
+        svg.setAttribute('class','reg-svg');
+        svg.setAttribute('viewBox',cfg.viewBox);
+        svg.setAttribute('preserveAspectRatio','xMidYMid slice');
+        svg.innerHTML=cfg.svg;
+        host.appendChild(svg);
+        return svg;
+      }
+      function regionPaths(svg){ return svg? Array.prototype.slice.call(svg.querySelectorAll(':scope > path')) : []; }
+      function centerPct(el, hostRect){
+        var r=el.getBoundingClientRect();
+        return { x:((r.left+r.width/2)-hostRect.left)/hostRect.width*100,
+                 y:((r.top+r.height/2)-hostRect.top)/hostRect.height*100, r:r };
+      }
+
+      /* ---- screen transitions ---- */
+      function hide(elm,cb2){ if(!elm){ if(cb2) cb2(); return; } elm.classList.add('gone'); setTimeout(function(){ elm.style.display='none'; if(cb2) cb2(); },700); }
+      /* render the floor selector FIRST (underneath the still-opaque overlay), THEN fade the overlay
+         away to reveal it — no flash of the tower grid / blank screen in between. */
+      function enterTower(id){
+        state.tower=id; state.floor=null; state.unit=null; go(1);
+        if(chooser && chooser.classList.contains('on')){ aerial.style.display='none'; hide(chooser); }
+        else { if(chooser) chooser.style.display='none'; hide(aerial); }
+      }
+      function openChooser(){ if(!chooser) return; chooser.style.display=''; requestAnimationFrame(function(){ chooser.classList.add('on'); layoutChoose(); requestAnimationFrame(layoutChoose); }); }
+      function closeChooser(){ if(!chooser) return; chooser.classList.remove('on'); setTimeout(function(){ if(!chooser.classList.contains('on')) chooser.style.display='none'; },600); }
+
+      /* ---- numbered POINTER pins (medallion above the tower + stem pointing down to it) ---- */
+      function makeNums(screenEl){ var w=screenEl.querySelector('.reg-nums'); if(!w){ w=document.createElement('div'); w.className='reg-nums'; screenEl.appendChild(w); } w.innerHTML=''; return w; }
+      function addPin(numWrap, n, onClick, path){
+        var b=document.createElement('button'); b.type='button'; b.className='reg-pin';
+        b.setAttribute('aria-label','Tower '+n);
+        b.innerHTML='<span class="med">'+n+'</span><span class="stem"></span><span class="tip"></span>';
+        b.addEventListener('click',function(e){ e.stopPropagation(); onClick(); });
+        if(!reduce) b.style.animationDelay=(n*0.10).toFixed(2)+'s';
+        if(path){ b.addEventListener('mouseenter',function(){ path.classList.add('reg-hot'); b.classList.add('hot'); });
+                  b.addEventListener('mouseleave',function(){ path.classList.remove('reg-hot'); b.classList.remove('hot'); }); }
+        numWrap.appendChild(b); return b;
+      }
+      function placePin(b, xPct, yPct){ b.style.left=xPct.toFixed(2)+'%'; b.style.top=yPct.toFixed(2)+'%'; }
+      /* pointer tip anchor = the building's TOP-centre (medallion floats above via translate(-100%)) */
+      function topPct(el, hostRect){ var r=el.getBoundingClientRect();
+        return { x:((r.left+r.width/2)-hostRect.left)/hostRect.width*100,
+                 y:((r.top)-hostRect.top)/hostRect.height*100, r:r }; }
+
+      /* ============ SITE — West→chooser · T7/T8→floor selector · buttons 1–8 ============ */
+      var siteSvg=buildRegions(document.getElementById('siteRegHost'), R.site);
+      var siteP=regionPaths(siteSvg);   /* DOM order cls-1(t7),cls-3(t8),cls-2(west) → match by class */
+      function siteByKey(key){ var cls=({west:'cls-2',t7:'cls-1',t8:'cls-3'})[key];
+        for(var i=0;i<siteP.length;i++){ if((siteP[i].getAttribute('class')||'').split(/\s+/).indexOf(cls)>=0) return siteP[i]; } return null; }
+      var pWest=siteByKey('west'), pT7=siteByKey('t7'), pT8=siteByKey('t8');
+      function armPath(p, fn){ if(!p) return; p.style.cursor='pointer'; p.setAttribute('tabindex','0'); p.setAttribute('role','button');
+        p.addEventListener('click',fn); p.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fn(); } }); }
+      armPath(pWest, openChooser);                 /* tap the building → browse the six towers */
+      armPath(pT7, function(){ enterTower(7); });
+      armPath(pT8, function(){ enterTower(8); });
+
+      var siteNums=makeNums(aerial);
+      var bT7=addPin(siteNums,7,function(){enterTower(7);},pT7);
+      var bT8=addPin(siteNums,8,function(){enterTower(8);},pT8);
+      /* West towers are NOT sequential left→right — per the client's red-marked layout the order is
+         3 · 2 · 4 · 1 · 5 · 6, with the taller pointer stems on 4 & 5 reaching the back towers. */
+      var WEST_ORDER=[3,2,4,1,5,6], WEST_STEM={1:54,2:46,3:44,4:90,5:98,6:70};
+      var bWest=[]; WEST_ORDER.forEach(function(tower,pos){
+        bWest.push({ pos:pos, tower:tower, b:addPin(siteNums,tower,function(){enterTower(tower);},pWest) });
+      });
+      function layoutSite(){
+        var hr=aerial.getBoundingClientRect(); if(!hr.width) return;
+        if(pT7){ var a7=topPct(pT7,hr); placePin(bT7,a7.x,Math.max(24,a7.y+2)); }
+        if(pT8){ var a8=topPct(pT8,hr); placePin(bT8,a8.x,Math.max(24,a8.y+2)); }
+        /* six pointers across the West mass, in the marked 3·2·4·1·5·6 order + per-tower stem length */
+        if(pWest){ var wr=pWest.getBoundingClientRect(); var yT=((wr.top)-hr.top)/hr.height*100;
+          bWest.forEach(function(o){ var i=o.pos, cx=wr.left+((i+0.5)/6)*wr.width, stagger=(i%2)*2.4;
+            o.b.style.setProperty('--stem', (WEST_STEM[o.tower]||54)+'px');
+            placePin(o.b, (cx-hr.left)/hr.width*100, Math.max(22, yT+2+stagger)); }); }
+      }
+
+      /* ============ CHOOSE — six towers ordered left→right, numbered 1–6 ============ */
+      var chooseSvg=buildRegions(document.getElementById('chooseRegHost'), R.choose);
+      var chooseP=regionPaths(chooseSvg);
+      var ranked=chooseP.map(function(el){ var bb; try{ bb=el.getBBox(); }catch(_){ bb={x:0,width:0}; } return { el:el, cx:bb.x+bb.width/2 }; })
+                        .sort(function(a,b){ return a.cx-b.cx; });
+      var chooseBtns=[], chooseNums=makeNums(chooser);
+      ranked.forEach(function(o,i){ var id=i+1; CHOOSE_D[id]=o.el.getAttribute('d');
+        armPath(o.el, (function(n){ return function(){ enterTower(n); }; })(id));
+        o.el.setAttribute('aria-label','Tower '+id);
+        chooseBtns.push({ id:id, path:o.el, b:addPin(chooseNums, id, (function(n){ return function(){ enterTower(n); }; })(id), o.el) });
+      });
+      function layoutChoose(){
+        var hr=chooser.getBoundingClientRect(); if(!hr.width) return;
+        chooseBtns.forEach(function(o){ var a=topPct(o.path,hr); placePin(o.b,a.x,Math.max(22,a.y+2)); });
+      }
+
+      /* ---- chrome ---- */
+      var sh=document.getElementById('siteHome'); if(sh) sh.addEventListener('click',function(){ if(window.HMKit&&HMKit.back) HMKit.back(); });
+      var sa=document.getElementById('siteAll'); if(sa) sa.addEventListener('click',function(){ hide(aerial, function(){ go(0); }); });
+      var cbk=document.getElementById('chooseBack'); if(cbk) cbk.addEventListener('click',closeChooser);
+
+      /* ---- boot ---- */
+      requestAnimationFrame(function(){ aerial.classList.add('on'); layoutSite(); layoutChoose();
+        requestAnimationFrame(function(){ layoutSite(); layoutChoose(); }); });
+      window.addEventListener('resize', function(){ layoutSite(); layoutChoose(); }, {passive:true});
+    })();
+
+    syncCompareBtn();
+    render();
+  })();
+  </script>
+</body>
+</html>

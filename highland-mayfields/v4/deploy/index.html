@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Highland Mayfields — An Opulence of Luxury</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e1816">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mayfields">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="styles/brand.css">
+<style>
+  /* ============ INTRO + APP SHELL ============ */
+  html,body{ height:100%; }
+  #app{ position:fixed; inset:0; background:var(--hm-espresso-2); overflow:hidden; }
+
+  /* ---- home iframe (preloaded under the intro) ---- */
+  #homeFrame{
+    position:absolute; inset:0; width:100%; height:100%; border:0;
+    opacity:0; visibility:hidden; transition:opacity 1.1s var(--ease-settle);
+  }
+  #app.entered #homeFrame{ opacity:1; visibility:visible; }
+
+  /* ---- intro root ---- */
+  #intro{ position:absolute; inset:0; z-index:5; background:var(--hm-espresso-2);
+    transition:opacity 1.1s var(--ease-settle); }
+  #app.entered #intro{ opacity:0; pointer-events:none; }
+
+  /* faint quatrefoil watermark + grain shared */
+  .grain{ position:absolute; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+
+  /* ====== 1 · START GATE ====== */
+  #gate{ position:absolute; inset:0; z-index:30; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:clamp(1.4rem,3vh,2.6rem);
+    background:radial-gradient(120% 120% at 50% 42%, #2a1e19 0%, var(--hm-espresso-2) 62%);
+    transition:opacity .9s var(--ease-settle); cursor:pointer; }
+  #gate.gone{ opacity:0; pointer-events:none; }
+  #gate .mark{ width:clamp(78px,11vw,150px); filter:drop-shadow(0 6px 26px rgba(0,0,0,.5)); }
+  #gate .markSvg{ width:clamp(64px,8vw,110px); height:auto; }
+  #gate .markSvg path{ fill:none; stroke:var(--hm-copper); stroke-width:6; }
+  .gate-breathe{ animation:gate-breathe 4.6s var(--ease-soft) infinite; }
+  @keyframes gate-breathe{ 0%,100%{ transform:translateY(0) scale(1); opacity:.92 } 50%{ transform:translateY(-4px) scale(1.025); opacity:1 } }
+  #gate .touch{ display:flex; flex-direction:column; align-items:center; gap:.9rem; opacity:0; animation:gate-touch-in 1.2s var(--ease-settle) .5s forwards; }
+  @keyframes gate-touch-in{ to{ opacity:1 } }
+  #gate .touch .dot{ width:6px; height:6px; border-radius:50%; background:var(--hm-gold); opacity:.85;
+    animation:gate-pulse 2.4s ease-in-out infinite; }
+  @keyframes gate-pulse{ 0%,100%{ transform:scale(1); opacity:.4 } 50%{ transform:scale(1.7); opacity:1 } }
+  #gate .touch span{ font-family:var(--font-label); text-transform:uppercase; letter-spacing:var(--track-label);
+    font-size:var(--t-label); color:var(--ink-dim); }
+
+  /* ====== 2 · VIDEO STAGE ====== */
+  #videoStage{ position:absolute; inset:0; z-index:20; background:#000; opacity:0;
+    transition:opacity .8s var(--ease-settle); }
+  #videoStage.on{ opacity:1; }
+  #introVideo{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
+  #skip{ position:absolute; right:clamp(1rem,2.4vw,2.4rem); bottom:clamp(1rem,2.4vw,2.4rem);
+    z-index:22; font-family:var(--font-label); font-size:var(--t-micro); letter-spacing:var(--track-wide);
+    text-transform:uppercase; color:rgba(244,242,235,.5); background:none; border:0; cursor:pointer;
+    display:flex; align-items:center; gap:.6em; opacity:0; transition:opacity .6s, color .3s; }
+  #skip.show{ opacity:1; }
+  #skip:hover{ color:var(--ink); }
+  #skip::after{ content:""; width:1.6em; height:1px; background:currentColor; }
+
+  /* ====== 3 · ENTER SCENE (post-film composition) ====== */
+  #enterScene{ position:absolute; inset:0; z-index:25; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+    opacity:0; visibility:hidden; transition:opacity 1.2s var(--ease-settle); }
+  #enterScene.on{ opacity:1; visibility:visible; }
+  /* twilight hero bleeding in behind */
+  #enterScene .bg{ position:absolute; inset:0; background-size:cover; background-position:50% 42%;
+    transform:scale(1.08); transition:transform 9s linear; }
+  #enterScene.on .bg{ transform:scale(1.14); }
+  #enterScene .veil{ position:absolute; inset:0;
+    background:radial-gradient(120% 100% at 50% 38%, rgba(26,18,15,.34), rgba(26,18,15,.82) 78%); }
+  #enterScene .inner{ position:relative; z-index:2; display:flex; flex-direction:column;
+    align-items:center; gap:clamp(1.1rem,2.4vh,2rem); padding:var(--pad-stage); }
+  #enterScene .lockup{ width:clamp(280px,40vw,640px); filter:drop-shadow(0 10px 40px rgba(0,0,0,.55));
+    opacity:0; transform:translateY(14px); }
+  #enterScene.on .lockup{ animation:rise 1.3s var(--ease-settle) .15s forwards; }
+  #enterScene .rule{ width:min(46vw,420px); opacity:0; }
+  #enterScene.on .rule{ animation:fade 1s var(--ease-settle) .8s forwards; }
+  #enterScene .tag{ font-family:var(--font-body); font-style:italic; font-size:var(--t-sub);
+    color:var(--ink-dim); letter-spacing:.02em; opacity:0; }
+  #enterScene.on .tag{ animation:fade 1.1s var(--ease-settle) 1s forwards; }
+  #enterScene .enterWrap{ opacity:0; margin-top:.4rem; }
+  #enterScene.on .enterWrap{ animation:rise 1.1s var(--ease-settle) 1.5s forwards; }
+  @keyframes rise{ to{ opacity:1; transform:translateY(0) } }
+  @keyframes fade{ to{ opacity:1 } }
+
+  /* ---- ENTER button — HOME-SCREEN PLAQUE style (cut-corner glass plate + gold hairline) ---- */
+  #enterBtn{ position:relative; overflow:visible; display:inline-grid; place-items:center;
+    width:clamp(244px,31vw,312px); height:clamp(66px,8.6vh,84px); padding:0;
+    border-radius:0; background:transparent;
+    transition:transform .3s var(--ease-soft); will-change:transform; }
+  #enterBtn::before,#enterBtn::after{ display:none !important; }  /* kill base .hm-enter pill border + glow */
+  /* the vector plate — same .pl-* anatomy as the home plaques (thin non-scaling gold edge) */
+  #enterBtn .pl-plate{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none;
+    transition:transform .45s var(--ease-soft), filter .45s var(--ease-soft);
+    filter:drop-shadow(0 12px 22px rgba(0,0,0,.5)); }
+  #enterBtn .pl-glass{ fill:url(#enterGlass); }
+  #enterBtn .pl-inner{ fill:none; stroke:var(--hm-gold); stroke-width:1; vector-effect:non-scaling-stroke; opacity:.2; }
+  #enterBtn .pl-edge{ fill:none; stroke:var(--hm-gold-soft); stroke-width:1.15; vector-effect:non-scaling-stroke; opacity:.92; }
+  /* face: label + arrow, styled like a plaque title */
+  #enterBtn .pl-face{ position:relative; z-index:2; display:inline-flex; align-items:center; gap:.7em;
+    font-family:var(--font-display); font-weight:300; letter-spacing:.04em; text-transform:none;
+    font-size:calc(var(--t-label)*1.14); color:var(--hm-gold-bright);
+    transition:color .4s var(--ease-soft), letter-spacing .4s var(--ease-soft); }
+  #enterBtn .arrow{ display:inline-block; transition:transform .4s var(--ease-soft); }
+  /* champagne sheen sweep, clipped to the cut-corner silhouette */
+  #enterBtn .sheen{ position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:linear-gradient(105deg,transparent 42%,color-mix(in srgb,var(--hm-gold-bright) 40%,transparent) 50%,transparent 58%);
+    background-size:250% 100%; background-repeat:no-repeat; background-position:175% 0;
+    clip-path:polygon(7.3% 3.1%,92.7% 3.1%,99.1% 25%,99.1% 75%,92.7% 96.9%,7.3% 96.9%,.9% 75%,.9% 25%); }
+  #enterScene.on #enterBtn .sheen{ animation:btn-sheen 5.6s var(--ease-soft) 2.4s infinite; }
+  @keyframes btn-sheen{ 0%{ background-position:175% 0 } 34%{ background-position:-75% 0 } 100%{ background-position:-75% 0 } }
+  /* hover/focus = home plaque lift + glow */
+  @media (hover:hover){
+    #enterBtn:hover .pl-plate{ transform:translateY(-3px) scale(1.025);
+      filter:drop-shadow(0 16px 26px rgba(0,0,0,.55)) drop-shadow(0 0 16px rgba(184,156,109,.46)); }
+    #enterBtn:hover .pl-face{ color:#fff; letter-spacing:.07em; }
+    #enterBtn:hover .arrow{ transform:translateX(6px); }
+  }
+  #enterBtn:focus-visible{ outline:none; }
+  #enterBtn:focus-visible .pl-plate{ transform:translateY(-3px) scale(1.025);
+    filter:drop-shadow(0 16px 26px rgba(0,0,0,.55)) drop-shadow(0 0 16px rgba(184,156,109,.55)); }
+  #enterBtn:active{ transform:translateY(1px); }
+  /* press ripple (kept) */
+  #enterBtn .rip{ position:absolute; border-radius:50%; pointer-events:none; z-index:1; transform:translate(-50%,-50%) scale(0);
+    background:radial-gradient(circle,color-mix(in srgb,var(--hm-gold-bright) 55%,transparent),transparent 70%); animation:btn-rip .7s ease-out forwards; }
+  @keyframes btn-rip{ to{ transform:translate(-50%,-50%) scale(1); opacity:0 } }
+
+  /* ====== intro → home : soft luxury CROSS-DISSOLVE ======
+     The home iframe fades up while #intro fades out (see #homeFrame / #intro transitions
+     above). No lattice wipe — quiet, cinematic. */
+
+  /* enter-scene exit push-in */
+  #app.leaving #enterScene .inner{ transform:scale(1.08); opacity:0; transition:all 1.1s var(--ease-settle); }
+
+  /* ====== subtle UNIFIED BACKGROUND inside the intro (same layers as home/screens, lower opacity) ====== */
+  #intro{ background:transparent; }   /* let the shared texture show; gate/video/scene carry their own grounds */
+  .ibg{ position:fixed; inset:0; z-index:-3; overflow:hidden;
+    background:radial-gradient(150% 130% at 76% 36%, #2b211c 0%, var(--hm-espresso) 48%, var(--hm-espresso-2) 100%); }
+  .ibg::before{ content:""; position:absolute; inset:-6%; background-image:var(--hm-lattice);
+    background-size:clamp(86px,9vw,132px); opacity:.04; animation:bg-lattice 70s linear infinite; }
+  @keyframes bg-lattice{ to{ background-position:132px 132px; } }
+  .ibg::after{ content:""; position:absolute; inset:-25%; mix-blend-mode:screen;
+    background:linear-gradient(116deg, transparent 40%, rgba(201,176,120,.06) 48%, rgba(231,208,152,.13) 50.5%, rgba(201,176,120,.06) 53%, transparent 61%);
+    animation:bg-sweep 13s ease-in-out infinite; }
+  @keyframes bg-sweep{ 0%{ transform:translate3d(-42%,-22%,0); opacity:0 } 22%{ opacity:1 } 78%{ opacity:1 } 100%{ transform:translate3d(42%,22%,0); opacity:0 } }
+  .ibgimg{ position:fixed; inset:0; z-index:-2; pointer-events:none; --xpeak:.24;
+    background-image:url("assets/bg-wireframe@2560.webp"); background-repeat:no-repeat;
+    background-position:center; background-size:cover; opacity:.24; mix-blend-mode:screen;
+    animation:bg-drift 40s ease-in-out infinite, bg-cross 18s ease-in-out infinite; will-change:transform,opacity; }
+  @keyframes bg-drift{ 0%,100%{ transform:scale(1.04) translate(0,0) } 50%{ transform:scale(1.09) translate(-1.4%,1%) } }
+  .ibgline{ position:fixed; inset:0; z-index:-2; pointer-events:none; --xpeak:.32;
+    background-image:url("assets/bg-lineart.png"); background-repeat:no-repeat;
+    background-position:center; background-size:cover; opacity:.32; mix-blend-mode:screen;
+    animation:bg-line 40s ease-in-out infinite, bg-cross-line 18s ease-in-out -9s infinite; will-change:transform,opacity; }
+  @keyframes bg-line{ 0%,100%{ transform:scale(1.05) translate(0,0) } 50%{ transform:scale(1.1) translate(1.6%,-1%) } }
+  /* symmetric antiphase cross-fade — matches the other screens (18s cycle, line offset -9s) */
+  @keyframes bg-cross      { 0%,100%{ opacity:0 } 50%{ opacity:var(--xpeak,.5) } }
+  @keyframes bg-cross-line { 0%,100%{ opacity:calc(var(--xpeak,.58)*.12) } 50%{ opacity:var(--xpeak,.58) } }
+  .igrain{ position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+  @media (prefers-reduced-motion:reduce){ .ibg::before,.ibg::after,.ibgimg,.ibgline{ animation:none; } }
+
+  /* ============ FIRST-RUN "DOWNLOAD THE EXPERIENCE" GATE ============ */
+  #dlGate{ position:fixed; inset:0; z-index:60; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:clamp(1.5rem,3.4vh,2.8rem);
+    background:radial-gradient(120% 120% at 50% 40%, #2a1e19 0%, #1e1816 62%);
+    transition:opacity .85s var(--ease-settle); }
+  #dlGate.gone{ opacity:0; pointer-events:none; }
+  #dlGate .dl-main{ display:flex; flex-direction:column; align-items:center;
+    gap:clamp(1.2rem,2.8vh,2.2rem); transition:opacity .5s ease; }
+  #dlGate .dl-crest{ width:clamp(88px,11vw,148px); height:auto;
+    filter:drop-shadow(0 8px 30px rgba(0,0,0,.55)); animation:gate-breathe 4.6s var(--ease-soft) infinite; }
+  #dlGate .dl-name{ font-family:var(--font-display,'Cormorant Garamond',serif); font-weight:400;
+    font-size:clamp(1.7rem,4vw,3rem); letter-spacing:.14em; color:var(--hm-gold-bright,#e7d098);
+    text-transform:uppercase; line-height:1.05; }
+  #dlGate .dl-sub{ font-family:var(--font-body,'EB Garamond',serif); font-style:italic;
+    font-size:clamp(.85rem,1.7vw,1.15rem); color:var(--ink-dim,rgba(244,242,235,.6)); margin-top:-.4rem; }
+  #dlGate .dl-progwrap{ display:flex; flex-direction:column; align-items:center; gap:.9rem;
+    width:min(52vw,560px); }
+  #dlGate .dl-track{ position:relative; width:100%; height:3px; border-radius:3px;
+    background:rgba(184,156,109,.16); overflow:hidden; }
+  #dlGate .dl-bar{ position:absolute; inset:0 auto 0 0; width:0%; border-radius:3px;
+    background:linear-gradient(90deg, #b89c6d, #e7d098 55%, #f2e6c8);
+    box-shadow:0 0 14px rgba(231,208,152,.5); transition:width .3s ease; }
+  #dlGate .dl-meta{ display:flex; align-items:center; gap:.9em;
+    font-family:var(--font-label,'Jost',sans-serif); font-size:clamp(.62rem,1.1vw,.78rem);
+    letter-spacing:.26em; text-transform:uppercase; color:var(--ink-dim,rgba(244,242,235,.55)); }
+  #dlGate .dl-pct{ color:var(--hm-gold,#c9b078); font-variant-numeric:tabular-nums; }
+  #dlGate .dl-bytes{ font-family:var(--font-label,'Jost',sans-serif); font-variant-numeric:tabular-nums;
+    font-size:clamp(.6rem,1.05vw,.74rem); letter-spacing:.16em; color:var(--ink-dim,rgba(244,242,235,.5)); }
+  /* ---- STATE A: the offer (crest + lede + real download button) ---- */
+  #dlGate .dl-offer{ display:flex; flex-direction:column; align-items:center; gap:clamp(1rem,2.2vh,1.6rem); }
+  #dlGate .dl-lede{ max-width:36ch; font-family:var(--font-body,'EB Garamond',serif); font-style:italic;
+    font-size:clamp(.92rem,1.75vw,1.2rem); line-height:1.5; color:var(--ink-dim,rgba(244,242,235,.62)); margin:0 auto; }
+  #dlGate .dl-btn{ position:relative; cursor:pointer; overflow:hidden;
+    padding:clamp(.85rem,1.7vh,1.1rem) clamp(1.9rem,3.4vw,2.9rem);
+    background:linear-gradient(180deg, rgba(184,156,109,.18), rgba(184,156,109,.06));
+    border:1px solid var(--hm-gold-soft,#b89c6d); border-radius:2px; color:var(--hm-gold-bright,#e7d098);
+    font-family:var(--font-label,'Jost',sans-serif); text-transform:uppercase; font-weight:400;
+    letter-spacing:.22em; font-size:clamp(.72rem,1.3vw,.9rem);
+    transition:background .35s var(--ease-soft), color .35s var(--ease-soft),
+               box-shadow .35s var(--ease-soft), transform .25s var(--ease-soft); }
+  #dlGate .dl-btn::after{ content:""; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(105deg,transparent 42%,rgba(242,230,200,.35) 50%,transparent 58%);
+    background-size:250% 100%; background-repeat:no-repeat; background-position:175% 0;
+    animation:dl-sheen 5.4s var(--ease-soft) 1.2s infinite; }
+  @keyframes dl-sheen{ 0%{ background-position:175% 0 } 38%{ background-position:-75% 0 } 100%{ background-position:-75% 0 } }
+  @media (hover:hover){ #dlGate .dl-btn:hover{ color:#fff; background:linear-gradient(180deg, rgba(184,156,109,.3), rgba(184,156,109,.12));
+    box-shadow:0 10px 32px rgba(0,0,0,.42), 0 0 22px rgba(184,156,109,.4); transform:translateY(-2px); } }
+  #dlGate .dl-btn:active{ transform:translateY(0); }
+  #dlGate .dl-btn:focus-visible{ outline:none; box-shadow:0 0 0 2px rgba(231,208,152,.5); }
+  #dlGate .dl-btn[disabled]{ opacity:.45; pointer-events:none; }
+  #dlGate .dl-note{ font-family:var(--font-label,'Jost',sans-serif); text-transform:uppercase;
+    letter-spacing:.2em; font-size:clamp(.58rem,1vw,.7rem); color:rgba(244,242,235,.4); }
+  /* ---- STATE C: done ---- */
+  #dlGate .dl-done{ display:flex; flex-direction:column; align-items:center; gap:clamp(.9rem,2vh,1.4rem);
+    animation:fade .7s var(--ease-settle) both; }
+  #dlGate .dl-check{ width:clamp(48px,5vw,64px); height:clamp(48px,5vw,64px); display:grid; place-items:center;
+    border-radius:50%; border:1.5px solid var(--hm-gold,#c9b078); color:var(--hm-gold-bright,#e7d098);
+    font-size:clamp(1.4rem,2.4vw,2rem); line-height:1; box-shadow:0 0 28px rgba(231,208,152,.32);
+    animation:gate-breathe 4.6s var(--ease-soft) infinite; }
+  #dlGate .dl-donemsg{ font-family:var(--font-body,'EB Garamond',serif); font-style:italic;
+    font-size:clamp(1rem,2vw,1.35rem); color:var(--ink,#f4f2eb); max-width:32ch; line-height:1.4; }
+  #dlGate [hidden]{ display:none !important; }
+  /* rotate-to-landscape hint (portrait only) */
+  #dlGate .dl-rotate{ display:none; position:absolute; inset:0; z-index:2;
+    flex-direction:column; align-items:center; justify-content:center; gap:1.2rem;
+    background:radial-gradient(120% 120% at 50% 42%, #2a1e19, #1e1816 70%); }
+  #dlGate .dl-rotate svg{ width:clamp(46px,9vw,72px); height:auto; color:var(--hm-gold,#c9b078);
+    animation:dl-rot 2.8s var(--ease-soft) infinite; }
+  @keyframes dl-rot{ 0%,100%{ transform:rotate(0) } 55%,80%{ transform:rotate(-90deg) } }
+  #dlGate .dl-rotate span{ font-family:var(--font-label,'Jost',sans-serif); text-transform:uppercase;
+    letter-spacing:.24em; font-size:clamp(.66rem,1.4vw,.82rem); color:var(--ink-dim,rgba(244,242,235,.6)); }
+  @media (orientation:portrait){
+    #dlGate .dl-main{ opacity:.14; filter:blur(1px); }
+    #dlGate .dl-rotate{ display:flex; }
+  }
+
+  /* ---- app-wide portrait rotate hint (landscape-only kiosk suite) ---- */
+  #rotateHint{ display:none; position:fixed; inset:0; z-index:55;
+    flex-direction:column; align-items:center; justify-content:center; gap:1.3rem; text-align:center;
+    background:radial-gradient(120% 120% at 50% 42%, #2a1e19, #1e1816 70%); }
+  #rotateHint svg{ width:clamp(48px,10vw,80px); height:auto; color:var(--hm-gold,#c9b078);
+    animation:dl-rot 2.8s var(--ease-soft) infinite; }
+  #rotateHint .rh-name{ font-family:var(--font-display,'Cormorant Garamond',serif);
+    font-size:clamp(1.1rem,3vw,1.7rem); letter-spacing:.14em; text-transform:uppercase;
+    color:var(--hm-gold-bright,#e7d098); }
+  #rotateHint span.rh-cap{ font-family:var(--font-label,'Jost',sans-serif); text-transform:uppercase;
+    letter-spacing:.24em; font-size:clamp(.66rem,1.5vw,.84rem); color:var(--ink-dim,rgba(244,242,235,.6)); }
+  @media (orientation:portrait){ #rotateHint{ display:flex; } }
+</style>
+</head>
+<body>
+<div id="app" data-kd-brand="highland-mayfields">
+
+  <!-- first-run download-the-experience gate (offline precache) -->
+  <div id="dlGate" role="dialog" aria-live="polite" aria-label="Download the experience">
+    <div class="dl-main">
+      <img class="dl-crest" src="assets/logo-crest.png" alt="" aria-hidden="true">
+      <div>
+        <div class="dl-name">Highland Mayfields</div>
+        <div class="dl-sub">An opulence of luxury</div>
+      </div>
+
+      <!-- STATE A · offer (real button, no auto-start) -->
+      <div class="dl-offer" id="dlOffer">
+        <p class="dl-lede">Download the experience to use it fully offline — every film, render and detail saved to this device.</p>
+        <button class="dl-btn" id="dlBtn" type="button">Download the experience</button>
+        <div class="dl-note" id="dlNote">One-time · about 55&nbsp;MB</div>
+      </div>
+
+      <!-- STATE B · honest byte-weighted progress -->
+      <div class="dl-progwrap" id="dlProg" hidden>
+        <div class="dl-track"><div class="dl-bar" id="dlBar"></div></div>
+        <div class="dl-meta"><span class="dl-cap" id="dlCap">Saving to this device…</span><span class="dl-pct" id="dlPct">0%</span></div>
+        <div class="dl-bytes" id="dlBytes">0.0&nbsp;MB / —&nbsp;MB</div>
+      </div>
+
+      <!-- STATE C · done -->
+      <div class="dl-done" id="dlDone" hidden>
+        <div class="dl-check" aria-hidden="true">&#10003;</div>
+        <p class="dl-donemsg" id="dlDoneMsg">Saved to this device — works fully offline</p>
+        <button class="dl-btn dl-continue" id="dlContinue" type="button">Continue</button>
+      </div>
+    </div>
+    <div class="dl-rotate" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 19h6"/>
+      </svg>
+      <span>Rotate to landscape</span>
+    </div>
+  </div>
+
+  <!-- app-wide portrait rotate hint (landscape-only kiosk) -->
+  <div id="rotateHint" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 19h6"/>
+    </svg>
+    <div class="rh-name">Highland Mayfields</div>
+    <span class="rh-cap">Rotate to landscape</span>
+  </div>
+
+  <!-- preloaded home, revealed on enter -->
+  <iframe id="homeFrame" title="Highland Mayfields" loading="eager"></iframe>
+
+  <!-- premium voice greeting (plays on lock-in) -->
+  <audio id="welcome" preload="auto">
+    <source src="assets/welcome.m4a" type="audio/mp4">
+    <source src="assets/welcome.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- intro -->
+  <div id="intro">
+    <!-- subtle shared background texture (cohesion with home + inside screens) -->
+    <div class="ibg" aria-hidden="true"></div>
+    <div class="ibgline" aria-hidden="true"></div>
+    <div class="ibgimg" aria-hidden="true"></div>
+    <div class="igrain" aria-hidden="true"></div>
+    <div class="grain"></div>
+
+    <!-- 3 · enter scene -->
+    <div id="enterScene">
+      <div class="bg" id="enterBg"></div>
+      <div class="veil"></div>
+      <div class="inner">
+        <img class="lockup" id="enterLockup" alt="Highland Mayfields" src="assets/logo-lockup-light.png">
+        <div class="hm-rule rule"></div>
+        <p class="tag">An opulence of luxury</p>
+        <div class="enterWrap">
+          <button class="hm-enter" id="enterBtn" aria-label="Enter Highland Mayfields">
+            <svg class="pl-plate" viewBox="0 0 220 64" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="enterGlass" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" style="stop-color:var(--hm-espresso)"/>
+                  <stop offset=".55" style="stop-color:var(--hm-espresso-2)"/>
+                  <stop offset="1" style="stop-color:var(--hm-espresso-2)"/>
+                </linearGradient>
+              </defs>
+              <polygon class="pl-glass" points="16,2 204,2 218,16 218,48 204,62 16,62 2,48 2,16"/>
+              <polygon class="pl-inner" points="22,8 198,8 212,20 212,44 198,56 22,56 8,44 8,20"/>
+              <polygon class="pl-edge"  points="16,2 204,2 218,16 218,48 204,62 16,62 2,48 2,16"/>
+            </svg>
+            <span class="sheen" aria-hidden="true"></span>
+            <span class="pl-face">
+              <span class="label">Enter the Estate</span>
+              <span class="arrow" aria-hidden="true">&rarr;</span>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 · video -->
+    <div id="videoStage">
+      <video id="introVideo" playsinline preload="auto" poster="assets/logo-poster.jpg">
+        <source src="assets/logo-animation.webm" type="video/webm">
+        <source src="assets/logo-animation.mp4" type="video/mp4">
+      </video>
+      <button id="skip">Skip intro</button>
+    </div>
+
+    <!-- 1 · start gate -->
+    <div id="gate" role="button" tabindex="0" aria-label="Touch to begin">
+      <img class="mark gate-breathe" id="gateMark" alt="" src="assets/logo-crest.png"
+           onerror="this.style.display='none';document.getElementById('gateMarkSvg').style.display='block';">
+      <svg id="gateMarkSvg" class="markSvg gate-breathe" viewBox="0 0 100 100" style="display:none" aria-hidden="true">
+        <path d="M50 8 C58 28 72 42 92 50 C72 58 58 72 50 92 C42 72 28 58 8 50 C28 42 42 28 50 8 Z"/>
+      </svg>
+      <div class="touch"><span class="dot"></span><span>Touch to begin</span></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var app   = document.getElementById('app');
+  var gate  = document.getElementById('gate');
+  var vstage= document.getElementById('videoStage');
+  var vid   = document.getElementById('introVideo');
+  var skip  = document.getElementById('skip');
+  var scene = document.getElementById('enterScene');
+  var enterBg = document.getElementById('enterBg');
+  var enterBtn= document.getElementById('enterBtn');
+  var welcome = document.getElementById('welcome');
+  var started=false, ended=false, entered=false, greeted=false;
+
+  /* luxury transition sound (no visible toggle; fails silently if blocked) */
+  var sfxTransition=null;
+  try{ sfxTransition=new Audio('assets/sfx/transition.mp3'); sfxTransition.preload='auto'; sfxTransition.volume=.35; }catch(e){}
+  function playTransition(){ if(!sfxTransition) return; try{ sfxTransition.currentTime=0; var p=sfxTransition.play(); if(p&&p.catch) p.catch(function(){}); }catch(e){} }
+
+  /* preload home immediately so Enter is instant */
+  document.getElementById('homeFrame').src = 'home.html';
+
+  /* set twilight hero behind the enter scene (webp w/ jpg fallback) */
+  (function(){
+    var img=new Image();
+    img.onload=function(){ enterBg.style.backgroundImage="url('assets/hero-intro.webp')"; };
+    img.onerror=function(){
+      var j=new Image();
+      j.onload=function(){ enterBg.style.backgroundImage="url('assets/hero-intro.jpg')"; };
+      j.onerror=function(){ enterBg.style.background="radial-gradient(120% 120% at 50% 40%, #2a1e19, #14100d)"; };
+      j.src='assets/hero-intro.jpg';
+    };
+    img.src='assets/hero-intro.webp';
+  })();
+
+  function begin(){
+    if(started) return; started=true;
+    gate.classList.add('gone');
+    vstage.classList.add('on');
+    // user gesture -> sound allowed
+    var p = vid.play();
+    if(p && p.catch){ p.catch(function(){
+      // autoplay-with-sound blocked: try muted, else skip to scene
+      vid.muted=true; vid.play().catch(function(){ showScene(); });
+    }); }
+    setTimeout(function(){ if(!ended) skip.classList.add('show'); }, 2200);
+  }
+  function showScene(){
+    if(ended) return; ended=true;
+    skip.classList.remove('show');
+    vstage.style.opacity='0';
+    setTimeout(function(){ vstage.style.display='none'; }, 800);
+    scene.classList.add('on');
+    // premium voice greeting — plays HERE, on the intro scene only (gate touch already unlocked audio)
+    if(!greeted){ greeted=true; setTimeout(function(){ try{ welcome.currentTime=0; welcome.play().catch(function(){}); }catch(e){} }, 850); }
+  }
+  function enter(){
+    entered=true;
+    playTransition();                 // soft luxury touch-cue on the cross-dissolve into home
+    app.classList.add('leaving');
+    // the greeting belongs to the intro only — silence it before home is revealed
+    try{ welcome.pause(); welcome.currentTime=0; }catch(e){}
+    setTimeout(function(){
+      app.classList.add('entered');   // home iframe fades up while #intro fades out (soft cross-dissolve)
+      /* tell home to POP its medallions in from air exactly as it's revealed */
+      try{ document.getElementById('homeFrame').contentWindow.postMessage('hm:enter','*'); }catch(e){}
+    }, 480);
+    setTimeout(function(){
+      // free intro resources after the cut
+      try{ vid.pause(); vid.removeAttribute('src'); vid.load(); }catch(e){}
+      document.getElementById('intro').style.display='none';
+    }, 1500);
+  }
+
+  gate.addEventListener('click', begin);
+  gate.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); begin(); }});
+  vid.addEventListener('ended', showScene);
+  vid.addEventListener('error', function(){ if(started) showScene(); });
+  skip.addEventListener('click', function(e){ e.stopPropagation(); try{vid.pause();}catch(_){ } showScene(); });
+  enterBtn.addEventListener('click', enter);
+
+  /* magnetic cursor-follow + press ripple on the enter button */
+  (function(){
+    var reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+    if(!reduce){
+      enterBtn.addEventListener('pointermove', function(e){
+        var r=enterBtn.getBoundingClientRect();
+        var dx=(e.clientX-(r.left+r.width/2))/r.width, dy=(e.clientY-(r.top+r.height/2))/r.height;
+        enterBtn.style.transform='translate('+(dx*12).toFixed(1)+'px,'+(dy*9).toFixed(1)+'px)';
+      });
+      enterBtn.addEventListener('pointerleave', function(){ enterBtn.style.transform=''; });
+    }
+    enterBtn.addEventListener('pointerdown', function(e){
+      var r=enterBtn.getBoundingClientRect(), s=document.createElement('span'); s.className='rip';
+      var d=Math.max(r.width,r.height)*1.7; s.style.width=s.style.height=d+'px';
+      s.style.left=(e.clientX-r.left)+'px'; s.style.top=(e.clientY-r.top)+'px';
+      enterBtn.appendChild(s); setTimeout(function(){ s.remove(); },700);
+    });
+  })();
+
+  /* intro ENTER button — morph through 3 distinct plaque silhouettes on a 3s loop
+     (octagon → hexagon banner → soft rectangle). All 8-point so they tween smoothly. */
+  (function(){
+    var glass=enterBtn.querySelector('.pl-glass'), inner=enterBtn.querySelector('.pl-inner'),
+        edge=enterBtn.querySelector('.pl-edge'), sheen=enterBtn.querySelector('.sheen');
+    if(!glass||!edge||!inner) return;
+    var SHAPES=[
+      { o:'20,2 200,2 218,18 218,46 200,62 20,62 2,46 2,18', i:'26,8 194,8 212,22 212,42 194,56 26,56 8,42 8,22' }, /* octagon  */
+      { o:'20,2 200,2 218,32 218,32 200,62 20,62 2,32 2,32', i:'26,8 194,8 212,32 212,32 194,56 26,56 8,32 8,32' }, /* hexagon  */
+      { o:'8,2 212,2 218,8 218,56 212,62 8,62 2,56 2,8',     i:'14,8 206,8 212,14 212,50 206,56 14,56 8,50 8,14' }  /* rectangle*/
+    ];
+    var idx=0, raf=0, timer=0;
+    var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function nums(s){ return s.trim().split(/[ ,]+/).map(Number); }
+    function str(a){ var o=''; for(var k=0;k<a.length;k+=2){ o+=(k?' ':'')+a[k]+','+a[k+1]; } return o; }
+    function clip(a){ var o='polygon('; for(var k=0;k<a.length;k+=2){ o+=(k?',':'')+(a[k]/220*100).toFixed(2)+'% '+(a[k+1]/64*100).toFixed(2)+'%'; } return o+')'; }
+    function apply(o,i){ var so=str(o); glass.setAttribute('points',so); edge.setAttribute('points',so); inner.setAttribute('points',str(i)); if(sheen) sheen.style.clipPath=clip(o); }
+    function ease(x){ return x<.5 ? 4*x*x*x : 1-Math.pow(-2*x+2,3)/2; }
+    function morph(to){
+      var fO=nums(SHAPES[idx].o), fI=nums(SHAPES[idx].i), tO=nums(SHAPES[to].o), tI=nums(SHAPES[to].i), t0=null, dur=700;
+      cancelAnimationFrame(raf);
+      function step(ts){ if(t0===null)t0=ts; var p=Math.min(1,(ts-t0)/dur), e=ease(p);
+        apply(fO.map(function(v,n){return v+(tO[n]-v)*e;}), fI.map(function(v,n){return v+(tI[n]-v)*e;}));
+        if(p<1) raf=requestAnimationFrame(step); else idx=to;
+      }
+      raf=requestAnimationFrame(step);
+    }
+    apply(nums(SHAPES[0].o), nums(SHAPES[0].i));
+    if(!reduce){ timer=setInterval(function(){ if(entered){ clearInterval(timer); cancelAnimationFrame(raf); return; } morph((idx+1)%SHAPES.length); }, 3000); }
+  })();
+
+  /* ---- RESTART : home's logo asks to return to the intro gate (soft fade, no hard reload) ---- */
+  function restartIntro(){
+    if(!entered) return;                 // only meaningful once we're inside home
+    playTransition();
+    var intro=document.getElementById('intro');
+    intro.style.display='';              // bring the intro layer back so it can fade in
+    // reset the opening sequence to the touch-gate
+    gate.classList.remove('gone');
+    scene.classList.remove('on');
+    vstage.classList.remove('on'); vstage.style.display=''; vstage.style.opacity='';
+    try{ vid.pause(); vid.currentTime=0; vid.load(); }catch(e){}
+    skip.classList.remove('show');
+    enterBtn.style.transform='';
+    started=false; ended=false; entered=false; greeted=false;
+    // re-arm home for the next enter (so its medallions bloom again)
+    var hf=document.getElementById('homeFrame');
+    try{ hf.contentWindow.location.replace('home.html'); }catch(e){ hf.src='home.html'; }
+    // cross-dissolve: intro fades up while home fades out
+    requestAnimationFrame(function(){ app.classList.remove('entered','leaving'); });
+  }
+
+  /* messages from the home child */
+  window.addEventListener('message', function(e){
+    if(!e) return;
+    if(e.data==='hm:restart-intro') restartIntro();
+    /* 'hm:home-ready' acknowledged silently */
+  });
+})();
+</script>
+
+<!-- offline-first PWA: register SW, then prefetch heavy renders when idle -->
+<script>
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+  /* Only reload when an EXISTING controller is REPLACED (a real SW update). On the very
+     first claim (controller was null) we must NOT reload — that would interrupt the
+     first-run download gate. */
+  var _hadController = !!navigator.serviceWorker.controller;
+  var _reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(_reloaded || !_hadController) return; _reloaded=true; window.location.reload();
+  });
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').then(function(reg){
+      try{ if(reg.update) reg.update(); }catch(e){}
+      var fire=function(){
+        var c=navigator.serviceWorker.controller;
+        if(c){ c.postMessage('PREFETCH_SECONDARY'); }
+        else { navigator.serviceWorker.ready.then(function(reg){
+          if(reg && reg.active){ reg.active.postMessage('PREFETCH_SECONDARY'); }
+        }); }
+      };
+      if('requestIdleCallback' in window){ requestIdleCallback(fire, {timeout:4000}); }
+      else { setTimeout(fire, 2500); }
+    }).catch(function(){});
+  });
+})();
+</script>
+
+<!-- first-run "Download the experience" gate: explicit, byte-honest, self-healing precache into caches.open('hm-v5') -->
+<script>
+(function(){
+  var VER='hm-v5', KEY='hm-downloaded';
+  var gate=document.getElementById('dlGate');
+  if(!gate) return;
+  var params=new URLSearchParams(location.search);
+  var force=params.has('redl');   /* ?redl re-shows the offer for testing (never auto-downloads) */
+
+  var offer =document.getElementById('dlOffer');
+  var prog  =document.getElementById('dlProg');
+  var doneEl=document.getElementById('dlDone');
+  var btn   =document.getElementById('dlBtn');
+  var cont  =document.getElementById('dlContinue');
+  var bar   =document.getElementById('dlBar');
+  var pctEl =document.getElementById('dlPct');
+  var capEl =document.getElementById('dlCap');
+  var bytesEl=document.getElementById('dlBytes');
+  var doneMsg=document.getElementById('dlDoneMsg');
+
+  /* the fonts the app actually loads (brand.css @imports Jost; index/screens reference these two sheets).
+     precaching the sheets AND the woff2 they point to kills offline FOUT. */
+  var FONT_CSS=[
+    'https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&display=swap',
+    'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap'
+  ];
+  var EXTERNALS=[
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+  ];
+
+  function abs(u){ try{ return new URL(u, location.href).href; }catch(e){ return u; } }
+  function mb(b){ return (b/1048576).toFixed(1); }
+
+  function showState(name){
+    offer.hidden = name!=='offer';
+    prog.hidden  = name!=='prog';
+    doneEl.hidden= name!=='done';
+  }
+  function dismiss(){
+    gate.classList.add('gone');
+    setTimeout(function(){ if(gate.parentNode) gate.parentNode.removeChild(gate); }, 900);
+  }
+  cont.addEventListener('click', dismiss);
+
+  /* -------- build the FULL precache list: manifest + shell + externals + discovered woff2 -------- */
+  async function buildList(){
+    var list=[];
+    try{
+      var r=await fetch('asset-manifest.json?v='+Date.now(), {cache:'no-store'});
+      var j=await r.json();
+      if(Array.isArray(j)) list=j.slice();
+    }catch(e){}
+    ['./','index.html','home.html','manifest.json','sw.js','asset-manifest.json'].forEach(function(u){
+      if(list.indexOf(u)<0) list.push(u);
+    });
+    FONT_CSS.concat(EXTERNALS).forEach(function(u){ if(list.indexOf(u)<0) list.push(u); });
+    /* discover the actual gstatic .woff2 files referenced by the font sheets (UA-correct) */
+    for(var i=0;i<FONT_CSS.length;i++){
+      try{
+        var cr=await fetch(FONT_CSS[i], {cache:'reload'});
+        var css=await cr.text();
+        var m=css.match(/https:\/\/[^)"']+\.woff2/g)||[];
+        m.forEach(function(u){ if(list.indexOf(u)<0) list.push(u); });
+      }catch(e){}
+    }
+    return list;
+  }
+
+  /* -------- self-heal: compare the live cache against the manifest -------- */
+  async function cacheState(list){
+    var cache=null; try{ cache=await caches.open(VER); }catch(e){ return {cache:null, missing:list.slice()}; }
+    var keys=await cache.keys();
+    var have=new Set(keys.map(function(r){ return r.url; }));
+    var missing=list.filter(function(u){ return !have.has(abs(u)); });
+    return {cache:cache, missing:missing};
+  }
+
+  /* -------- byte sizing via HEAD Content-Length (fallback by extension) -------- */
+  var sizes={}, total=0, loaded=0;
+  async function sizeOf(url){
+    try{
+      var h=await fetch(url, {method:'HEAD', cache:'no-store'});
+      var cl=h && h.headers && h.headers.get('content-length');
+      if(cl){ var n=parseInt(cl,10); if(n>0) return n; }
+    }catch(e){}
+    if(/\.mp4$/i.test(url))  return 8*1048576;
+    if(/\.webm$/i.test(url)) return 1048576;
+    if(/\.(webp|jpg|jpeg|png|glb)$/i.test(url)) return 320*1024;
+    if(/\.(m4a|mp3)$/i.test(url)) return 200*1024;
+    if(/\.woff2$/i.test(url)) return 40*1024;
+    return 24*1024;
+  }
+  async function measure(list){
+    var i=0;
+    function w(){ return (async function(){ while(i<list.length){ var my=i++; sizes[list[my]]=await sizeOf(list[my]); } })(); }
+    var p=[]; for(var k=0;k<8;k++) p.push(w()); await Promise.all(p);
+  }
+
+  function paint(){
+    var p= total ? Math.min(100, Math.round(loaded/total*100)) : 100;
+    bar.style.width=p+'%'; pctEl.textContent=p+'%';
+    bytesEl.innerHTML=mb(loaded)+'&nbsp;MB / '+mb(total)+'&nbsp;MB';
+  }
+
+  /* -------- fetch one asset; STREAM the body so big videos advance steadily -------- */
+  async function grab(cache, url){
+    var a=abs(url), sz=sizes[url]||0;
+    try{ if(cache && await cache.match(a)){ loaded+=sz; paint(); return; } }catch(e){}
+    var res=null;
+    for(var attempt=0; attempt<2; attempt++){
+      try{
+        res=await fetch(url, {cache:'reload'});
+        if(res && (res.ok || res.type==='opaque')) break;
+        res=null;
+      }catch(e){ res=null; }
+    }
+    if(!res){ loaded+=sz; paint(); return; }   /* count as done so the bar still completes */
+    if(res.body && res.body.getReader && res.type!=='opaque'){
+      var reader=res.body.getReader(), chunks=[];
+      try{
+        for(;;){ var rd=await reader.read(); if(rd.done) break; chunks.push(rd.value); loaded+=rd.value.length; paint(); }
+      }catch(e){ loaded+=sz; paint(); return; }
+      try{
+        var blob=new Blob(chunks);
+        if(cache) await cache.put(a, new Response(blob, {status:res.status, statusText:res.statusText, headers:new Headers(res.headers)}));
+      }catch(e){}
+    } else {
+      try{ if(cache) await cache.put(a, res.clone()); }catch(e){}
+      loaded+=sz; paint();
+    }
+  }
+
+  /* -------- the download run (only after the user taps) -------- */
+  var running=false;
+  async function run(){
+    if(running) return; running=true;
+    showState('prog');
+    capEl.textContent='Measuring the estate…';
+    var list=await buildList();
+    await measure(list);
+    total=0; loaded=0; for(var n=0;n<list.length;n++){ total+=sizes[list[n]]||0; }
+    paint();
+    capEl.textContent='Saving to this device…';
+    var cache=null; try{ cache=await caches.open(VER); }catch(e){}
+    var idx=0, CONC=4;
+    function worker(){ return (async function(){ while(idx<list.length){ var my=idx++; await grab(cache, list[my]); } })(); }
+    var pool=[]; for(var w=0; w<CONC; w++) pool.push(worker());
+    await Promise.all(pool);
+    loaded=total; paint();
+    capEl.textContent='Complete';
+    try{ localStorage.setItem(KEY,VER); }catch(e){}
+    doneMsg.textContent='Saved to this device — works fully offline';
+    setTimeout(function(){ showState('done'); }, 450);
+  }
+  btn.addEventListener('click', function(){ btn.disabled=true; run(); });
+
+  /* -------- init: trust the CACHE, not the flag -------- */
+  async function init(){
+    var list;
+    try{ list=await buildList(); }catch(e){ list=[]; }
+    var st;
+    try{ st=await cacheState(list); }catch(e){ st={missing:list}; }
+    if(!force && st.missing && st.missing.length===0 && list.length){
+      /* already complete — instant confirmation, no re-download */
+      try{ localStorage.setItem(KEY,VER); }catch(e){}
+      doneMsg.textContent='Ready — works fully offline';
+      showState('done');
+      return;
+    }
+    /* first run / incomplete / reinstalled — offer the explicit download */
+    showState('offer');
+  }
+  requestAnimationFrame(function(){ requestAnimationFrame(init); });
+})();
+</script>
+</body>
+</html>

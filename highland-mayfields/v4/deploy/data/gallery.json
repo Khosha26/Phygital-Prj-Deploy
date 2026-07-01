@@ -1,0 +1,42 @@
+{
+  "_meta": { "note": "Web-optimized from client renders/videos (app/assets/screens/). Originals in OneDrive 'Raghav Sir' dump.", "base": "assets/screens/" },
+  "categories": [
+    { "id": "aerial", "name": "Aerial & Masterplan", "items": [
+      { "src": "day-aerial.webp", "title": "Township — Day", "tag": "Render" },
+      { "src": "night-aerial.webp", "title": "Township — Night", "tag": "Render" },
+      { "src": "tower-top.webp", "title": "Tower Top View", "tag": "Aerial" },
+      { "src": "norwood-top.webp", "title": "Norwood — Top View", "tag": "Aerial" },
+      { "src": "mayfield-bird-night.webp", "title": "Mayfield — Bird's-eye, Night", "tag": "Aerial" },
+      { "src": "master-layout.webp", "title": "Master Layout Plan", "tag": "Plan" }
+    ] },
+    { "id": "towers", "name": "Towers & Residences", "items": [
+      { "src": "mayfield-eye-1.webp", "title": "Mayfield — Street View", "tag": "Render" },
+      { "src": "mayfield-eye-2.webp", "title": "Mayfield — Approach", "tag": "Render" },
+      { "src": "norwood-night.webp", "title": "Norwood — Night", "tag": "Render" },
+      { "src": "pocketc-entry.webp", "title": "Pocket C — Tower Entry", "tag": "Render" }
+    ] },
+    { "id": "club", "name": "Clubhouse & Amenities", "items": [
+      { "src": "clubhouse.webp", "title": "The Pearl — Clubhouse", "tag": "Render" }
+    ] },
+    { "id": "landscape", "name": "Landscape", "items": [
+      { "src": "landscape-1.webp", "title": "Landscape — Sanctuary", "tag": "Render" },
+      { "src": "landscape-2.webp", "title": "Landscape — Greens", "tag": "Render" },
+      { "src": "landscape-3.webp", "title": "Landscape — Courtyard", "tag": "Render" },
+      { "src": "landscape-4.webp", "title": "Landscape — Walk", "tag": "Render" }
+    ] }
+  ],
+  "videos": [
+    { "src": "walkthrough.mp4", "poster": "walkthrough-poster.webp", "title": "Mayfields Walkthrough", "desc": "A cinematic tour of the township." },
+    { "src": "location-tour.mp4", "poster": "location-tour-poster.webp", "title": "Location & Construction Update", "desc": "Site progress and connectivity." }
+  ],
+  "heroRenders": {
+    "address": "location-map.webp",
+    "residences": "mayfield-eye-1.webp",
+    "pearl": "clubhouse.webp",
+    "inventory": "pocketc-entry.webp",
+    "landscape": "landscape-1.webp",
+    "masterplan": "master-layout.webp",
+    "gallery": "day-aerial.webp",
+    "villas": "mayfield-bird-night.webp"
+  }
+}

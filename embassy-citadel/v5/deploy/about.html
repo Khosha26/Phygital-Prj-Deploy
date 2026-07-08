@@ -1,0 +1,1978 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — About</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  ABOUT v1 — assumptions + reasoning
+  ──────────────────────────────────────────────────────────────────────
+  Concept
+  · Project Overview / About chapter. Reached from home's "08 About"
+    tile. Editorial three-column composition: Our Story (left),
+    circular hero with orbital values (center), Our Journey timeline
+    (right). Bottom strip = long horizontal stats pill + "A Legacy of
+    Impact" video card.
+  · The tower IS the hero — clipped to a perfect circle, soft warm
+    drop-shadow, framed by faint gold concentric ring patterns
+    radiating outward. 5 value-circles (vision/quality/people/trust/
+    sustainability) sit on the LEFT HALF of the outer orbital arc.
+  · Frank-Curator voice. Real Embassy facts: founded 1993 by Jitu
+    Virwani in Bangalore, India's leading developer, 26M+ sq ft,
+    50+ projects, REIT pioneer, recent ultra-premium residential.
+
+  Layout (1440 × 900 stage)
+  · Top bar 76px — same chrome (wordmark = back to home, eyebrow
+    centre, live IST + Worli right).
+  · Left column at x=64, w=340 — eyebrow, two-line Cormorant
+    headline ("Crafting Legacies. / Enriching Lives."), hairline,
+    two body paragraphs, WATCH OUR STORY pill.
+  · Center column ~620w — hero circle ~530px Ø with image
+    'hero-tower-realistic.jpg'; orbital ring; 5 value-circles on
+    left half of arc; THE PROJECT caption inside lower portion;
+    EXPLORE PROJECT → button below.
+  · Right column at right=64, w=340 — OUR JOURNEY eyebrow + 4
+    timeline milestones (1993 / 2006 / 2015 / 2024) on vertical
+    dashed gold rail.
+  · Two popup cards default-open as examples: OUR VISION (anchored
+    left of vision orbit), SHAPING SKYLINES (right of 2015 row).
+  · Bottom strip: long horizontal cream pill with 5 stats divided
+    by hairlines + "A Legacy of Impact" video card right of stats.
+  · Bottom-bar (24px) centred: ↓ SCROLL TO EXPLORE caption.
+
+  Interactions wired
+  · Brand wordmark → cream veil → home.html.
+  · Click any value-circle (vision / quality / people / trust /
+    sustainability) → opens its popup card with tailored content.
+  · Click any timeline milestone → opens year-specific popup.
+  · WATCH OUR STORY pill → centered placeholder modal
+    ("Story video coming soon").
+  · EXPLORE PROJECT → cream veil → home.html.
+  · MORE INFO link on each stat → small popup with extended copy.
+  · A Legacy of Impact card → placeholder modal.
+  · Popup X close OR backdrop click → fade out.
+  · Live clock updates every 30s.
+
+  Placeholders / honest acknowledgements
+  · "Story video" + "Legacy of Impact" videos are placeholder
+    modals (real videos pending from Embassy).
+  · MORE INFO popups carry one-line extended descriptions; deeper
+    detail to wire later when factsheets land.
+  · (chapter index is the home
+    screen; no overflow menu yet).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --tile-shadow:   0 18px 38px rgba(20, 14, 6, 0.16),
+                     0 6px 14px  rgba(20, 14, 6, 0.10);
+    --plate-shadow:  0 30px 60px -18px rgba(80, 58, 28, 0.32),
+                     0 14px 30px -10px rgba(80, 58, 28, 0.18),
+                     0 4px 10px        rgba(40, 28, 10, 0.08);
+    --hero-shadow:   0 40px 90px -24px rgba(80, 58, 28, 0.42),
+                     0 18px 38px -14px rgba(80, 58, 28, 0.22),
+                     0 4px 14px         rgba(40, 28, 10, 0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage scaler — flex-center letterbox ─────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    display: flex; align-items: center; justify-content: center;
+    isolation: isolate;
+    /* Flat paper — matches the stage's own paper edge so letterbox/pillarbox
+       margins (iPad 4:3, 65" 16:9) blend with no visible "cut". */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  /* Full-bleed day-tint behind the stage so the margins shift hue in lock-step
+     with the stage's own day-tint — the seam never appears at any tint phase. */
+  #stage-wrap::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    pointer-events: none; mix-blend-mode: color;
+    background-color: rgba(255, 250, 240, 0.10);
+    animation: dayCycle 120s linear infinite;
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    z-index: 1;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+  }
+
+  .stage-bg {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.02;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 1px;
+    mix-blend-mode: multiply;
+  }
+
+  .day-tint {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: multiply;
+    animation: dayCycle 120s ease-in-out infinite;
+  }
+  @keyframes dayCycle {
+    0%   { background-color: rgba(255, 244, 220, 0.04); }
+    25%  { background-color: rgba(255, 250, 240, 0.02); }
+    50%  { background-color: rgba(255, 230, 180, 0.05); }
+    75%  { background-color: rgba(232, 207, 161, 0.06); }
+    100% { background-color: rgba(255, 244, 220, 0.04); }
+  }
+
+  /* Faint gold concentric ring pattern behind hero */
+  .concentric {
+    position: absolute;
+    left: 50%; top: 395px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .concentric .ring {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(148, 111, 56, 0.10);
+  }
+
+  /* Radial halo behind hero — lit-from-behind warmth */
+  .hero-halo {
+    position: absolute;
+    left: 50%; top: 395px;
+    transform: translate(-50%, -50%);
+    width: 760px; height: 760px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(circle, rgba(255, 230, 180, 0.22) 0%, rgba(255, 230, 180, 0.08) 38%, transparent 70%);
+    mix-blend-mode: screen;
+  }
+
+  /* ── TOP BAR (seamless — paper bg shows through) ────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Unified left-side brand-back */
+  .ec-brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    min-height: 44px;
+  }
+  .ec-brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .ec-brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .ec-brand-back .brand-diamond {
+    width: 18px; height: 18px;
+    position: relative; display: inline-block;
+    transform: rotate(45deg);
+    border: 1px solid var(--gold-500);
+    background: linear-gradient(135deg, var(--gold-200) 0%, var(--gold-500) 100%);
+    box-shadow: 0 0 6px rgba(148,111,56,0.20);
+    flex-shrink: 0;
+  }
+  .ec-brand-back .brand-diamond::before {
+    content: ''; position: absolute; inset: 3px;
+    border: 0.5px solid rgba(255,255,255,0.55); background: transparent;
+  }
+  .ec-brand-back .brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+  .ec-brand-back .brand-text .name {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500; font-size: 22px;
+    color: var(--onyx-700); letter-spacing: 0.04em;
+  }
+  .ec-brand-back .brand-text .loc {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  /* Right-side BACK button */
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+  /* ── TAP RESPONSIVENESS — interactive surfaces inside the app ── */
+  button, [role="button"], a[href], .timeline-marker, .stat, .leader-card {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  svg .tap, svg [data-tap], svg [role="button"] { pointer-events: all; cursor: pointer; }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: absolute;
+    top: 38px; left: 44px;
+    transform-origin: left center;
+  }
+  .brand:hover { opacity: 0.72; }
+  .brand:focus-visible { outline: none; opacity: 0.72; }
+  .brand::after {
+    content: '← Home';
+    position: absolute;
+    left: 100%; top: 50%;
+    transform: translate(8px, -50%);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: none;
+  }
+  .brand:hover::after, .brand:focus-visible::after {
+    opacity: 0.85;
+    transform: translate(12px, -50%);
+  }
+  .brand-wordmark {
+    width: 156px; height: 43.2px;
+    color: var(--onyx-700);
+    margin-top: -18px;
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+  .top-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 9px;
+    letter-spacing: 0.55em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.78;
+    margin: 0 auto;
+  }
+  .top-right {
+    display: flex; align-items: center; gap: 14px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--onyx-100); opacity: 0.78;
+    font-variant-numeric: tabular-nums;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold-300);
+    box-shadow: 0 0 8px rgba(217,185,122,0.6);
+    animation: livePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.18); }
+  }
+  /* ── LEFT COLUMN — OUR STORY ─────────────────────────────────── */
+  .col-left {
+    position: absolute;
+    left: 64px;
+    top: 124px;
+    width: 340px;
+    z-index: 6;
+  }
+  .eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.85;
+    margin-bottom: 22px;
+  }
+  .display-h {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 56px;
+    line-height: 0.98;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0;
+  }
+  .display-h span { display: block; }
+  .hair-rule {
+    width: 60px; height: 1px;
+    background: var(--gold-500);
+    opacity: 0.7;
+    margin: 22px 0 22px 0;
+  }
+  .body-p {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--onyx-100);
+    opacity: 0.82;
+    margin: 0 0 14px 0;
+    text-wrap: pretty;
+  }
+  .body-p:last-of-type { margin-bottom: 22px; }
+
+  .pill-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 38px;
+    padding: 0 16px 0 6px;
+    border-radius: 19px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    box-shadow: 0 6px 14px rgba(20,14,6,0.07);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+    cursor: pointer;
+    transition: background 220ms ease, transform 180ms ease, box-shadow 220ms ease;
+  }
+  .pill-btn:hover {
+    background: var(--bone-50);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(20,14,6,0.10);
+  }
+  .pill-btn .play {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--gold-500);
+    color: var(--paper);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .pill-btn .play svg { width: 9px; height: 9px; }
+  .pill-btn .arrow {
+    margin-left: 2px;
+    color: var(--gold-500);
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  /* ── CENTER COLUMN — Hero + orbital ───────────────────────────── */
+  .col-center {
+    position: absolute;
+    left: 50%; top: 395px;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    width: 760px; height: 620px;
+    pointer-events: none;
+  }
+  .hero-circle {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 430px; height: 430px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: var(--hero-shadow);
+    background: linear-gradient(160deg, var(--bone-50) 0%, var(--bone-200) 60%, var(--warm-grey) 100%);
+    pointer-events: auto;
+    border: 1px solid var(--hair);
+  }
+  .hero-circle img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .hero-circle::before {
+    /* inner gold rim */
+    content: '';
+    position: absolute; inset: 6px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 244, 220, 0.45);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .hero-circle::after {
+    /* warm wash for caption legibility on bottom */
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 42%;
+    background: linear-gradient(180deg, transparent 0%, rgba(20, 14, 6, 0.42) 75%, rgba(20, 14, 6, 0.6) 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Outer orbital ring (compass arc) */
+  .orbital-ring {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 580px; height: 580px;
+    border-radius: 50%;
+    border: 1px dashed rgba(148, 111, 56, 0.35);
+    pointer-events: none;
+  }
+  .orbital-dot {
+    position: absolute;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--gold-500);
+    opacity: 0.55;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Value circles on orbit */
+  .value {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  .value .bubble {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    box-shadow: 0 8px 18px rgba(80, 58, 28, 0.18);
+    display: grid; place-items: center;
+    color: var(--gold-500);
+    transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+  }
+  .value:hover .bubble {
+    transform: scale(1.08);
+    border-color: var(--gold-300);
+    box-shadow: 0 12px 24px rgba(80, 58, 28, 0.22);
+  }
+  .value.is-active .bubble {
+    border-color: var(--gold-500);
+    box-shadow: 0 14px 28px rgba(80, 58, 28, 0.28);
+  }
+  .value .bubble svg { width: 26px; height: 26px; }
+  .value .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  /* Hero caption (inside hero, near bottom) */
+  .hero-caption {
+    position: absolute;
+    left: 50%; bottom: 36px;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .hero-caption .e {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.55em; text-transform: uppercase;
+    color: var(--gold-200);
+    margin-bottom: 6px;
+  }
+  .hero-caption .t {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400; font-size: 28px;
+    color: var(--paper);
+    line-height: 1;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  .hero-caption .s {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400; font-style: italic;
+    font-size: 14px;
+    color: var(--gold-200);
+    opacity: 0.92;
+  }
+
+  /* EXPLORE PROJECT button below hero — inside col-center */
+  .explore-btn-wrap {
+    position: absolute;
+    left: 50%; top: calc(50% + 250px);
+    transform: translate(-50%, 0);
+    z-index: 6;
+    pointer-events: auto;
+  }
+  .explore-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 20px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    box-shadow: 0 8px 18px rgba(20,14,6,0.08);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    cursor: pointer;
+    transition: background 220ms ease, transform 180ms ease, box-shadow 220ms ease;
+  }
+  .explore-btn:hover {
+    background: var(--bone-50);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(20,14,6,0.12);
+  }
+  .explore-btn .arr {
+    font-size: 14px;
+    letter-spacing: 0;
+    color: var(--gold-500);
+  }
+
+  /* ── RIGHT COLUMN — Our Journey ⇄ value write-up (swap target) ──── */
+  .col-right {
+    position: absolute;
+    right: 64px;
+    top: 124px;
+    width: 340px;
+    z-index: 6;
+  }
+  .col-right .eyebrow { margin-bottom: 28px; }
+
+  /* The two stacked views share the same slot; only one is shown at a time.
+     A soft fade-in on the incoming view keeps the swap seamless. */
+  .right-view { position: relative; }
+  .right-view[hidden] { display: none; }
+  .right-view.is-entering { opacity: 0; }
+  .right-view {
+    transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .right-view.is-entering { transform: translateY(6px); }
+
+  /* Value write-up — matches the editorial register of the timeline */
+  .value-view .vv-title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif; letter-spacing: 0.04em;
+    font-weight: 400;
+    font-size: 42px;
+    line-height: 1.02;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0 0 18px 0;
+  }
+  .value-view .vv-rule {
+    width: 54px; height: 1px;
+    background: var(--gold-500);
+    opacity: 0.7;
+    margin: 0 0 22px 0;
+  }
+  .value-view .vv-body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 1.72;
+    color: var(--onyx-100);
+    opacity: 0.86;
+    margin: 0;
+    max-width: 300px;
+    text-wrap: pretty;
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 22px;
+  }
+  .timeline::before {
+    /* dashed gold rail */
+    content: '';
+    position: absolute;
+    left: 5px; top: 6px; bottom: 6px;
+    width: 0;
+    border-left: 1px dashed rgba(148, 111, 56, 0.45);
+  }
+  .milestone {
+    position: relative;
+    padding: 0 0 26px 0;
+    cursor: pointer;
+    transition: opacity 220ms ease;
+  }
+  .milestone:hover { opacity: 0.85; }
+  .milestone:last-child { padding-bottom: 0; }
+  .milestone::before {
+    /* gold dot on rail */
+    content: '';
+    position: absolute;
+    left: -22px; top: 14px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1.5px solid var(--gold-500);
+    transition: background 220ms ease, transform 220ms ease;
+  }
+  .milestone:hover::before,
+  .milestone.is-active::before {
+    background: var(--gold-500);
+    transform: scale(1.15);
+  }
+  .milestone .year {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1;
+    color: var(--onyx-700);
+    margin: 0 0 6px 0;
+  }
+  .milestone .ttl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 8px;
+  }
+  .milestone .desc {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--onyx-100);
+    opacity: 0.78;
+    text-wrap: pretty;
+  }
+
+  /* ── Timeline sequential animation ──────────────────────────────── */
+  /* Rail starts as zero-height clip from top, extends down */
+  .timeline.is-animating::before {
+    /* Rail draws progressively via clip-path */
+    clip-path: inset(0 0 100% 0);
+    animation: tlRailDraw 2400ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+    animation-delay: 500ms;
+  }
+  @keyframes tlRailDraw {
+    0%   { clip-path: inset(0 0 100% 0); }
+    100% { clip-path: inset(0 0 0% 0); }
+  }
+
+  .timeline.is-animating .milestone::before {
+    transform: scale(0);
+    animation: tlDotIn 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  .timeline.is-animating .milestone .year,
+  .timeline.is-animating .milestone .ttl,
+  .timeline.is-animating .milestone .desc {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: tlTextIn 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes tlDotIn {
+    0%   { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+  @keyframes tlTextIn {
+    0%   { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Staggered delays per milestone — 600ms between each */
+  .timeline.is-animating .milestone:nth-child(1)::before { animation-delay:  500ms; }
+  .timeline.is-animating .milestone:nth-child(1) .year,
+  .timeline.is-animating .milestone:nth-child(1) .ttl,
+  .timeline.is-animating .milestone:nth-child(1) .desc  { animation-delay:  650ms; }
+
+  .timeline.is-animating .milestone:nth-child(2)::before { animation-delay: 1100ms; }
+  .timeline.is-animating .milestone:nth-child(2) .year,
+  .timeline.is-animating .milestone:nth-child(2) .ttl,
+  .timeline.is-animating .milestone:nth-child(2) .desc  { animation-delay: 1250ms; }
+
+  .timeline.is-animating .milestone:nth-child(3)::before { animation-delay: 1700ms; }
+  .timeline.is-animating .milestone:nth-child(3) .year,
+  .timeline.is-animating .milestone:nth-child(3) .ttl,
+  .timeline.is-animating .milestone:nth-child(3) .desc  { animation-delay: 1850ms; }
+
+  .timeline.is-animating .milestone:nth-child(4)::before { animation-delay: 2300ms; }
+  .timeline.is-animating .milestone:nth-child(4) .year,
+  .timeline.is-animating .milestone:nth-child(4) .ttl,
+  .timeline.is-animating .milestone:nth-child(4) .desc  { animation-delay: 2450ms; }
+
+  /* ── VALUE WRITE-UP (persistent, right of hero) ────────────────── */
+  .value-readout {
+    position: absolute;
+    left: calc(50% + 220px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 214px;
+    z-index: 12;
+    pointer-events: auto;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    padding: 22px 20px 24px 20px;
+    box-shadow:
+      0 28px 56px -18px rgba(80, 58, 28, 0.30),
+      0 12px 26px -10px rgba(80, 58, 28, 0.16);
+  }
+  .value-readout .vr-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.85;
+    margin-bottom: 12px;
+  }
+  .value-readout .vr-title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif; letter-spacing: 0.04em;
+    font-weight: 400;
+    font-size: 34px;
+    line-height: 1.04;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0 0 14px 0;
+  }
+  .value-readout .vr-rule {
+    width: 48px; height: 1px;
+    background: var(--gold-500);
+    opacity: 0.7;
+    margin: 0 0 16px 0;
+  }
+  .value-readout .vr-body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 1.62;
+    color: var(--onyx-100);
+    opacity: 0.84;
+    margin: 0;
+    text-wrap: pretty;
+  }
+  /* crossfade hook — swap text without harsh cut */
+  .value-readout .vr-eyebrow,
+  .value-readout .vr-title,
+  .value-readout .vr-body {
+    transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .value-readout.is-swapping .vr-eyebrow,
+  .value-readout.is-swapping .vr-title,
+  .value-readout.is-swapping .vr-body {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  /* hero image crossfade on swap */
+  #heroImg {
+    transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  #heroImg.is-swapping { opacity: 0; }
+
+  /* ── POPUP CARD (single shared) ────────────────────────────────── */
+  .popup {
+    position: absolute;
+    width: 240px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    padding: 16px 16px 14px 16px;
+    box-shadow:
+      0 24px 50px -16px rgba(80, 58, 28, 0.32),
+      0 10px 22px -8px rgba(80, 58, 28, 0.18);
+    z-index: 30;
+    transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(4px) scale(0.98);
+    pointer-events: none;
+  }
+  .popup.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  .popup .head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .popup .head .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .popup .close {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--bone-50);
+    border: 1px solid var(--hair-lo);
+    display: grid; place-items: center;
+    cursor: pointer;
+    color: var(--onyx-100);
+    transition: background 200ms ease;
+  }
+  .popup .close:hover { background: var(--bone-200); }
+  .popup .close svg { width: 8px; height: 8px; }
+  .popup .rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--hair-hi) 0%, var(--hair) 50%, transparent 100%);
+    margin-bottom: 10px;
+  }
+  .popup .body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--onyx-100);
+    opacity: 0.84;
+    margin: 0 0 12px 0;
+    text-wrap: pretty;
+  }
+  .popup .thumb {
+    width: 100%;
+    height: 90px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--bone-50) 0%, var(--bone-200) 100%);
+    border: 1px solid var(--hair-lo);
+  }
+  .popup .thumb img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Connector pointer */
+  .popup::before {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    transform: rotate(45deg);
+  }
+  .popup.pt-right::before {
+    right: -6px; top: 22px;
+    border-left: none; border-bottom: none;
+  }
+  .popup.pt-left::before {
+    left: -6px; top: 22px;
+    border-right: none; border-top: none;
+  }
+
+  /* ── STATS PILL + VIDEO CARD ──────────────────────────────────── */
+  .bottom-row {
+    position: absolute;
+    left: 44px;
+    right: 44px;
+    bottom: 56px;
+    height: 132px;
+    z-index: 5;
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+  }
+  .stats-pill {
+    flex: 1;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 66px;
+    box-shadow: var(--tile-shadow);
+    display: flex;
+    align-items: center;
+    padding: 0 36px;
+  }
+  .stat {
+    flex: 1;
+    padding: 0 18px;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    transition: opacity 220ms ease;
+  }
+  .stat:hover { opacity: 0.88; }
+  .stat + .stat::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 18%; bottom: 18%;
+    width: 1px;
+    background: var(--hair-lo);
+  }
+  .stat .icon {
+    width: 18px; height: 18px;
+    margin: 0 auto 6px auto;
+    color: var(--gold-500);
+    opacity: 0.85;
+  }
+  .stat .icon svg { width: 100%; height: 100%; display: block; }
+  .stat .num {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-size: 38px;
+    line-height: 1;
+    color: var(--onyx-700);
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8.5px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    margin-bottom: 6px;
+  }
+  .stat .more {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.85;
+    cursor: pointer;
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: opacity 200ms ease;
+  }
+  .stat .more:hover { opacity: 1; }
+
+  .video-card {
+    width: 270px;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--hair);
+    box-shadow: var(--tile-shadow);
+    cursor: pointer;
+    transition: transform 260ms ease, box-shadow 260ms ease;
+  }
+  .video-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 22px 44px rgba(20, 14, 6, 0.18),
+      0 8px 16px  rgba(20, 14, 6, 0.10);
+  }
+  .video-card .bg {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center center;
+  }
+  .video-card .veil {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(135deg, rgba(20, 14, 6, 0.55) 0%, rgba(20, 14, 6, 0.30) 50%, rgba(20, 14, 6, 0.55) 100%);
+  }
+  .video-card .content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 18px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px;
+  }
+  .video-card .title {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 1.05;
+    color: var(--paper);
+    letter-spacing: -0.005em;
+    max-width: 150px;
+  }
+  .video-card .play-circle {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 1px solid rgba(255, 244, 220, 0.5);
+    display: grid; place-items: center;
+    color: var(--onyx-700);
+    flex-shrink: 0;
+    transition: transform 240ms ease, background 240ms ease;
+  }
+  .video-card:hover .play-circle {
+    transform: scale(1.06);
+    background: var(--gold-100);
+  }
+  .video-card .play-circle svg { width: 14px; height: 14px; transform: translateX(1px); }
+
+  /* ── BOTTOM BAR ───────────────────────────────────────────────── */
+  .bottombar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 7;
+    pointer-events: none;
+  }
+  .scroll-indicator {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.72;
+  }
+  .scroll-indicator .chev {
+    width: 10px; height: 10px;
+    animation: chevBob 2.4s ease-in-out infinite;
+  }
+  @keyframes chevBob {
+    0%, 100% { transform: translateY(0); opacity: 0.7; }
+    50%      { transform: translateY(2px); opacity: 1; }
+  }
+
+  /* ── MODAL ────────────────────────────────────────────────────── */
+  .modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(20, 14, 6, 0.36);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 50;
+    display: none;
+    align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity 240ms ease;
+  }
+  .modal-backdrop.is-open {
+    display: flex;
+    opacity: 1;
+  }
+  .modal-card {
+    width: 380px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    padding: 26px 28px 24px 28px;
+    box-shadow:
+      0 30px 60px -16px rgba(80, 58, 28, 0.36),
+      0 12px 26px -10px rgba(80, 58, 28, 0.20);
+    position: relative;
+    transform: translateY(8px) scale(0.97);
+    transition: transform 240ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .modal-backdrop.is-open .modal-card { transform: translateY(0) scale(1); }
+  .modal-card .head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .modal-card .head .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .modal-card .close {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--bone-50);
+    border: 1px solid var(--hair-lo);
+    display: grid; place-items: center;
+    cursor: pointer;
+    color: var(--onyx-100);
+  }
+  .modal-card .close:hover { background: var(--bone-200); }
+  .modal-card .close svg { width: 9px; height: 9px; }
+  .modal-card .rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--hair-hi) 0%, var(--hair) 60%, transparent 100%);
+    margin-bottom: 14px;
+  }
+  .modal-card .title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400; font-size: 26px;
+    line-height: 1.1;
+    color: var(--onyx-700);
+    margin: 0 0 10px 0; letter-spacing: 0.045em;}
+  .modal-card .body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--onyx-100);
+    opacity: 0.85;
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  /* ── VEIL (page transition) ───────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--paper);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+  .veil.is-on {
+    opacity: 1;
+    pointer-events: auto;
+  }
+</style>
+
+<script>
+  // Stage scaler — fit-to-viewport (letterbox on either axis as needed).
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel wordmark — same SVG symbol as gallery/home -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+    <div class="stage-bg"></div>
+    <div class="day-tint"></div>
+    <div class="stage-grain"></div>
+
+    <!-- Faint gold concentric rings behind hero -->
+    <div class="concentric" aria-hidden="true">
+      <div class="ring" style="width: 660px; height: 660px;"></div>
+      <div class="ring" style="width: 760px; height: 760px;"></div>
+      <div class="ring" style="width: 860px; height: 860px;"></div>
+    </div>
+    <div class="hero-halo" aria-hidden="true"></div>
+
+    <!-- ╔══ TOP BAR ══╗ -->
+    <header class="topbar">
+      <a class="ec-brand-back" id="brandLink" aria-label="Embassy Citadel">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to home">
+        <span class="arr" aria-hidden="true">←</span>
+        <span>Back</span>
+      </button>
+    </header>
+
+    <!-- ╔══ LEFT COLUMN — OUR STORY ══╗ -->
+    <aside class="col-left">
+      <div class="eyebrow">— Our Story</div>
+      <h1 class="display-h">
+        <span>Crafting Legacies.</span>
+        <span>Enriching Lives.</span>
+      </h1>
+      <div class="hair-rule"></div>
+      <p class="body-p">For over three decades, Embassy Group has been creating considered spaces that inspire, elevate and endure.</p>
+      <p class="body-p">From Bangalore's first integrated business park to India's first listed REIT, our legacy is built on trust, restraint and the patient work of shaping the future of modern India.</p>
+      <button class="pill-btn" id="watchStoryBtn" type="button">
+        <span class="play">
+          <svg viewBox="0 0 12 12" fill="currentColor"><path d="M3 2.5v7l6-3.5z"/></svg>
+        </span>
+        <span>Watch Our Story</span>
+      </button>
+    </aside>
+
+    <!-- ╔══ CENTER — Hero + orbital values ══╗ -->
+    <div class="col-center">
+      <div class="orbital-ring"></div>
+
+      <!-- Tiny gold dots between value circles on the orbital arc (LEFT half) -->
+      <!-- Orbit radius = 290px; dots arranged between value circles at θ=70°,90°,110°,130° (CCW from top) -->
+      <span class="orbital-dot" style="left: 50%; top: 50%; transform: translate(calc(-50% - 273px), calc(-50% - 99px));"></span>
+      <span class="orbital-dot" style="left: 50%; top: 50%; transform: translate(calc(-50% - 290px), calc(-50% + 0px));"></span>
+      <span class="orbital-dot" style="left: 50%; top: 50%; transform: translate(calc(-50% - 273px), calc(-50% + 99px));"></span>
+      <span class="orbital-dot" style="left: 50%; top: 50%; transform: translate(calc(-50% - 222px), calc(-50% + 186px));"></span>
+
+      <!-- Hero circle (the tower) -->
+      <div class="hero-circle" id="heroCircle">
+        <img id="heroImg" src="assets/client/gallery/ext-tower-03.webp" alt="Embassy Citadel — Tower" onerror="this.style.display='none'; this.parentNode.style.background='linear-gradient(160deg, #1F1B15 0%, #3A332A 60%, #1A1814 100%)';" />
+
+        <div class="hero-caption">
+          <div class="e">— The Project</div>
+          <div class="t">Embassy Citadel</div>
+          <div class="s">Worli, Mumbai</div>
+        </div>
+      </div>
+
+      <!-- 5 value circles evenly spaced along LEFT half of outer orbit -->
+      <!-- Orbit radius = 290px; angles from top going CCW: 60°, 80°, 100°, 120°, 140° (20° gaps) -->
+      <!-- x = -290·sin(θ), y = -290·cos(θ) -->
+
+      <div class="value" data-value="vision" style="left: 50%; top: 50%; transform: translate(calc(-50% - 251px), calc(-50% - 145px));">
+        <div class="bubble" aria-hidden="true">
+          <!-- column / temple icon -->
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 9 L16 4 L27 9"/>
+            <path d="M5 9 L27 9"/>
+            <path d="M8 12 L8 23"/>
+            <path d="M14 12 L14 23"/>
+            <path d="M18 12 L18 23"/>
+            <path d="M24 12 L24 23"/>
+            <path d="M4 26 L28 26"/>
+          </svg>
+        </div>
+        <div class="lbl">Vision</div>
+      </div>
+
+      <div class="value" data-value="quality" style="left: 50%; top: 50%; transform: translate(calc(-50% - 286px), calc(-50% - 50px));">
+        <div class="bubble" aria-hidden="true">
+          <!-- diamond icon -->
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 12 L16 26 L26 12 L22 5 L10 5 Z"/>
+            <path d="M6 12 L26 12"/>
+            <path d="M10 5 L16 12 L22 5"/>
+            <path d="M16 12 L16 26"/>
+          </svg>
+        </div>
+        <div class="lbl">Quality</div>
+      </div>
+
+      <div class="value" data-value="people" style="left: 50%; top: 50%; transform: translate(calc(-50% - 286px), calc(-50% + 50px));">
+        <div class="bubble" aria-hidden="true">
+          <!-- people icon -->
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="3.5"/>
+            <circle cx="21" cy="11" r="3.5"/>
+            <path d="M5 24 c0-4 3-6 6-6 s6 2 6 6"/>
+            <path d="M15 24 c0-4 3-6 6-6 s6 2 6 6"/>
+          </svg>
+        </div>
+        <div class="lbl">People</div>
+      </div>
+
+      <div class="value" data-value="trust" style="left: 50%; top: 50%; transform: translate(calc(-50% - 251px), calc(-50% + 145px));">
+        <div class="bubble" aria-hidden="true">
+          <!-- clasped hands / heart icon -->
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 25 C16 25 6 19 6 12 C6 8 9 6 12 6 C14 6 16 8 16 10 C16 8 18 6 20 6 C23 6 26 8 26 12 C26 19 16 25 16 25 Z"/>
+          </svg>
+        </div>
+        <div class="lbl">Trust</div>
+      </div>
+
+      <div class="value" data-value="sustainability" style="left: 50%; top: 50%; transform: translate(calc(-50% - 186px), calc(-50% + 222px));">
+        <div class="bubble" aria-hidden="true">
+          <!-- leaf icon -->
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 26 C6 14 14 6 26 6 C26 18 18 26 6 26 Z"/>
+            <path d="M6 26 L18 14"/>
+          </svg>
+        </div>
+        <div class="lbl">Sustainability</div>
+      </div>
+
+      <!-- EXPLORE PROJECT button below hero (inside col-center so it sits in orbit) -->
+      <div class="explore-btn-wrap">
+        <button class="explore-btn" id="exploreBtn" type="button">
+          <span>Explore Project</span>
+          <span class="arr">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ╔══ RIGHT COLUMN — swaps: Our Journey (Vision) ⇄ value write-up ══╗ -->
+    <aside class="col-right">
+      <!-- Our Journey — shown when VISION is selected (default) -->
+      <div class="right-view" id="journeyView" style="border-radius:8px;">
+        <div class="eyebrow">— Our Journey</div>
+        <div class="timeline" id="timeline">
+          <div class="milestone" data-year="1993">
+            <div class="year">1993</div>
+            <div class="ttl">— The Beginning</div>
+            <div class="desc">Embassy Group is founded in Bangalore by Jitu Virwani with a singular vision: to build spaces that transform skylines and enrich lives.</div>
+          </div>
+          <div class="milestone" data-year="2006">
+            <div class="year">2006</div>
+            <div class="ttl">— Expanding Horizons</div>
+            <div class="desc">Embassy Manyata opens in Bangalore — among India's largest integrated business parks. New asset classes, new cities, landmark developments.</div>
+          </div>
+          <div class="milestone" data-year="2015">
+            <div class="year">2015</div>
+            <div class="ttl">— Shaping Skylines</div>
+            <div class="desc">Embassy REIT is conceived — to become India's first publicly listed REIT in 2019. A new standard for institutional-grade real estate.</div>
+          </div>
+          <div class="milestone" data-year="2024">
+            <div class="year">2024</div>
+            <div class="ttl">— The Future</div>
+            <div class="desc">Embassy Citadel rises on Worli sea-face. A single tower. A world unto itself. Our finest expression of everything we believe in.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Value write-up — shown when Quality / People / Trust / Sustainability selected -->
+      <div class="right-view value-view" id="valueView" hidden>
+        <div class="eyebrow" id="vvEyebrow">— Quality</div>
+        <h2 class="vv-title" id="vvTitle">Quality</h2>
+        <div class="vv-rule"></div>
+        <p class="vv-body" id="vvBody">—</p>
+      </div>
+    </aside>
+
+    <!-- ╔══ SHARED POPUP (used for both values + milestones) ══╗ -->
+    <div class="popup" id="sharedPopup" data-popup-for="">
+      <div class="head">
+        <span class="lbl">—</span>
+        <button class="close" type="button" id="sharedPopupClose" aria-label="Close">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 3 L9 9 M9 3 L3 9"/></svg>
+        </button>
+      </div>
+      <div class="rule"></div>
+      <p class="body">—</p>
+      <div class="thumb"><img src="" alt="" onerror="this.style.display='none';"/></div>
+    </div>
+
+    <!-- ╔══ BOTTOM ROW — Stats pill + Video card ══╗ -->
+    <div class="bottom-row">
+      <div class="stats-pill" id="statsPill">
+        <div class="stat" data-stat="years">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 19 L8 11 L12 16 L16 9 L21 19 Z"/>
+            </svg>
+          </div>
+          <div class="num">31+</div>
+          <div class="lbl">Years of Excellence</div>
+          <span class="more">More Info →</span>
+        </div>
+        <div class="stat" data-stat="projects">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 21 L4 9 L10 5 L10 21 Z"/>
+              <path d="M10 21 L10 11 L20 11 L20 21 Z"/>
+              <path d="M13 14 L13 16 M16 14 L16 16 M13 18 L13 20 M16 18 L16 20"/>
+              <path d="M6 12 L6 14 M6 16 L6 18"/>
+            </svg>
+          </div>
+          <div class="num">50+</div>
+          <div class="lbl">Projects Delivered</div>
+          <span class="more">More Info →</span>
+        </div>
+        <div class="stat" data-stat="sqft">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 8 L12 4 L20 8 L12 12 Z"/>
+              <path d="M4 8 L4 16 L12 20 L12 12"/>
+              <path d="M20 8 L20 16 L12 20"/>
+            </svg>
+          </div>
+          <div class="num">26M+</div>
+          <div class="lbl">Sq. Ft. Developed</div>
+          <span class="more">More Info →</span>
+        </div>
+        <div class="stat" data-stat="cities">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21 C12 21 5 14 5 9 A7 7 0 0 1 19 9 C19 14 12 21 12 21 Z"/>
+              <circle cx="12" cy="9" r="2.4"/>
+            </svg>
+          </div>
+          <div class="num">20+</div>
+          <div class="lbl">Cities Presence</div>
+          <span class="more">More Info →</span>
+        </div>
+        <div class="stat" data-stat="families">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="9" r="3"/>
+              <circle cx="17" cy="10" r="2.4"/>
+              <path d="M3 19 C3 15 6 13 9 13 S15 15 15 19"/>
+              <path d="M14 19 C14 16 16 14 17 14 S21 16 21 19"/>
+            </svg>
+          </div>
+          <div class="num">10K+</div>
+          <div class="lbl">Happy Families</div>
+          <span class="more">More Info →</span>
+        </div>
+      </div>
+
+      <div class="video-card" id="legacyCard">
+        <div class="bg" style="background-image: url('assets/client/gallery/view-01.webp');"></div>
+        <div class="veil"></div>
+        <div class="content">
+          <div class="title">A Legacy of Impact</div>
+          <div class="play-circle">
+            <svg viewBox="0 0 14 14" fill="currentColor"><path d="M3 2 L12 7 L3 12 Z"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══ BOTTOM BAR ══╗ -->
+    <div class="bottombar">
+      <div class="scroll-indicator">
+        <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 5 L6 8 L9 5"/>
+        </svg>
+        <span>Scroll to Explore</span>
+        <svg class="chev" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 5 L6 8 L9 5"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ╔══ MODAL ══╗ -->
+    <div class="modal-backdrop" id="modalBackdrop">
+      <div class="modal-card" id="modalCard">
+        <div class="head">
+          <span class="lbl" id="modalLbl">— Embassy Group</span>
+          <button class="close" type="button" id="modalCloseBtn" aria-label="Close">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 3 L9 9 M9 3 L3 9"/></svg>
+          </button>
+        </div>
+        <div class="rule"></div>
+        <h2 class="title" id="modalTitle">Story Coming Soon</h2>
+        <p class="body" id="modalBody">A short film tracing three decades of Embassy Group is being prepared. It will live here when ready.</p>
+      </div>
+    </div>
+
+    <!-- Cream veil for page transitions -->
+    <div class="veil" id="veil"></div>
+  </div>
+</div>
+
+<script>
+  // ── Live clock (guarded — chip removed from topbar) ────────────
+  (function clock() {
+    const el = document.getElementById('clock');
+    if (!el) return;
+    function tick() {
+      const now = new Date();
+      const ist = new Date(now.getTime() + (now.getTimezoneOffset() + 330) * 60000);
+      const hh = String(ist.getHours()).padStart(2, '0');
+      const mm = String(ist.getMinutes()).padStart(2, '0');
+      el.textContent = hh + ':' + mm + ' IST';
+    }
+    tick();
+    setInterval(tick, 30000);
+  })();
+
+  // ── Brand wordmark → veil → home ───────────────────────────────
+  function aboutVeilTo(href) {
+    const veil = document.getElementById('veil');
+    if (veil) veil.classList.add('is-on');
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = href; }, 220);
+  }
+  document.getElementById('brandLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    aboutVeilTo('home.html');
+  });
+  const ecBackBtn = document.getElementById('ecBackBtn');
+  if (ecBackBtn) {
+    const goBack = (e) => { if (e) e.preventDefault(); aboutVeilTo('home.html'); };
+    ecBackBtn.addEventListener('click', goBack);
+    ecBackBtn.addEventListener('touchend', goBack, { passive: false });
+  }
+
+  // ── EXPLORE PROJECT → veil → home ──────────────────────────────
+  document.getElementById('exploreBtn').addEventListener('click', () => {
+    const veil = document.getElementById('veil');
+    veil.classList.add('is-on');
+    setTimeout(() => { window.location.href = 'home.html'; }, 220);
+  });
+
+  // ── Popup content tables ───────────────────────────────────────
+  const VALUE_CONTENT = {
+    vision:         { label: 'Our Vision',     body: "To be the world's most admired real estate developer, creating landmarks that transform lives and skylines.",                  thumb: 'assets/client/gallery/ext-tower-01.webp' },
+    quality:        { label: 'Quality',        body: 'Uncompromising standards from foundation to finish — every detail considered, every material curated.',                         thumb: 'assets/client/gallery/int-master-suite.webp' },
+    people:         { label: 'People',         body: 'Our craftspeople, architects and engineers are the foundation of everything we build. Their hands shape our legacy.',           thumb: 'assets/client/amenities/am-resident-living.webp' },
+    trust:          { label: 'Trust',          body: 'Three decades of delivering on what we promise. Built on transparency, integrity and considered action.',                        thumb: 'assets/client/gallery/lobby-1.webp' },
+    sustainability: { label: 'Sustainability', body: 'Green certifications, water reclamation, native landscaping. Building responsibly for generations to come.',                     thumb: 'assets/client/gallery/view-02.webp' },
+  };
+
+  const YEAR_CONTENT = {
+    '1993': { label: 'The Beginning',     body: 'Embassy Group is founded in Bangalore by Jitu Virwani. A vision to transform skylines, one considered project at a time.',                                 thumb: 'assets/client/gallery/lobby-2.webp' },
+    '2006': { label: 'Expanding Horizons',body: 'Embassy Manyata opens. New asset classes, new cities, landmark integrated developments — the work begins to scale.',                                       thumb: 'assets/client/gallery/ext-tower-02.webp' },
+    '2015': { label: 'Shaping Skylines',  body: "Considered projects that redefined urban living. Integrated business parks. India's first listed REIT in 2019. A new benchmark for institutional real estate.", thumb: 'assets/client/gallery/view-03.webp' },
+    '2024': { label: 'The Future',        body: 'Embassy Citadel rises on Worli sea-face. A single tower. A world unto itself. Our finest expression of everything we believe in.',                          thumb: 'assets/client/gallery/ext-tower-03.webp' },
+  };
+
+  // ── Shared popup show/position ─────────────────────────────────
+  const sharedPopup = document.getElementById('sharedPopup');
+  const STAGE_W = 1440;
+  const STAGE_H = 900;
+  const POPUP_W = 240;
+  const POPUP_H_APPROX = 200;  // approximate (header + body + thumb)
+
+  function showPopup(triggerEl, data, key) {
+    if (!triggerEl || !data) return;
+
+    // Update content
+    sharedPopup.querySelector('.head .lbl').textContent = data.label;
+    sharedPopup.querySelector('.body').textContent = data.body;
+    const img = sharedPopup.querySelector('.thumb img');
+    img.src = data.thumb;
+    img.style.display = '';
+    sharedPopup.setAttribute('data-popup-for', key);
+
+    // Position adjacent to trigger — use stage coordinate space
+    const stage = document.getElementById('stage');
+    const stageRect = stage.getBoundingClientRect();
+    const rect = triggerEl.getBoundingClientRect();
+    const scale = stageRect.width / STAGE_W;
+
+    // Convert trigger rect into stage-local coords (un-scaled)
+    const tLeft   = (rect.left   - stageRect.left) / scale;
+    const tRight  = (rect.right  - stageRect.left) / scale;
+    const tTop    = (rect.top    - stageRect.top)  / scale;
+    const tHeight = rect.height / scale;
+    const tCenterY = tTop + tHeight / 2;
+
+    // Smart left/right placement based on available space
+    const gap = 18;
+    const roomRight = STAGE_W - tRight;
+    const goRight = roomRight > (POPUP_W + gap + 24);
+
+    let popupLeft;
+    if (goRight) {
+      // Popup sits to the RIGHT of trigger → tail on popup's LEFT side points back toward trigger
+      popupLeft = tRight + gap;
+      sharedPopup.classList.remove('pt-right');
+      sharedPopup.classList.add('pt-left');
+    } else {
+      // Popup sits to the LEFT of trigger → tail on popup's RIGHT side points back toward trigger
+      popupLeft = tLeft - POPUP_W - gap;
+      sharedPopup.classList.remove('pt-left');
+      sharedPopup.classList.add('pt-right');
+    }
+
+    // Vertical: center popup on trigger, clamped above bottom stats pill (y≈712) + below topbar
+    let popupTop = tCenterY - POPUP_H_APPROX / 2;
+    popupTop = Math.max(90, Math.min(popupTop, 700 - POPUP_H_APPROX));
+
+    // Clamp horizontal too
+    popupLeft = Math.max(20, Math.min(popupLeft, STAGE_W - POPUP_W - 20));
+
+    sharedPopup.style.left = popupLeft + 'px';
+    sharedPopup.style.top  = popupTop + 'px';
+    sharedPopup.classList.add('is-open');
+  }
+
+  function hidePopup() {
+    sharedPopup.classList.remove('is-open');
+  }
+
+  // ── Value circles → swap hero image + RIGHT COLUMN (no popup) ────────
+  //  · vision  → right column shows OUR JOURNEY (the timeline) — default
+  //  · quality / people / trust / sustainability → that value's write-up
+  //    appears in the SAME place Our Journey occupies. Hero image swaps too.
+  const heroImg     = document.getElementById('heroImg');
+  const heroDefault = heroImg ? heroImg.getAttribute('src') : '';
+  const journeyView = document.getElementById('journeyView');
+  const valueView   = document.getElementById('valueView');
+  const vvEyebrow   = document.getElementById('vvEyebrow');
+  const vvTitle     = document.getElementById('vvTitle');
+  const vvBody      = document.getElementById('vvBody');
+
+  let currentValue = null;
+  let currentRightView = null;
+
+  // Show one right-column view in the shared slot, hide the other.
+  function showRightView(viewEl, fade) {
+    if (!viewEl) return;
+    [journeyView, valueView].forEach(v => { if (v && v !== viewEl) v.hidden = true; });
+    viewEl.hidden = false;
+    currentRightView = viewEl;
+    if (!fade) return;
+    viewEl.classList.add('is-entering');               // start faded/lowered
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      viewEl.classList.remove('is-entering');           // → settle in (fade + rise)
+    }));
+  }
+
+  function selectValue(key, animate) {
+    const data = VALUE_CONTENT[key];
+    if (!data) return;
+    if (key === currentValue) return;
+    currentValue = key;
+
+    // Active state on the matching circle
+    document.querySelectorAll('.value').forEach(v => {
+      v.classList.toggle('is-active', v.dataset.value === key);
+    });
+
+    const apply = () => {
+      // Hero image swap (fall back to default tower if a thumb is missing)
+      if (heroImg) {
+        heroImg.style.display = '';
+        heroImg.onerror = function () { this.onerror = null; this.src = heroDefault; };
+        heroImg.src = data.thumb;
+      }
+      // Right column: vision → Our Journey; the other four → their write-up
+      if (key === 'vision') {
+        showRightView(journeyView, animate);
+      } else {
+        if (vvEyebrow) vvEyebrow.textContent = '— ' + data.label;
+        if (vvTitle)   vvTitle.textContent   = data.label;
+        if (vvBody)    vvBody.textContent    = data.body;
+        showRightView(valueView, animate);
+      }
+    };
+
+    if (animate && heroImg) {
+      heroImg.classList.add('is-swapping');                 // fade hero out
+      if (currentRightView) currentRightView.classList.add('is-entering'); // fade current view out
+      setTimeout(() => {
+        apply();                                            // swap content + view
+        requestAnimationFrame(() => heroImg.classList.remove('is-swapping')); // fade hero in
+      }, 180);
+    } else {
+      apply();
+    }
+  }
+
+  document.querySelectorAll('.value').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // A value selection also dismisses any open milestone popup
+      hidePopup();
+      selectValue(el.dataset.value, true);
+    });
+  });
+
+  // Pre-select Vision on load (image + write-up, no transition flash)
+  selectValue('vision', false);
+
+  // Timeline milestones
+  document.querySelectorAll('.milestone').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const year = el.dataset.year;
+      document.querySelectorAll('.milestone').forEach(m => m.classList.remove('is-active'));
+      el.classList.add('is-active');
+      showPopup(el, YEAR_CONTENT[year], year);
+    });
+  });
+
+  // Close button
+  document.getElementById('sharedPopupClose').addEventListener('click', (e) => {
+    e.stopPropagation();
+    hidePopup();
+  });
+
+  // Click outside to close
+  document.addEventListener('click', (e) => {
+    const insidePopup = e.target.closest('.popup');
+    const onValue     = e.target.closest('.value');
+    const onMilestone = e.target.closest('.milestone');
+    if (insidePopup || onValue || onMilestone) return;
+    hidePopup();
+  });
+
+  // ── Timeline sequential entrance animation ─────────────────────
+  (function timelineAnim() {
+    const tl = document.getElementById('timeline');
+    if (!tl) return;
+    // Trigger on next frame so the browser registers initial state, then add class
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        tl.classList.add('is-animating');
+      });
+    });
+  })();
+
+  // ── Modal (Watch Story / Legacy / More Info) ───────────────────
+  const modal      = document.getElementById('modalBackdrop');
+  const modalLbl   = document.getElementById('modalLbl');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody  = document.getElementById('modalBody');
+
+  function openModal(lbl, title, body) {
+    modalLbl.textContent   = lbl;
+    modalTitle.textContent = title;
+    modalBody.textContent  = body;
+    modal.classList.add('is-open');
+  }
+  function closeModal() {
+    modal.classList.remove('is-open');
+  }
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.getElementById('watchStoryBtn').addEventListener('click', () => {
+    openModal('— Our Story', 'Story Coming Soon',
+      'A short film tracing three decades of Embassy Group is being prepared. It will live here when ready.');
+  });
+
+  document.getElementById('legacyCard').addEventListener('click', () => {
+    openModal('— A Legacy of Impact', 'Coming Soon',
+      'A visual chronicle of the buildings, parks and homes Embassy Group has delivered across India. Currently in edit.');
+  });
+
+  // ── MORE INFO popups on stats ──────────────────────────────────
+  const STAT_INFO = {
+    years:    { lbl: '— Years of Excellence', title: '31+ Years',          body: 'Embassy Group was founded in 1993 in Bangalore. Three decades of considered work across commercial, residential and hospitality.' },
+    projects: { lbl: '— Projects Delivered',  title: '50+ Projects',       body: 'From integrated business parks (Embassy Manyata, Embassy GolfLinks) to landmark residential and hospitality assets across the country.' },
+    sqft:     { lbl: '— Sq. Ft. Developed',   title: '26M+ Sq. Ft.',       body: 'Across asset classes — commercial, residential, retail, hospitality. The footprint of three decades of patient development.' },
+    cities:   { lbl: '— Cities Presence',     title: '20+ Cities',         body: 'Bangalore, Mumbai, Chennai, Hyderabad, Pune, Trivandrum and beyond. A network of considered developments across India.' },
+    families: { lbl: '— Happy Families',      title: '10K+ Families',      body: 'Homeowners across Embassy residential properties. Each property handed over with the same level of care as the first.' },
+  };
+
+  document.querySelectorAll('.stat .more').forEach(more => {
+    more.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const stat = e.target.closest('.stat').dataset.stat;
+      const data = STAT_INFO[stat];
+      if (data) openModal(data.lbl, data.title, data.body);
+    });
+  });
+  // Also allow clicking anywhere on the stat to open
+  document.querySelectorAll('.stat').forEach(s => {
+    s.addEventListener('click', () => {
+      const data = STAT_INFO[s.dataset.stat];
+      if (data) openModal(data.lbl, data.title, data.body);
+    });
+  });
+
+  // ── ESC closes modal + popups ──────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.querySelectorAll('.popup.is-open').forEach(p => p.classList.remove('is-open'));
+    }
+  });
+</script>
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+</script>
+<!-- PWA-JS-END -->
+
+<script>
+  // ── Preload likely next screens + touch-start prefetch on tap targets ───
+  (function () {
+    function prefetch(url) {
+      if (!url || url.startsWith('http') || document.querySelector('link[rel="prefetch"][href="' + url + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+    function preloadNextScreens(urls) {
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 400); };
+      idle(function () { urls.forEach(prefetch); });
+    }
+    // about.html → preload home.html
+    preloadNextScreens(['home.html']);
+
+    document.querySelectorAll('a[href], button[data-href]').forEach(function (el) {
+      var href = el.getAttribute('href') || el.dataset.href;
+      if (!href || href.startsWith('http')) return;
+      el.addEventListener('touchstart', function () { prefetch(href); }, { passive: true, once: true });
+    });
+  })();
+</script>
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() {
+      document.body.classList.remove('is-leaving', 'is-firing');
+      // This screen drives its veil via #veil.is-on (set in aboutVeilTo /
+      // exploreBtn). bfcache restores the page with that class intact, which
+      // would leave the cream veil fully opaque → blank on back. Clear it too.
+      var v = document.getElementById('veil');
+      if (v) v.classList.remove('is-on');
+    }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+</body>
+</html>

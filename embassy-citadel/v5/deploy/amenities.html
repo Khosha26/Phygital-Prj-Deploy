@@ -1,0 +1,2247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Amenities</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  AMENITIES v1 — assumptions + reasoning
+  ──────────────────────────────────────────────────────────────────────
+  Concept
+  · An inside screen reached from the home's Amenities tile. A
+    three-column hi-fi viewer: left rail with category list and a
+    download CTA, a center column with a vertical icon-stack rail
+    plus a large circular hero plate, and a right rail with the
+    active category headline + a 2×3 grid of sub-amenity tiles. A
+    five-thumb strip lives just above the metadata strip for direct
+    selection within the active category.
+  · The hero is content-forward. NO tower silhouette this time —
+    the paper background carries the warmth, the round plate carries
+    the show. The circular shape is a deliberate departure from the
+    rectangular gallery plate so amenities read as "experiences"
+    not "rooms."
+  · Editorial tone is The Frank Curator. Numbers are stated. No
+    banned-word adjectives. Tagline: "Curated for a Life / Beyond
+    Extraordinary."
+
+  Layout (1440 × 900 stage)
+  · Top bar 76px — wordmark at left (back button → home.html),
+    eyebrow centre, live IST + Worli on the right + a small
+    no top-right menu button.
+  · Left rail at x=44, w=280 — eyebrow, big Cormorant "AMENITIES",
+    tagline, hairline, 6 category rows (icon + label + count),
+    download CTA at the foot.
+  · Center column at x=340, w=720 — large circular hero plate
+    (640px) centred in the column, plus prev/counter/next row
+    overlaid at the foot of the plate.
+  · Right rail at x=996, w=400 — small gold lotus icon, category
+    headline (Cormorant 64px), italic sub-heading, hairline, short
+    descriptor (Inter 12px), 2×3 grid of sub-amenity tiles.
+  · Bottom thumbnail strip — 5 dark rectangular thumbs left-aligned
+    just above the metadata strip. Active gets a gold ring + "+"
+    chip top-right; the rest carry a subtle warm shadow.
+  · Metadata strip — 6 inline stat columns identical to gallery.
+  · Footer 56px — same chrome as home; chapter dot 05 is filled.
+
+  Interactions wired
+  · Category click (left rail) → switches active category, resets
+    to sub-amenity 01, updates right rail headline / grid / hero /
+    thumb strip / counter active state.
+  · Sub-amenity tile click (right rail) → updates hero image, syncs
+    bottom thumb strip + counter.
+  · Bottom thumb click → same as tile click.
+  · Arrow buttons + keyboard ← / → → prev/next within current
+    category.
+  · Brand wordmark (top-left) → cream veil → home.html.
+  · Live clock — updates every 30s. Live dot pulses gold.
+  · "Download Amenities Guide" button =
+    visual only (no real action).
+
+  Category data (6 categories · 41 sub-amenities · 6/8/5/7/9/6)
+  · WELLNESS    (06) — sanctuary set; brochure-p-08..13
+  · RECREATION  (08) — refined play; pg-01..08
+  · BUSINESS    (05) — considered work; pg-09..13
+  · SOCIAL      (07) — quiet gathering; pg-14..20
+  · OUTDOORS    (09) — two and a half acres; pg-21..29
+  · SERVICES    (06) — thoughtful by default; pg-30..35
+
+  Placeholders / to-wire-later
+  · The download CTA is visual only.
+  · If an image fails to load, it falls back to a cream gradient
+    placeholder (honest "image pending" caption inside the round
+    plate; subtle dim panel inside thumb strip).
+  · No real lightbox / no fullscreen toggle on the round plate
+    (kept simpler than gallery on purpose — amenities are about
+    the catalogue, not the photo).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --tile-shadow:    0 18px 38px rgba(20, 14, 6, 0.16),
+                      0 6px 14px  rgba(20, 14, 6, 0.10);
+    --plate-shadow:   0 40px 80px -22px rgba(80, 58, 28, 0.42),
+                      0 18px 36px -12px rgba(80, 58, 28, 0.22),
+                      0 4px 10px        rgba(40, 28, 10, 0.10);
+    --halo-shadow:    0 0 0 1px var(--hair-lo),
+                      0 0 0 12px rgba(252, 250, 244, 0.55),
+                      0 0 0 13px var(--hair-lo);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage scaler — flex-center letterbox ─────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    display: flex; align-items: center; justify-content: center;
+    isolation: isolate;
+    /* Flat paper — matches the stage's own paper edge so the letterbox/
+       pillarbox margins (iPad 4:3, 65" 16:9) blend with no visible "cut". */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  /* Full-bleed day-tint behind the stage so the margins shift hue in
+     lock-step with the stage's own .day-tint — no seam at any tint phase. */
+  #stage-wrap::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    pointer-events: none; mix-blend-mode: color;
+    background-color: rgba(255, 250, 240, 0.10);
+    animation: dayCycle 120s linear infinite;
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    z-index: 1;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+  }
+
+  /* ── PAPER BACKGROUND (same artwork as home / gallery) ───────────── */
+  .stage-bg {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.02;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 1px;
+    mix-blend-mode: multiply;
+  }
+
+  .day-tint {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: multiply;
+    animation: dayCycle 120s ease-in-out infinite;
+  }
+  @keyframes dayCycle {
+    0%   { background-color: rgba(255, 244, 220, 0.04); }
+    25%  { background-color: rgba(255, 250, 240, 0.02); }
+    50%  { background-color: rgba(255, 230, 180, 0.05); }
+    75%  { background-color: rgba(232, 207, 161, 0.06); }
+    100% { background-color: rgba(255, 244, 220, 0.04); }
+  }
+
+  /* ── TOP BAR (seamless — paper bg shows through) ────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Unified left-side brand-back: diamond + Embassy Citadel + WORLI · MUMBAI */
+  .ec-brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    min-height: 44px;
+  }
+  .ec-brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .ec-brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .ec-brand-back .brand-diamond {
+    width: 18px; height: 18px;
+    position: relative; display: inline-block;
+    transform: rotate(45deg);
+    border: 1px solid var(--gold-500);
+    background: linear-gradient(135deg, var(--gold-200) 0%, var(--gold-500) 100%);
+    box-shadow: 0 0 6px rgba(148,111,56,0.20);
+    flex-shrink: 0;
+  }
+  .ec-brand-back .brand-diamond::before {
+    content: ''; position: absolute; inset: 3px;
+    border: 0.5px solid rgba(255,255,255,0.55); background: transparent;
+  }
+  .ec-brand-back .brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+  .ec-brand-back .brand-text .name {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500; font-size: 22px;
+    color: var(--onyx-700); letter-spacing: 0.04em;
+  }
+  .ec-brand-back .brand-text .loc {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  /* Right-side BACK button */
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+  /* ── TAP RESPONSIVENESS — interactive surfaces inside the app ── */
+  button, [role="button"], a[href], .am-tile, .cat-row, .pill-sm, .filter-pill {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  svg .tap, svg [data-tap], svg [role="button"] { pointer-events: all; cursor: pointer; }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+  }
+  .brand:hover { opacity: 0.72; transform: translateX(-1px); }
+  .brand:focus-visible { outline: none; opacity: 0.72; }
+  .brand::after {
+    content: '← Home';
+    position: absolute;
+    left: 100%; top: 50%;
+    transform: translate(8px, -50%);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: none;
+  }
+  .brand:hover::after, .brand:focus-visible::after {
+    opacity: 0.85;
+    transform: translate(12px, -50%);
+  }
+  .brand-wordmark {
+    width: 156px; height: 43.2px;
+    color: var(--onyx-700);
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+  .top-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 9px;
+    letter-spacing: 0.55em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.78;
+  }
+  .top-right {
+    display: flex; align-items: center; gap: 14px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--onyx-100); opacity: 0.78;
+    font-variant-numeric: tabular-nums;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold-300);
+    box-shadow: 0 0 8px rgba(217,185,122,0.6);
+    animation: livePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.18); }
+  }
+
+  /* ── LEFT EDITORIAL RAIL ─────────────────────────────────────────── */
+  .leftrail {
+    position: absolute;
+    left: 44px;
+    top: 108px;
+    width: 280px;
+    height: 712px;
+    z-index: 6;
+    display: flex; flex-direction: column;
+    gap: 0;
+  }
+  .lr-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.85;
+    margin-bottom: 14px;
+  }
+  .lr-headline {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 56px;
+    line-height: 0.98;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0 0 12px 0;
+  }
+  .lr-tag {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    line-height: 1.6;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.82;
+    margin-bottom: 22px;
+  }
+  .lr-rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--hair-hi) 0%, var(--hair) 60%, transparent 100%);
+    margin: 0 0 16px 0;
+  }
+
+  /* Category list */
+  .cat-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
+  .cat-row {
+    display: flex; align-items: center;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    transition: background 220ms ease, border-color 220ms ease,
+                box-shadow 240ms ease, transform 180ms ease;
+    color: var(--onyx-700);
+    font-family: 'Lato', sans-serif;
+    text-align: left;
+    width: 100%;
+  }
+  .cat-row:hover {
+    background: rgba(252, 250, 244, 0.55);
+    border-color: var(--hair-lo);
+    box-shadow: var(--tile-shadow);
+    transform: translateY(-1px);
+  }
+  .cat-row.is-active {
+    background: rgba(252, 250, 244, 0.92);
+    border-color: var(--hair);
+    box-shadow:
+      0 14px 28px rgba(80, 58, 28, 0.18),
+      0 5px 10px  rgba(40, 28, 10, 0.10);
+    transform: translateY(-1px);
+  }
+  .cat-row .ic {
+    width: 18px; height: 18px;
+    color: var(--gold-500);
+    flex-shrink: 0;
+    display: grid; place-items: center;
+  }
+  .cat-row .ic svg { width: 100%; height: 100%; display: block; }
+  .cat-row .label {
+    flex: 1;
+    margin-left: 14px;
+    font-weight: 500;
+    font-size: 10.5px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+  }
+  .cat-row.is-active .label { color: var(--onyx-900); }
+  .cat-row .count {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--taupe-400);
+    font-variant-numeric: tabular-nums;
+    padding: 2px 7px;
+    border-radius: 9px;
+    border: 1px solid var(--hair-lo);
+    background: rgba(252, 250, 244, 0.6);
+  }
+  .cat-row.is-active .count {
+    color: var(--gold-500);
+    border-color: var(--hair);
+    background: rgba(252, 250, 244, 0.98);
+  }
+
+  /* ── CENTER COLUMN ───────────────────────────────────────────────── */
+  .centercol {
+    position: absolute;
+    left: 340px;
+    top: 108px;
+    width: 720px;
+    /* Metadata strip removed → column now breathes down toward the footer. */
+    height: 716px;
+    z-index: 5;
+  }
+
+  /* Circular hero plate — centred (vertically) in the taller column */
+  .circle-wrap {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 640px;
+    height: 640px;
+    z-index: 3;
+  }
+  .circle-plate {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--bone-50) 0%, var(--bone-200) 60%, var(--warm-grey) 100%);
+    box-shadow: var(--plate-shadow);
+    border: 1px solid var(--hair);
+    isolation: isolate;
+  }
+  .circle-img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    opacity: 1;
+    transition: opacity 220ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform: scale(1.04);
+    display: block;
+  }
+  .circle-img.is-fading { opacity: 0; }
+  .circle-fallback {
+    position: absolute; inset: 0;
+    display: none;
+    place-items: center;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 45%, var(--paper) 0%, var(--bone-50) 55%, var(--bone-200) 100%);
+  }
+  .circle-fallback.is-on { display: grid; }
+  .circle-fallback span {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--taupe-400);
+    opacity: 0.75;
+  }
+  /* Inner warm vignette */
+  .circle-plate::after {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 110% 100% at 50% 50%,
+        transparent 50%,
+        rgba(40, 28, 10, 0.30) 100%);
+    border-radius: 50%;
+    z-index: 2;
+  }
+  /* Inner gold rim ring */
+  .circle-plate::before {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(232, 207, 161, 0.35);
+    pointer-events: none;
+    z-index: 3;
+  }
+  /* Outer dotted orbital ring */
+  .orbital-ring {
+    position: absolute;
+    left: -22px; top: -22px; right: -22px; bottom: -22px;
+    border-radius: 50%;
+    border: 1px dashed rgba(148, 111, 56, 0.42);
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Warm halo behind plate */
+  .circle-halo {
+    position: absolute;
+    left: -60px; top: -60px;
+    width: calc(100% + 120px);
+    height: calc(100% + 120px);
+    border-radius: 50%;
+    background:
+      radial-gradient(ellipse 50% 50% at 50% 50%,
+        rgba(232, 207, 161, 0.22) 0%,
+        rgba(232, 207, 161, 0.06) 45%,
+        transparent 75%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Hero crossfade swap target */
+  .circle-img.is-enter { opacity: 0; transform: scale(1.08); }
+  .circle-img.is-shown { opacity: 1; transform: scale(1.04); }
+
+  /* Counter + arrow row — sits as a soft pill OVERLAY at the bottom
+     of the circular hero plate (which is now vertically centred in the
+     taller column after the metadata strip was removed). Reads as a
+     chrome control floating over the image. */
+  .ctrl-row {
+    position: absolute;
+    left: 40px;
+    top: 50%;
+    margin-top: 264px;
+    width: 640px;
+    height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 18px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .ctrl-row > * { pointer-events: auto; }
+  .ctrl-pill {
+    display: flex; align-items: center; gap: 18px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.86);
+    border: 1px solid var(--hair);
+    box-shadow:
+      0 12px 28px -8px rgba(80, 58, 28, 0.42),
+      0 4px 10px rgba(40, 28, 10, 0.16);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .arrow {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.92);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    display: grid; place-items: center;
+    cursor: pointer;
+    box-shadow:
+      0 8px 18px -6px rgba(80, 58, 28, 0.26),
+      0 3px 6px rgba(40, 28, 10, 0.10);
+    transition: background 220ms ease, transform 220ms ease, box-shadow 220ms ease;
+  }
+  .arrow:hover {
+    background: var(--paper);
+    transform: scale(1.06);
+    box-shadow:
+      0 12px 24px -6px rgba(80, 58, 28, 0.34),
+      0 4px 8px rgba(40, 28, 10, 0.12);
+  }
+  .arrow svg { width: 13px; height: 13px; display: block; color: var(--gold-500); }
+  .ctrl-counter {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 16px;
+    color: var(--onyx-700);
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding: 0 14px;
+  }
+  .ctrl-counter .slash {
+    color: var(--gold-500);
+    margin: 0 4px;
+    opacity: 0.7;
+  }
+
+  /* ── RIGHT RAIL ──────────────────────────────────────────────────── */
+  /* Right rail now hosts a vertical THUMBNAIL STACK (replaces the
+     2×3 sub-amenity tile grid + the bottom horizontal thumb strip).
+     Each thumb = the same dark-warm card with photo overlay + caption
+     used previously on the bottom; the active one carries a gold ring
+     and a "+" chip in the top-right. */
+  .rightrail {
+    position: absolute;
+    left: 1080px;
+    top: 108px;
+    width: 320px;
+    /* Metadata strip removed → rail breathes down toward the footer. */
+    height: 716px;
+    z-index: 6;
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .rr-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px;
+    padding: 0 2px 8px;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .rr-header .rr-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.45em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.82;
+  }
+  .rr-header .rr-counter {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic;
+    font-weight: 400; font-size: 13px;
+    color: var(--onyx-100);
+    opacity: 0.78;
+    font-variant-numeric: tabular-nums;
+  }
+  .rr-header .rr-counter .slash {
+    color: var(--gold-500);
+    opacity: 0.7;
+    margin: 0 3px;
+  }
+
+  /* Vertical thumb stack — scrolls when count > visible (handles
+     Outdoors-9 / Recreation-8 without breaking the rail). */
+  .thumbstack {
+    flex: 1;
+    display: flex; flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--hair) transparent;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  .thumbstack::-webkit-scrollbar { width: 4px; }
+  .thumbstack::-webkit-scrollbar-track { background: transparent; }
+  .thumbstack::-webkit-scrollbar-thumb {
+    background: var(--hair-lo);
+    border-radius: 2px;
+  }
+  .thumbstack::-webkit-scrollbar-thumb:hover {
+    background: var(--hair);
+  }
+
+  .ts-thumb {
+    position: relative;
+    width: 100%;
+    height: 96px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(160deg, #2A2620 0%, #1F1B15 100%);
+    border: 1px solid var(--hair-lo);
+    cursor: pointer;
+    box-shadow:
+      0 8px 18px -6px rgba(80, 58, 28, 0.22),
+      0 3px 6px rgba(40, 28, 10, 0.08);
+    transition: box-shadow 240ms ease, transform 220ms ease, border-color 220ms ease;
+    padding: 0;
+  }
+  .ts-thumb img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0.85;
+  }
+  .ts-thumb::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(20,14,6,0.05) 0%, rgba(20,14,6,0.78) 100%);
+    pointer-events: none;
+  }
+  .ts-thumb .ts-ic {
+    /* small gold glyph top-left — gives the placeholder thumb identity
+       when no photo is available */
+    position: absolute;
+    top: 10px; left: 10px;
+    width: 16px; height: 16px;
+    color: var(--gold-200);
+    opacity: 0.7;
+    z-index: 2;
+    display: grid; place-items: center;
+  }
+  .ts-thumb .ts-ic svg { width: 100%; height: 100%; display: block; }
+  .ts-thumb .caption {
+    position: absolute;
+    left: 14px; right: 14px; bottom: 10px;
+    z-index: 2;
+    display: flex; flex-direction: column;
+    gap: 3px;
+    text-align: left;
+  }
+  .ts-thumb .caption .title {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--paper);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ts-thumb .caption .sub {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic;
+    font-size: 12px;
+    color: var(--gold-200);
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ts-thumb:hover {
+    transform: translateX(-2px);
+    box-shadow:
+      0 14px 24px -6px rgba(80, 58, 28, 0.30),
+      0 4px 8px rgba(40, 28, 10, 0.10);
+    border-color: var(--hair);
+  }
+  .ts-thumb.is-active {
+    border-color: var(--gold-300);
+    box-shadow:
+      0 0 0 1.5px var(--gold-300),
+      0 14px 28px -6px rgba(80, 58, 28, 0.36),
+      0 5px 10px rgba(40, 28, 10, 0.14);
+  }
+  .ts-thumb .plus {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.92);
+    color: var(--gold-500);
+    display: none;
+    place-items: center;
+    z-index: 3;
+    border: 1px solid var(--hair);
+  }
+  .ts-thumb.is-active .plus { display: grid; }
+  .ts-thumb .plus svg { width: 10px; height: 10px; display: block; }
+
+  /* ── FOOTER BAR (identical to home / gallery) ────────────────────── */
+  .footer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    border-top: 1px solid var(--hair-lo);
+    background: linear-gradient(0deg, rgba(252,250,244,0.65), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .footer-left {
+    display: flex; align-items: center; gap: 22px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 9px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--onyx-100); opacity: 0.60;
+  }
+  .footer-left .pip {
+    width: 3px; height: 3px;
+    background: var(--gold-500);
+    transform: rotate(45deg);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .footer-left .em { color: var(--gold-500); opacity: 1; }
+  .footer-right {
+    display: flex; align-items: center; gap: 18px;
+  }
+  .footer-scroll {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.78;
+  }
+  .footer-dots { display: flex; gap: 10px; align-items: center; }
+  .footer-dots .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--hair);
+    transition: background 240ms ease, transform 240ms ease;
+  }
+  .footer-dots .dot.is-active {
+    background: var(--gold-400);
+    transform: scale(1.45);
+    box-shadow: 0 0 10px rgba(201,165,103,0.55);
+  }
+
+  /* ── LEVEL-PLANS LAUNCHER (left rail, under category list) ─────────
+     Opens the amenity-floor plan viewer overlay. Sits in the left rail
+     beneath the 6 category rows; reads as the editorial counterpart to
+     the category list — "see the floors these amenities live on." */
+  .lp-launch {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%;
+    margin-top: 4px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--hair);
+    background: rgba(252, 250, 244, 0.78);
+    cursor: pointer;
+    text-align: left;
+    box-shadow: var(--tile-shadow);
+    transition: background 220ms ease, border-color 220ms ease,
+                box-shadow 240ms ease, transform 180ms ease;
+  }
+  .lp-launch:hover {
+    background: var(--paper);
+    border-color: var(--hair-hi);
+    transform: translateY(-1px);
+  }
+  .lp-launch .lp-ic {
+    width: 18px; height: 18px; flex-shrink: 0;
+    color: var(--gold-500);
+    display: grid; place-items: center;
+  }
+  .lp-launch .lp-ic svg { width: 100%; height: 100%; display: block; }
+  .lp-launch .lp-txt { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .lp-launch .lp-title {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10.5px;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--onyx-700);
+  }
+  .lp-launch .lp-sub {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-size: 12px;
+    color: var(--gold-500); opacity: 0.85;
+  }
+  .lp-launch .lp-count {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--taupe-400);
+    font-variant-numeric: tabular-nums;
+    padding: 2px 7px; border-radius: 9px;
+    border: 1px solid var(--hair-lo);
+    background: rgba(252, 250, 244, 0.6);
+    flex-shrink: 0;
+  }
+
+  /* ── HERO ZOOM + FULL-SCREEN VIEWER chrome ─────────────────────────── */
+  .ctrl-row { gap: 10px; }
+  .circle-plate.is-hz .circle-img {
+    transform: translate(var(--hzx, 0px), var(--hzy, 0px)) scale(var(--hzs, 1)) !important;
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .circle-plate .circle-img.no-anim { transition: none !important; }
+  .circle-plate.is-hz     { cursor: grab; }
+  .circle-plate.is-hzgrab { cursor: grabbing; }
+  .fs-nav { position: absolute; right: 16px; bottom: 16px; z-index: 4; }
+
+  /* ── LEVEL-PLANS OVERLAY (amenity floor plans on bone/paper) ──────── */
+  .lp-overlay {
+    position: absolute; inset: 0;
+    z-index: 40;
+    display: none;
+    flex-direction: column;
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  .lp-overlay.is-open { display: flex; }
+  .lp-ov-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 44px 14px;
+  }
+  .lp-ov-titles { display: flex; flex-direction: column; gap: 6px; }
+  .lp-ov-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.85;
+  }
+  .lp-ov-headline {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400; font-size: 38px; line-height: 1;
+    letter-spacing: 0.02em; color: var(--onyx-700); margin: 0;
+  }
+  .lp-ov-close {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-height: 44px; padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background 220ms ease, color 220ms ease, border-color 220ms ease;
+  }
+  .lp-ov-close:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .lp-ov-close svg { width: 12px; height: 12px; display: block; }
+
+  /* Big plan viewer — zoomable. The stage is the clipping FRAME
+     (overflow:hidden); the image is panned/zoomed via a JS transform.
+     object-fit:contain keeps the plan honest at fit (no stretch). */
+  .lp-stage {
+    flex: 1;
+    position: relative;
+    margin: 0 44px;
+    border-radius: 16px;
+    border: 1px solid var(--hair-lo);
+    background: linear-gradient(160deg, var(--bone-50) 0%, var(--bone-200) 100%);
+    box-shadow: var(--tile-shadow);
+    overflow: hidden;
+    isolation: isolate;
+    touch-action: none;
+  }
+  .lp-stage img {
+    position: absolute; inset: 18px;
+    width: calc(100% - 36px); height: calc(100% - 36px);
+    object-fit: contain;
+    display: block;
+    transform-origin: center center;
+    transform: translate(var(--lpx, 0px), var(--lpy, 0px)) scale(var(--lps, 1));
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+    /* will-change only during active gesture — keeps the zoomed HD image crisp at rest. */
+  }
+  .lp-stage img.no-anim { transition: none; will-change: transform; }
+  .lp-stage.is-grabbing img { will-change: transform; }
+  .lp-stage.is-zoomed   { cursor: grab; }
+  .lp-stage.is-grabbing { cursor: grabbing; }
+
+  /* Zoom control cluster — +/−/Fit pill + live % (overlay chrome) */
+  .lp-zoom {
+    position: absolute;
+    left: 50%; bottom: 16px; transform: translateX(-50%);
+    z-index: 4;
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.86);
+    border: 1px solid var(--hair);
+    box-shadow:
+      0 10px 24px -8px rgba(80, 58, 28, 0.40),
+      0 3px 8px rgba(40, 28, 10, 0.14);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .lp-zoom .lp-zbtn {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.92);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: background 200ms ease, transform 180ms ease;
+  }
+  .lp-zoom .lp-zbtn:hover  { background: var(--paper); transform: scale(1.06); }
+  .lp-zoom .lp-zbtn:active { transform: scale(0.94); }
+  .lp-zoom .lp-zbtn svg { width: 13px; height: 13px; display: block; }
+  .lp-zoom .lp-zpct {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+    min-width: 38px; text-align: center;
+  }
+  .lp-zoom .lp-zfit {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--gold-500);
+    background: transparent;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    padding: 6px 12px; min-height: 30px;
+    cursor: pointer;
+    transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+  }
+  .lp-zoom .lp-zfit:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .lp-zoom .lp-zfit.is-disabled { opacity: 0.4; pointer-events: none; }
+
+  .lp-stage .lp-caption {
+    position: absolute;
+    left: 50%; top: 16px; transform: translateX(-50%);
+    z-index: 4;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    background: rgba(252, 250, 244, 0.78);
+    border: 1px solid var(--hair-lo);
+    padding: 7px 16px; border-radius: 999px;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Thumbnail selector row — 6 amenity level plans */
+  .lp-thumbs {
+    display: flex; gap: 12px;
+    padding: 16px 44px 24px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+  .lp-thumb {
+    position: relative;
+    flex: 1 1 0; min-width: 140px;
+    height: 92px;
+    border-radius: 10px;
+    border: 1px solid var(--hair-lo);
+    background: linear-gradient(160deg, var(--bone-50) 0%, var(--bone-200) 100%);
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: var(--tile-shadow);
+    transition: border-color 220ms ease, box-shadow 220ms ease, transform 200ms ease;
+    padding: 0;
+  }
+  .lp-thumb img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    padding: 8px 8px 22px;
+    display: block;
+  }
+  .lp-thumb .lp-thumb-lab {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 5px 8px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--onyx-700);
+    background: linear-gradient(0deg, rgba(252,250,244,0.95), rgba(252,250,244,0.4));
+    text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lp-thumb:hover { transform: translateY(-2px); border-color: var(--hair); }
+  .lp-thumb.is-active {
+    border-color: var(--gold-300);
+    box-shadow: 0 0 0 1.5px var(--gold-300), var(--tile-shadow);
+  }
+
+  /* ── Cream veil (matches home pattern) ──────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+
+  body.fast-entry .veil {
+    opacity: 1;
+    animation: veilWakeOut 700ms cubic-bezier(0.4, 0, 0.2, 1) 80ms forwards;
+  }
+  @keyframes veilWakeOut { to { opacity: 0; } }
+
+  /* Entrance fade for the amenities content (subtle settle-in) */
+  .leftrail, .centercol, .rightrail {
+    animation: settleIn 700ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+  }
+  .centercol   { animation-delay: 140ms; }
+  .rightrail   { animation-delay: 200ms; }
+  @keyframes settleIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .leftrail, .centercol, .rightrail { animation: none; }
+    .day-tint, .live-dot { animation: none; }
+  }
+</style>
+
+<script>
+  // Stage scaler — fit-to-viewport (letterbox on either axis as needed).
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel wordmark — same SVG symbol as home / gallery -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+    <div class="stage-bg"></div>
+    <div class="day-tint"></div>
+    <div class="stage-grain"></div>
+
+    <!-- ╔══ TOP BAR ══╗ -->
+    <header class="topbar">
+      <a class="ec-brand-back" id="brandLink" aria-label="Embassy Citadel">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to home">
+        <span class="arr" aria-hidden="true">←</span>
+        <span>Back</span>
+      </button>
+    </header>
+
+    <!-- ╔══ LEFT EDITORIAL RAIL ══╗ -->
+    <aside class="leftrail">
+      <div class="lr-eyebrow">— The Sovereign Tower</div>
+      <h1 class="lr-headline">Amenities</h1>
+      <div class="lr-tag">Curated for a Life<br/>Beyond Extraordinary.</div>
+      <div class="lr-rule"></div>
+
+      <div class="cat-list" id="catList"></div>
+
+      <!-- Level-plans launcher → opens the amenity-floor plan viewer overlay -->
+      <button class="lp-launch" type="button" id="lpLaunch" aria-label="View amenity level plans">
+        <span class="lp-ic">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="1.5"/><path d="M3 9h18M9 9v12M15 3v6"/>
+          </svg>
+        </span>
+        <span class="lp-txt">
+          <span class="lp-title">Level Plans</span>
+          <span class="lp-sub">The floors amenities live on</span>
+        </span>
+        <span class="lp-count">07</span>
+      </button>
+    </aside>
+
+    <!-- ╔══ CENTER COLUMN ══╗ -->
+    <div class="centercol">
+      <!-- Circular hero plate -->
+      <div class="circle-wrap">
+        <div class="circle-halo"></div>
+        <div class="orbital-ring"></div>
+        <div class="circle-plate" id="circlePlate">
+          <img class="circle-img is-shown" id="circleImg" alt="Amenity image" src="assets/client/amenities/am-resident-living.webp" decoding="async" />
+          <div class="circle-fallback" id="circleFallback"><span>Image pending</span></div>
+        </div>
+      </div>
+
+      <!-- Counter + arrows — overlay pill on the circular hero -->
+      <div class="ctrl-row">
+        <div class="ctrl-pill">
+          <button class="arrow" type="button" id="prevBtn" aria-label="Previous">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <span class="ctrl-counter" id="counterText">01<span class="slash">/</span>06</span>
+          <button class="arrow" type="button" id="nextBtn" aria-label="Next">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <div class="ctrl-pill" aria-label="Zoom and full screen">
+          <button class="arrow" type="button" id="heroZoomOut" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <button class="arrow" type="button" id="heroZoomIn" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="arrow" type="button" id="heroFull" aria-label="View full screen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══ RIGHT RAIL — vertical thumbnail stack ══╗ -->
+    <!-- Replaces both the old 2×3 sub-amenity tile grid AND the bottom
+         horizontal thumb strip. One vertical scrollable column of dark
+         thumbnail cards, one per sub-amenity in the active category.
+         Active thumb carries a gold ring + "+" chip; click switches hero. -->
+    <aside class="rightrail">
+      <div class="rr-header">
+        <span class="rr-eyebrow" id="rrEyebrow">Wellness — Featured</span>
+        <span class="rr-counter" id="rrCounter">01<span class="slash">/</span>06</span>
+      </div>
+      <div class="thumbstack" id="thumbStack"></div>
+    </aside>
+
+    <!-- (Bottom metadata strip removed — main content breathes into the freed space.) -->
+
+    <!-- ╔══ LEVEL-PLANS OVERLAY — 6 amenity floor plans ══╗ -->
+    <div class="lp-overlay" id="lpOverlay" aria-hidden="true">
+      <div class="lp-ov-top">
+        <div class="lp-ov-titles">
+          <span class="lp-ov-eyebrow">— Amenity Level Plans</span>
+          <h2 class="lp-ov-headline">The Floors of the Tower</h2>
+        </div>
+        <button class="lp-ov-close" type="button" id="lpClose" aria-label="Close level plans">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span>Close</span>
+        </button>
+      </div>
+      <div class="lp-stage" id="lpStage">
+        <img id="lpImage" alt="" decoding="async" draggable="false" />
+        <div class="lp-caption" id="lpCaption">—</div>
+        <!-- Plan zoom control — +/− · live % · Fit (resets pan+zoom) -->
+        <div class="lp-zoom" aria-label="Plan zoom controls">
+          <button class="lp-zbtn" type="button" id="lpZoomOut" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <span class="lp-zpct" id="lpZoomPct">100%</span>
+          <button class="lp-zbtn" type="button" id="lpZoomIn" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="lp-zfit is-disabled" type="button" id="lpZoomFit" aria-label="Fit plan to frame">Fit</button>
+        </div>
+      </div>
+      <div class="lp-thumbs" id="lpThumbs"></div>
+    </div>
+
+    <!-- ╔══ FULL-SCREEN PHOTO VIEWER — current amenity image ══╗ -->
+    <div class="lp-overlay" id="fsOverlay" aria-hidden="true">
+      <div class="lp-ov-top">
+        <div class="lp-ov-titles">
+          <span class="lp-ov-eyebrow">— Amenities · Full Screen</span>
+          <h2 class="lp-ov-headline" id="fsHeadline">Amenity</h2>
+        </div>
+        <button class="lp-ov-close" type="button" id="fsClose" aria-label="Close full screen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span>Close</span>
+        </button>
+      </div>
+      <div class="lp-stage" id="fsStage" style="margin-bottom: 28px;">
+        <img id="fsImage" alt="" decoding="async" draggable="false" />
+        <div class="lp-caption" id="fsCaption">—</div>
+        <div class="lp-zoom" aria-label="Photo zoom controls">
+          <button class="lp-zbtn" type="button" id="fsZoomOut" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14"/></svg>
+          </button>
+          <span class="lp-zpct" id="fsZoomPct">100%</span>
+          <button class="lp-zbtn" type="button" id="fsZoomIn" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="lp-zfit is-disabled" type="button" id="fsZoomFit" aria-label="Fit photo to frame">Fit</button>
+        </div>
+        <div class="ctrl-pill fs-nav">
+          <button class="arrow" type="button" id="fsPrev" aria-label="Previous">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <span class="ctrl-counter" id="fsCounter">01<span class="slash">/</span>01</span>
+          <button class="arrow" type="button" id="fsNext" aria-label="Next">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cream veil -->
+    <div class="veil" id="veil"></div>
+
+    <!-- ╔══ FOOTER BAR ══╗ -->
+    <footer class="footer">
+      <div class="footer-left">
+        <span>Possession <span class="em">Q4&nbsp;2028</span></span>
+        <span class="pip"></span>
+        <span>Sales Pavilion <span class="em">·&nbsp;Worli&nbsp;Sea&nbsp;Face</span>&nbsp;·&nbsp;By Appointment Only</span>
+      </div>
+      <div class="footer-right">
+        <span class="footer-scroll">↓&nbsp;Scroll to Explore</span>
+        <div class="footer-dots" id="footerDots"></div>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+  // ── Inline SVG icons (gold stroke, line style — matches home / gallery) ──
+  const ICONS = {
+    wellness:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-3 4-3 8 0 11 3-3 3-7 0-11z"/><path d="M5 14c2 3 5 4 7 4s5-1 7-4"/></svg>',
+    recreation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4c2 3 4 5 4 8a4 4 0 11-8 0c0-3 2-5 4-8z"/><path d="M12 16v5"/></svg>',
+    business:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/><path d="M3 13h18"/></svg>',
+    social:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3"/><circle cx="17" cy="11" r="2.4"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><path d="M14.5 20c.2-2 2-3.5 4-3.5s3.3 1 3.5 3"/></svg>',
+    outdoors:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l-5 8h3l-4 6h12l-4-6h3z"/><path d="M12 17v4"/></svg>',
+    services:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18h14a0 0 0 000 0l-1.5-9a5.5 5.5 0 00-11 0L5 18z"/><path d="M10 18a2 2 0 004 0"/></svg>',
+
+    // Sub-amenity icons (small line glyphs, gold)
+    pool:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c2 1 3 1 5 0s3-1 5 0 3 1 5 0 3-1 3-1"/><path d="M3 20c2 1 3 1 5 0s3-1 5 0 3 1 5 0 3-1 3-1"/><path d="M8 14V6a2 2 0 014 0"/><path d="M16 14V6a2 2 0 00-4 0"/></svg>',
+    spa:        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-3-2-7-5-7-9a4 4 0 017-2 4 4 0 017 2c0 4-4 7-7 9z"/></svg>',
+    yoga:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.5"/><path d="M12 7v6"/><path d="M6 13l6-2 6 2"/><path d="M8 20l4-7 4 7"/></svg>',
+    gym:        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4M21 10v4"/><path d="M5 8v8M19 8v8"/><path d="M5 12h14"/></svg>',
+    salon:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><path d="M8 7l12 11M8 17L20 6"/></svg>',
+    meditation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="2"/><path d="M5 18c1-4 4-6 7-6s6 2 7 6"/><path d="M3 20h18"/></svg>',
+
+    cinema:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><circle cx="7" cy="9" r="1"/><circle cx="17" cy="9" r="1"/><circle cx="7" cy="15" r="1"/><circle cx="17" cy="15" r="1"/></svg>',
+    bowling:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="10" cy="9" r="0.8" fill="currentColor"/><circle cx="14" cy="9" r="0.8" fill="currentColor"/><circle cx="12" cy="13" r="0.8" fill="currentColor"/></svg>',
+    billiards:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9 9h6v6h-6z"/></svg>',
+    karaoke:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0"/><path d="M12 17v4"/></svg>',
+    squash:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>',
+    tennis:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M6 6c4 0 8 4 12 12"/><path d="M6 18c4 0 8-4 12-12"/></svg>',
+    indoor:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12"/><path d="M3 12h18M9 6v12M15 6v12"/></svg>',
+    games:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="10" rx="2"/><circle cx="8" cy="13" r="1.2"/><circle cx="16" cy="13" r="1.2"/></svg>',
+
+    meeting:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="11" rx="1"/><path d="M3 10h18"/><path d="M8 21l4-4 4 4"/></svg>',
+    coworking:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="2"/><circle cx="17" cy="7" r="2"/><path d="M3 17c0-3 2-4 4-4s4 1 4 4"/><path d="M13 17c0-3 2-4 4-4s4 1 4 4"/></svg>',
+    concierge:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"/><path d="M5 20c0-4 3-7 7-7s7 3 7 7"/></svg>',
+    library:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v16H4z"/><path d="M14 4h6v16h-6z"/><path d="M4 9h6M14 9h6"/></svg>',
+    tech:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="11" rx="1"/><path d="M9 20h6M12 16v4"/></svg>',
+
+    banquet:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18"/><path d="M5 10v8h14v-8"/><path d="M8 6h8l-1 4H9z"/></svg>',
+    bar:        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v8"/><path d="M8 20h8"/></svg>',
+    wine:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8v4a4 4 0 11-8 0z"/><path d="M12 11v8"/><path d="M9 21h6"/></svg>',
+    dining:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v8M6 11a3 3 0 003-3V3"/><path d="M16 3l4 6h-4z"/><path d="M16 9v12M6 11v10"/></svg>',
+    cigar:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="16" height="6" rx="1"/><path d="M19 12h2"/></svg>',
+    cafe:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h12v6a4 4 0 01-4 4H8a4 4 0 01-4-4z"/><path d="M16 10h2a2 2 0 010 4h-2"/><path d="M7 3v3M11 3v3"/></svg>',
+    skyclub:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l8-14 8 14z"/><circle cx="12" cy="14" r="1.5"/></svg>',
+
+    garden:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3"/><path d="M12 12v9"/><path d="M8 21h8"/></svg>',
+    jogging:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="5" r="1.5"/><path d="M10 11l3-2 3 3-2 4"/><path d="M7 14l3-3M14 16l-2 5"/></svg>',
+    sunset:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="4"/><path d="M3 18h18"/><path d="M12 6v2M5 9l1 1M19 9l-1 1"/></svg>',
+    skygarden:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18"/><path d="M5 7c4 0 6-2 6-2M5 11c4 0 6-2 6-2M5 15c4 0 6-2 6-2"/><path d="M19 3v18"/><path d="M19 7c-4 0-6-2-6-2M19 11c-4 0-6-2-6-2M19 15c-4 0-6-2-6-2"/></svg>',
+    pet:        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="9" r="1.5"/><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="19" cy="9" r="1.5"/><path d="M8 15c0-3 2-4 4-4s4 1 4 4-2 5-4 5-4-2-4-5z"/></svg>',
+    play:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6"/><path d="M5 21l3-8h8l3 8"/></svg>',
+    bbq:        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16l-2 7H6z"/><path d="M8 7c0-1 1-1 1-2s-1-1-1-2M12 7c0-1 1-1 1-2s-1-1-1-2M16 7c0-1 1-1 1-2s-1-1-1-2"/></svg>',
+    stone:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="8" r="1.4"/><circle cx="11" cy="11" r="1.4"/><circle cx="16" cy="8" r="1.4"/><circle cx="7" cy="15" r="1.4"/><circle cx="13" cy="16" r="1.4"/><circle cx="18" cy="14" r="1.4"/></svg>',
+
+    valet:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14"/><path d="M5 17l2-5h10l2 5"/><circle cx="8" cy="17" r="1.5"/><circle cx="16" cy="17" r="1.5"/></svg>',
+    booking:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="1"/><path d="M4 9h16"/><path d="M9 14l2 2 4-4"/></svg>',
+    housekeep:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l-2 5h4z"/><path d="M10 9v11M14 9v11"/><path d="M7 20h10"/></svg>',
+    food:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a8 8 0 0116 0z"/><path d="M3 14h18"/></svg>',
+    security:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/></svg>',
+
+    chev:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+    plus:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+  };
+
+  // ── Categories (6) with sub-amenities ────────────────────────────
+  // Image paths are relative from v4/amenities.html → assets/...
+  const CATEGORIES = [
+    {
+      key: 'wellness',
+      label: 'Wellness',
+      icon: 'wellness',
+      headline: 'Wellness',
+      sub: 'Sanctuary for<br/>Mind, Body &amp; Soul.',
+      desc: 'Spaces designed to nurture holistic well-being in every moment.',
+      items: [
+        // Only amenities with a real client render are listed.
+        { icon: 'pool',       name: 'Infinity Pool',    tag: 'Rooftop',          img: 'assets/client/amenities/am-aqua-lounge.webp' },
+        { icon: 'spa',        name: 'Spa & Steam',      tag: 'Thermal Suite',    img: 'assets/client/amenities/am-salon-spa.webp' },
+        { icon: 'gym',        name: 'Gymnasium',        tag: 'Technogym',        img: 'assets/client/amenities/am-gym-1.webp' },
+        { icon: 'salon',      name: 'Salon',            tag: 'Personal Care',    img: 'assets/client/amenities/am-salon-spa.webp' },
+      ],
+    },
+    {
+      key: 'recreation',
+      label: 'Recreation',
+      icon: 'recreation',
+      headline: 'Recreation',
+      sub: 'Refined play,<br/>considered hours.',
+      desc: 'Hours of quiet pursuit — from cinema to court — without leaving the tower.',
+      items: [
+        // Only amenities with a real client render are listed.
+        { icon: 'bowling',   name: 'Bowling Alley',   tag: 'Lounge',            img: 'assets/client/amenities/am-bowling.webp' },
+        { icon: 'tennis',    name: 'Tennis Court',    tag: 'Surfaced',          img: 'assets/client/amenities/am-padel.webp' },
+        { icon: 'indoor',    name: 'Indoor Sports',   tag: 'Multi-use',         img: 'assets/client/amenities/am-gym-2.webp' },
+        { icon: 'games',     name: 'Games Room',      tag: 'Lounge',            img: 'assets/client/amenities/am-indoor-games.webp' },
+      ],
+    },
+    {
+      key: 'business',
+      label: 'Business',
+      icon: 'business',
+      headline: 'Business',
+      sub: 'Considered space<br/>for considered work.',
+      desc: 'A quiet floor for meetings, reading, and the kind of work that needs no interruption.',
+      items: [
+        // Amenity-lobby render = open shared lounge → Co-Working.
+        { icon: 'coworking', name: 'Co-Working',        tag: 'Open',       img: 'assets/client/amenities/am-amenity-lobby.webp' },
+      ],
+    },
+    {
+      key: 'social',
+      label: 'Social',
+      icon: 'social',
+      headline: 'Social',
+      sub: 'Where the city<br/>gathers, quietly.',
+      desc: 'Rooms for the evening — for hosts, for guests, for the kind of dinner that lingers.',
+      items: [
+        { icon: 'banquet', name: 'Banquet Hall',   tag: 'Grand',           img: 'assets/client/amenities/am-banquet.webp' },
+        // Resident-living sky lounge render → Bar Lounge (resident).
+        { icon: 'bar',     name: 'Bar Lounge',     tag: 'Resident',        img: 'assets/client/amenities/am-resident-living.webp' },
+        { icon: 'dining',  name: 'Private Dining', tag: 'Chef Table',      img: 'assets/client/amenities/am-restaurant.webp' },
+        // Sky party hall (79th) render → Sky Club, Top Floor.
+        { icon: 'skyclub', name: 'Sky Club',       tag: 'Top Floor',       img: 'assets/client/amenities/am-party-hall.webp' },
+      ],
+    },
+    {
+      key: 'outdoors',
+      label: 'Outdoors',
+      icon: 'outdoors',
+      headline: 'Outdoors',
+      sub: 'Two and a half acres<br/>along the sea face.',
+      desc: 'Native gardens, soft paths, and a long stretch of west-facing sky.',
+      items: [
+        // Only amenities with a real client render are listed.
+        { icon: 'play',      name: 'Children’s Play', tag: 'Adventure',   img: 'assets/client/amenities/am-kids-play.webp' },
+      ],
+    },
+    {
+      key: 'services',
+      label: 'Services',
+      icon: 'services',
+      headline: 'Services',
+      sub: 'Thoughtful<br/>by default.',
+      desc: 'Around-the-clock care across every floor — quietly, never overheard.',
+      items: [
+        // Entrance / arrival lobby render → front-of-house Concierge.
+        { icon: 'concierge', name: 'Concierge',        tag: '24-Hour',       img: 'assets/client/amenities/am-entrance-lobby.webp' },
+      ],
+    },
+  ];
+
+  // ── State ────────────────────────────────────────────────────────
+  const state = {
+    catIndex: 0,   // index into CATEGORIES
+    subIndex: 0,   // index into items[]
+  };
+  function currentCat()  { return CATEGORIES[state.catIndex]; }
+  function currentItem() { return currentCat().items[state.subIndex]; }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  // ── DOM refs ─────────────────────────────────────────────────────
+  const catListEl     = document.getElementById('catList');
+  const circleImg     = document.getElementById('circleImg');
+  const circleFallbk  = document.getElementById('circleFallback');
+  const counterTextEl = document.getElementById('counterText');
+  const rrEyebrowEl   = document.getElementById('rrEyebrow');
+  const rrCounterEl   = document.getElementById('rrCounter');
+  const thumbStackEl  = document.getElementById('thumbStack');
+  const footerDotsEl  = document.getElementById('footerDots');
+  const veilEl        = document.getElementById('veil');
+
+  // ── Render: left rail category list ──────────────────────────────
+  CATEGORIES.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cat-row' + (i === 0 ? ' is-active' : '');
+    btn.dataset.category = c.key;
+    btn.dataset.idx = i;
+    btn.innerHTML =
+      '<span class="ic">' + ICONS[c.icon] + '</span>' +
+      '<span class="label">' + c.label + '</span>' +
+      '<span class="count">' + pad2(c.items.length) + '</span>';
+    btn.addEventListener('click', () => setCategory(i));
+    catListEl.appendChild(btn);
+  });
+
+  // ── Render: right-rail header (category eyebrow + counter) ───────
+  function renderRailHeader() {
+    const c = currentCat();
+    rrEyebrowEl.textContent = c.label + ' — Featured';
+    rrCounterEl.innerHTML =
+      pad2(state.subIndex + 1) +
+      '<span class="slash">/</span>' +
+      pad2(c.items.length);
+  }
+
+  // ── Render: vertical thumb stack (ALL items of active category) ──
+  // Replaces the prior right-rail 2×3 sub-tile grid AND the bottom
+  // horizontal thumb strip. Stack scrolls vertically when item count
+  // exceeds the visible height (Outdoors=9, Recreation=8).
+  function renderThumbStack() {
+    const c = currentCat();
+    thumbStackEl.innerHTML = '';
+    c.items.forEach((item, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ts-thumb' + (i === state.subIndex ? ' is-active' : '');
+      btn.dataset.idx = i;
+      btn.innerHTML =
+        '<img alt="" />' +
+        '<span class="ts-ic">' + (ICONS[item.icon] || '') + '</span>' +
+        '<span class="plus">' + ICONS.plus + '</span>' +
+        '<span class="caption">' +
+          '<span class="title">' + item.name + '</span>' +
+          '<span class="sub">' + item.tag + '</span>' +
+        '</span>';
+      const img = btn.querySelector('img');
+      img.onerror = () => { img.style.display = 'none'; };
+      // item.img may be null when no real photo exists yet — leave the
+      // dark thumb tile bare rather than firing a 404 for "null".
+      if (item.img) {
+        img.src = item.img;
+      } else {
+        img.style.display = 'none';
+      }
+      btn.addEventListener('click', () => setSub(i));
+      thumbStackEl.appendChild(btn);
+    });
+
+    // Scroll the active thumb into view inside its OWN container
+    // (no scrollIntoView — that breaks the fixed stage layout).
+    requestAnimationFrame(() => {
+      const active = thumbStackEl.querySelector('.ts-thumb.is-active');
+      if (!active) return;
+      const parent = thumbStackEl;
+      const aTop = active.offsetTop;
+      const aBot = aTop + active.offsetHeight;
+      const pTop = parent.scrollTop;
+      const pBot = pTop + parent.clientHeight;
+      if (aTop < pTop)      parent.scrollTop = aTop - 8;
+      else if (aBot > pBot) parent.scrollTop = aBot - parent.clientHeight + 8;
+    });
+  }
+
+  // ── Render: hero (with crossfade) ────────────────────────────────
+  function renderHero() {
+    const item = currentItem();
+    const c = currentCat();
+
+    circleImg.classList.add('is-fading');
+    setTimeout(() => {
+      const reveal = () => circleImg.classList.remove('is-fading');
+      if (item.img) {
+        circleFallbk.classList.remove('is-on');
+        circleImg.style.display = '';
+        circleImg.src = item.img;
+        // Decode the new frame before fading it in — no mid-load pop.
+        if (circleImg.decode) {
+          circleImg.decode().then(reveal).catch(reveal);
+        } else {
+          circleImg.complete ? reveal() : circleImg.addEventListener('load', reveal, { once: true });
+        }
+      } else {
+        // No real photo for this amenity — show the tasteful cream-gradient
+        // "image pending" plate instead of firing a 404 for "null".
+        circleImg.removeAttribute('src');
+        circleImg.style.display = 'none';
+        circleFallbk.classList.add('is-on');
+        reveal();
+      }
+    }, 220);
+
+    counterTextEl.innerHTML = pad2(state.subIndex + 1) + '<span class="slash">/</span>' + pad2(c.items.length);
+  }
+  circleImg.addEventListener('error', () => {
+    circleImg.style.display = 'none';
+    circleFallbk.classList.add('is-on');
+  });
+
+  // ── Actions ──────────────────────────────────────────────────────
+  function setCategory(i) {
+    if (i === state.catIndex) return;
+    state.catIndex = i;
+    state.subIndex = 0;
+    catListEl.querySelectorAll('.cat-row').forEach((el, j) => {
+      el.classList.toggle('is-active', j === i);
+    });
+    renderRailHeader();
+    renderThumbStack();
+    renderHero();
+  }
+  function setSub(i) {
+    const c = currentCat();
+    state.subIndex = (i + c.items.length) % c.items.length;
+    // Sync header + thumb active states (cheap re-render keeps logic simple)
+    renderRailHeader();
+    renderThumbStack();
+    renderHero();
+  }
+  function prevSub() { setSub(state.subIndex - 1); }
+  function nextSub() { setSub(state.subIndex + 1); }
+
+  document.getElementById('prevBtn').addEventListener('click', prevSub);
+  document.getElementById('nextBtn').addEventListener('click', nextSub);
+
+  // Keyboard arrows (ignored while the level-plans overlay is open —
+  // that overlay owns the arrows for plan navigation)
+  window.addEventListener('keydown', e => {
+    const ov = document.getElementById('lpOverlay');
+    if (ov && ov.classList.contains('is-open')) return;
+    if (e.key === 'ArrowLeft')  prevSub();
+    if (e.key === 'ArrowRight') nextSub();
+  });
+
+  // ── Footer chapter dots (Amenities = 05 active, index 4 of 8) ───
+  for (let i = 0; i < 8; i++) {
+    const d = document.createElement('span');
+    d.className = 'dot' + (i === 4 ? ' is-active' : '');
+    footerDotsEl.appendChild(d);
+  }
+
+  // ── Cream-veil navigation transitions ───────────────────────────
+  function navFade(href) {
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = href; }, 220);
+  }
+  const brandLink = document.getElementById('brandLink');
+  if (brandLink) {
+    brandLink.addEventListener('click', e => {
+      e.preventDefault();
+      navFade('home.html?from=amenities');
+    });
+  }
+  const ecBackBtn = document.getElementById('ecBackBtn');
+  if (ecBackBtn) {
+    const goBack = (e) => { if (e) e.preventDefault(); navFade('home.html?from=amenities'); };
+    ecBackBtn.addEventListener('click', goBack);
+    ecBackBtn.addEventListener('touchend', goBack, { passive: false });
+  }
+
+  // Fast-entry mode when arriving from home
+  (function () {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('from') === 'home') {
+        document.body.classList.add('fast-entry');
+      }
+    } catch (_) {}
+  })();
+
+  // ── Clock (guarded — chip removed from topbar) ─────────────────
+  function tickClock() {
+    const el = document.getElementById('clock');
+    if (!el) return;
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    el.textContent = hh + ':' + mm + ' IST';
+  }
+  tickClock();
+  setInterval(tickClock, 30000);
+
+  // ── LEVEL PLANS — 6 amenity floor plans (hardcoded from manifest.json
+  //    for offline safety; transparent WebP on uniform canvases) ───────
+  const LEVEL_PLANS = [
+    { label: 'Ground Floor',    file: 'assets/floorplans-final/amenity/amenity-ground-floor.webp' },
+    { label: 'Level 10',        file: 'assets/floorplans-final/amenity/amenity-lvl-10.webp' },
+    { label: 'Level 12',        file: 'assets/floorplans-final/amenity/amenity-lvl-12.webp' },
+    { label: 'Level 13',        file: 'assets/floorplans-final/amenity/amenity-lvl-13.webp' },
+    { label: 'Level 14',        file: 'assets/floorplans-final/amenity/amenity-lvl-14.webp' },
+    { label: 'Level 15',        file: 'assets/floorplans-final/amenity/amenity-lvl-15.webp' },
+    { label: 'Level 79 · Sky',  file: 'assets/floorplans-final/amenity/amenity-lvl-79.webp' },
+  ];
+  const lpOverlay  = document.getElementById('lpOverlay');
+  const lpThumbsEl = document.getElementById('lpThumbs');
+  const lpImageEl  = document.getElementById('lpImage');
+  const lpCapEl    = document.getElementById('lpCaption');
+  let lpIndex = 0;
+
+  // ── LEVEL-PLAN ZOOM ENGINE ──────────────────────────────────────────
+  // Wheel / trackpad + two-finger pinch to zoom · drag to pan when zoomed ·
+  // double-tap / double-click to reset · +/−/Fit control + live %.
+  // The plan image starts FIT (scale 1 = whole plan visible inside the
+  // frame via object-fit:contain), then zooms for detail. Pan is clamped
+  // so the image box never leaves the frame; .lp-stage overflow:hidden
+  // clips the result. Resets on plan switch + overlay open/close.
+  const LpZoom = (function () {
+    const stage = document.getElementById('lpStage');
+    const pctEl = document.getElementById('lpZoomPct');
+    const fitEl = document.getElementById('lpZoomFit');
+    const MIN = 1, MAX = 5;
+    let scale = 1, tx = 0, ty = 0;
+
+    function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+    // Image box = stage minus the 18px inset on each side.
+    function box() {
+      const r = stage.getBoundingClientRect();
+      return { w: Math.max(0, r.width - 36), h: Math.max(0, r.height - 36) };
+    }
+    function clampPan() {
+      const b = box();
+      const ox = (b.w * scale - b.w) / 2;
+      const oy = (b.h * scale - b.h) / 2;
+      tx = clamp(tx, -ox, ox);
+      ty = clamp(ty, -oy, oy);
+    }
+    function apply(animate) {
+      if (!animate) lpImageEl.classList.add('no-anim');
+      else lpImageEl.classList.remove('no-anim');
+      stage.style.setProperty('--lps', scale.toFixed(4));
+      stage.style.setProperty('--lpx', tx.toFixed(2) + 'px');
+      stage.style.setProperty('--lpy', ty.toFixed(2) + 'px');
+      stage.classList.toggle('is-zoomed', scale > 1.001);
+      pctEl.textContent = Math.round(scale * 100) + '%';
+      fitEl.classList.toggle('is-disabled', scale <= 1.001 && tx === 0 && ty === 0);
+      if (!animate) requestAnimationFrame(() => lpImageEl.classList.remove('no-anim'));
+    }
+    // Focal point: client px → offset from stage centre, in CSS px.
+    function focalFromClient(cx, cy) {
+      const r = stage.getBoundingClientRect();
+      return { fx: cx - (r.left + r.width / 2), fy: cy - (r.top + r.height / 2) };
+    }
+    function zoomTo(next, fx, fy) {
+      next = clamp(next, MIN, MAX);
+      if (next === scale) return;
+      const k = next / scale;
+      tx = (tx - fx) * k + fx;
+      ty = (ty - fy) * k + fy;
+      scale = next;
+      clampPan();
+      apply(true);
+    }
+    function reset(animate) {
+      scale = 1; tx = 0; ty = 0;
+      apply(animate !== false);
+    }
+
+    // Wheel / trackpad
+    stage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const { fx, fy } = focalFromClient(e.clientX, e.clientY);
+      const step = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      zoomTo(scale * step, fx, fy);
+    }, { passive: false });
+
+    // Drag to pan (mouse + single touch)
+    let dragging = false, lastX = 0, lastY = 0;
+    function dragStart(cx, cy) {
+      if (scale <= 1.001) return false;
+      dragging = true; lastX = cx; lastY = cy;
+      stage.classList.add('is-grabbing');
+      return true;
+    }
+    function dragMove(cx, cy) {
+      if (!dragging) return;
+      tx += (cx - lastX);
+      ty += (cy - lastY);
+      lastX = cx; lastY = cy;
+      clampPan();
+      apply(false);
+    }
+    function dragEnd() { dragging = false; stage.classList.remove('is-grabbing'); }
+
+    stage.addEventListener('mousedown', (e) => { if (dragStart(e.clientX, e.clientY)) e.preventDefault(); });
+    window.addEventListener('mousemove', (e) => dragMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', dragEnd);
+    stage.addEventListener('dblclick', (e) => { e.preventDefault(); reset(true); });
+
+    // Touch: single-finger pan · two-finger pinch · double-tap reset
+    let pinch = null, lastTap = 0;
+    stage.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const a = e.touches[0], b = e.touches[1];
+        const d0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        const mid = focalFromClient((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+        pinch = { d0, s0: scale, fx: mid.fx, fy: mid.fy };
+        dragging = false;
+      } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastTap < 300) { e.preventDefault(); reset(true); lastTap = 0; return; }
+        lastTap = now;
+        dragStart(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+    stage.addEventListener('touchmove', (e) => {
+      if (pinch && e.touches.length === 2) {
+        e.preventDefault();
+        const a = e.touches[0], b = e.touches[1];
+        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        zoomTo(pinch.s0 * (d / pinch.d0), pinch.fx, pinch.fy);
+      } else if (dragging && e.touches.length === 1) {
+        e.preventDefault();
+        dragMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: false });
+    stage.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) pinch = null;
+      if (e.touches.length === 0) dragEnd();
+    });
+
+    // +/− / Fit buttons
+    document.getElementById('lpZoomIn').addEventListener('click', () => zoomTo(scale * 1.4, 0, 0));
+    document.getElementById('lpZoomOut').addEventListener('click', () => zoomTo(scale / 1.4, 0, 0));
+    fitEl.addEventListener('click', () => reset(true));
+
+    return { reset };
+  })();
+
+  function lpSelect(i) {
+    lpIndex = (i + LEVEL_PLANS.length) % LEVEL_PLANS.length;
+    const p = LEVEL_PLANS[lpIndex];
+    lpImageEl.src = p.file;
+    lpImageEl.alt = p.label;
+    lpCapEl.textContent = p.label;
+    lpThumbsEl.querySelectorAll('.lp-thumb').forEach((el, j) =>
+      el.classList.toggle('is-active', j === lpIndex));
+    // Switching plans always returns the viewer to Fit.
+    if (LpZoom) LpZoom.reset(false);
+  }
+  LEVEL_PLANS.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'lp-thumb' + (i === 0 ? ' is-active' : '');
+    btn.innerHTML = '<img alt="" loading="lazy" />' +
+      '<span class="lp-thumb-lab">' + p.label + '</span>';
+    const img = btn.querySelector('img');
+    img.src = p.file;
+    btn.addEventListener('click', () => lpSelect(i));
+    lpThumbsEl.appendChild(btn);
+  });
+  function lpOpen()  {
+    lpOverlay.classList.add('is-open');
+    lpOverlay.setAttribute('aria-hidden', 'false');
+    // Select AFTER the overlay is laid out so the stage has real dimensions
+    // for the Fit clamp, and the plan opens fully visible (Fit) by default.
+    requestAnimationFrame(() => { lpSelect(lpIndex); if (LpZoom) LpZoom.reset(false); });
+  }
+  function lpCloseFn() {
+    lpOverlay.classList.remove('is-open');
+    lpOverlay.setAttribute('aria-hidden', 'true');
+    if (LpZoom) LpZoom.reset(false);
+  }
+  // Level Plans now routes to the Inventory floor index with the amenity
+  // band pre-selected — pick a floor there, view its plan. (The in-page
+  // lp-overlay stays dormant; lpOpen kept for reference.)
+  void lpOpen;
+  document.getElementById('lpLaunch').addEventListener('click', () => {
+    try { sessionStorage.setItem('ec.section', 'amenity'); } catch (_) {}
+    veilEl.classList.add('is-on');
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = 'inventory-floors.html'; }, 220);
+  });
+  document.getElementById('lpClose').addEventListener('click', lpCloseFn);
+  window.addEventListener('keydown', e => {
+    if (!lpOverlay.classList.contains('is-open')) return;
+    if (e.key === 'Escape')     lpCloseFn();
+    if (e.key === 'ArrowLeft')  lpSelect(lpIndex - 1);
+    if (e.key === 'ArrowRight') lpSelect(lpIndex + 1);
+  });
+  lpSelect(0);
+
+  // ── Initial render ──────────────────────────────────────────────
+  renderRailHeader();
+  renderThumbStack();
+  renderHero();
+
+  // ── HERO ZOOM — scale the circle plate image in place ─────────────
+  // Buttons + wheel + pinch · drag to pan when zoomed · double-tap reset.
+  // Resets whenever the image changes (setSub/setCategory wrappers below).
+  const HeroZoom = (function () {
+    const plate = document.getElementById('circlePlate');
+    const MIN = 1, MAX = 3;
+    let s = 1, tx = 0, ty = 0, dragging = false, lx = 0, ly = 0, pinch = null, lastTap = 0;
+    function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+    function clampPan() {
+      const r = plate.getBoundingClientRect();
+      const ox = r.width * (s - 1) / 2, oy = r.height * (s - 1) / 2;
+      tx = clamp(tx, -ox, ox); ty = clamp(ty, -oy, oy);
+    }
+    function apply(anim) {
+      if (!anim) circleImg.classList.add('no-anim');
+      plate.style.setProperty('--hzs', s.toFixed(4));
+      plate.style.setProperty('--hzx', tx.toFixed(1) + 'px');
+      plate.style.setProperty('--hzy', ty.toFixed(1) + 'px');
+      plate.classList.toggle('is-hz', s > 1.001);
+      if (!anim) requestAnimationFrame(() => circleImg.classList.remove('no-anim'));
+    }
+    function zoomStep(k) {
+      s = clamp(s * k, MIN, MAX);
+      if (s <= 1.001) { tx = 0; ty = 0; }
+      clampPan(); apply(true);
+    }
+    function reset(anim) { s = 1; tx = 0; ty = 0; apply(anim !== false); }
+    document.getElementById('heroZoomIn').addEventListener('click', () => zoomStep(1.3));
+    document.getElementById('heroZoomOut').addEventListener('click', () => zoomStep(1 / 1.3));
+    plate.addEventListener('wheel', (e) => { e.preventDefault(); zoomStep(e.deltaY < 0 ? 1.12 : 1 / 1.12); }, { passive: false });
+    plate.addEventListener('mousedown', (e) => {
+      if (s <= 1.001) return;
+      dragging = true; lx = e.clientX; ly = e.clientY;
+      plate.classList.add('is-hzgrab'); e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      tx += e.clientX - lx; ty += e.clientY - ly; lx = e.clientX; ly = e.clientY;
+      clampPan(); apply(false);
+    });
+    window.addEventListener('mouseup', () => { dragging = false; plate.classList.remove('is-hzgrab'); });
+    plate.addEventListener('dblclick', (e) => { e.preventDefault(); reset(true); });
+    plate.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const a = e.touches[0], b = e.touches[1];
+        pinch = { d0: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), s0: s };
+        dragging = false;
+      } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastTap < 300) { e.preventDefault(); reset(true); lastTap = 0; return; }
+        lastTap = now;
+        if (s > 1.001) { dragging = true; lx = e.touches[0].clientX; ly = e.touches[0].clientY; }
+      }
+    }, { passive: false });
+    plate.addEventListener('touchmove', (e) => {
+      if (pinch && e.touches.length === 2) {
+        e.preventDefault();
+        const a = e.touches[0], b = e.touches[1];
+        s = Math.min(MAX, Math.max(MIN, pinch.s0 * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d0));
+        clampPan(); apply(false);
+      } else if (dragging && e.touches.length === 1) {
+        e.preventDefault();
+        tx += e.touches[0].clientX - lx; ty += e.touches[0].clientY - ly;
+        lx = e.touches[0].clientX; ly = e.touches[0].clientY;
+        clampPan(); apply(false);
+      }
+    }, { passive: false });
+    plate.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) pinch = null;
+      if (e.touches.length === 0) { dragging = false; plate.classList.remove('is-hzgrab'); }
+    });
+    return { reset };
+  })();
+
+  // ── FULL-SCREEN VIEWER — current amenity photo on the big stage ───
+  const fsOverlay = document.getElementById('fsOverlay');
+  const FsView = (function () {
+    const stage = document.getElementById('fsStage');
+    const imgEl = document.getElementById('fsImage');
+    const headEl = document.getElementById('fsHeadline');
+    const capEl = document.getElementById('fsCaption');
+    const cntEl = document.getElementById('fsCounter');
+    const pctEl = document.getElementById('fsZoomPct');
+    const fitEl = document.getElementById('fsZoomFit');
+    const MIN = 1, MAX = 5;
+    let scale = 1, tx = 0, ty = 0;
+    function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+    function box() {
+      const r = stage.getBoundingClientRect();
+      return { w: Math.max(0, r.width - 36), h: Math.max(0, r.height - 36) };
+    }
+    function clampPan() {
+      const b = box();
+      const ox = (b.w * scale - b.w) / 2, oy = (b.h * scale - b.h) / 2;
+      tx = clamp(tx, -ox, ox); ty = clamp(ty, -oy, oy);
+    }
+    function apply(animate) {
+      if (!animate) imgEl.classList.add('no-anim');
+      else imgEl.classList.remove('no-anim');
+      stage.style.setProperty('--lps', scale.toFixed(4));
+      stage.style.setProperty('--lpx', tx.toFixed(2) + 'px');
+      stage.style.setProperty('--lpy', ty.toFixed(2) + 'px');
+      stage.classList.toggle('is-zoomed', scale > 1.001);
+      pctEl.textContent = Math.round(scale * 100) + '%';
+      fitEl.classList.toggle('is-disabled', scale <= 1.001 && tx === 0 && ty === 0);
+      if (!animate) requestAnimationFrame(() => imgEl.classList.remove('no-anim'));
+    }
+    function focalFromClient(cx, cy) {
+      const r = stage.getBoundingClientRect();
+      return { fx: cx - (r.left + r.width / 2), fy: cy - (r.top + r.height / 2) };
+    }
+    function zoomTo(next, fx, fy) {
+      next = clamp(next, MIN, MAX);
+      if (next === scale) return;
+      const k = next / scale;
+      tx = (tx - fx) * k + fx;
+      ty = (ty - fy) * k + fy;
+      scale = next; clampPan(); apply(true);
+    }
+    function reset(animate) { scale = 1; tx = 0; ty = 0; apply(animate !== false); }
+    document.getElementById('fsZoomIn').addEventListener('click', () => zoomTo(scale * 1.3, 0, 0));
+    document.getElementById('fsZoomOut').addEventListener('click', () => zoomTo(scale / 1.3, 0, 0));
+    fitEl.addEventListener('click', () => reset(true));
+    stage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const { fx, fy } = focalFromClient(e.clientX, e.clientY);
+      zoomTo(scale * (e.deltaY < 0 ? 1.12 : 1 / 1.12), fx, fy);
+    }, { passive: false });
+    let dragging = false, lastX = 0, lastY = 0, pinch = null, lastTap = 0;
+    stage.addEventListener('mousedown', (e) => {
+      if (scale <= 1.001) return;
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      stage.classList.add('is-grabbing'); e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      tx += e.clientX - lastX; ty += e.clientY - lastY; lastX = e.clientX; lastY = e.clientY;
+      clampPan(); apply(false);
+    });
+    window.addEventListener('mouseup', () => { dragging = false; stage.classList.remove('is-grabbing'); });
+    stage.addEventListener('dblclick', (e) => { e.preventDefault(); reset(true); });
+    stage.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const a = e.touches[0], b = e.touches[1];
+        const mid = focalFromClient((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+        pinch = { d0: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), s0: scale, fx: mid.fx, fy: mid.fy };
+        dragging = false;
+      } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastTap < 300) { e.preventDefault(); reset(true); lastTap = 0; return; }
+        lastTap = now;
+        if (scale > 1.001) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
+      }
+    }, { passive: false });
+    stage.addEventListener('touchmove', (e) => {
+      if (pinch && e.touches.length === 2) {
+        e.preventDefault();
+        const a = e.touches[0], b = e.touches[1];
+        zoomTo(pinch.s0 * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pinch.d0, pinch.fx, pinch.fy);
+      } else if (dragging && e.touches.length === 1) {
+        e.preventDefault();
+        tx += e.touches[0].clientX - lastX; ty += e.touches[0].clientY - lastY;
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        clampPan(); apply(false);
+      }
+    }, { passive: false });
+    stage.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) pinch = null;
+      if (e.touches.length === 0) { dragging = false; stage.classList.remove('is-grabbing'); }
+    });
+    function sync(resetZoom) {
+      const c = currentCat(), item = currentItem();
+      headEl.textContent = item.name;
+      cntEl.innerHTML = pad2(state.subIndex + 1) + '<span class="slash">/</span>' + pad2(c.items.length);
+      if (item.img) {
+        capEl.textContent = c.label + ' — ' + item.tag;
+        imgEl.style.display = ''; imgEl.src = item.img;
+      } else {
+        capEl.textContent = item.name + ' — Image pending';
+        imgEl.removeAttribute('src'); imgEl.style.display = 'none';
+      }
+      if (resetZoom !== false) reset(false);
+    }
+    return { sync, reset };
+  })();
+  function fsCloseFn() {
+    fsOverlay.classList.remove('is-open');
+    fsOverlay.setAttribute('aria-hidden', 'true');
+    FsView.reset(false);
+  }
+  document.getElementById('heroFull').addEventListener('click', () => {
+    fsOverlay.classList.add('is-open');
+    fsOverlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => FsView.sync());
+  });
+  document.getElementById('fsClose').addEventListener('click', fsCloseFn);
+  document.getElementById('fsPrev').addEventListener('click', () => setSub(state.subIndex - 1));
+  document.getElementById('fsNext').addEventListener('click', () => setSub(state.subIndex + 1));
+  window.addEventListener('keydown', (e) => {
+    if (fsOverlay.classList.contains('is-open') && e.key === 'Escape') fsCloseFn();
+  });
+
+  // Image-change wrappers: reset hero zoom, keep full-screen viewer in sync
+  const __setSub = setSub;
+  setSub = function (i) {
+    HeroZoom.reset(false);
+    __setSub(i);
+    if (fsOverlay.classList.contains('is-open')) FsView.sync();
+  };
+  const __setCategory = setCategory;
+  setCategory = function (i) {
+    HeroZoom.reset(false);
+    __setCategory(i);
+    if (fsOverlay.classList.contains('is-open')) FsView.sync();
+  };
+</script>
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+</script>
+<!-- PWA-JS-END -->
+
+<script>
+  // ── Preload likely next screens + touch-start prefetch on tap targets ───
+  (function () {
+    function prefetch(url) {
+      if (!url || url.startsWith('http') || document.querySelector('link[rel="prefetch"][href="' + url + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+    function preloadNextScreens(urls) {
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 400); };
+      idle(function () { urls.forEach(prefetch); });
+    }
+    // amenities.html → preload home.html
+    preloadNextScreens(['home.html']);
+
+    document.querySelectorAll('a[href], button[data-href]').forEach(function (el) {
+      var href = el.getAttribute('href') || el.dataset.href;
+      if (!href || href.startsWith('http')) return;
+      el.addEventListener('touchstart', function () { prefetch(href); }, { passive: true, once: true });
+    });
+  })();
+</script>
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+</body>
+</html>

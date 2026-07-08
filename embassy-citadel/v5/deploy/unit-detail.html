@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Residence Detail</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  UNIT DETAIL v3 — Individual residence plan · NO PRICE
+  ──────────────────────────────────────────────────────────────────────
+  Rebuild brief:
+    · HERO  = the selected unit's INDIVIDUAL PLAN (u.file, full unit sheet
+              webp) shown large on a clean paper/white card, object-fit
+              contain, fully ZOOMABLE (wheel / pinch / drag / double-tap +
+              ＋ / − / Fit chips + live %), so the plan can be read in full.
+    · NO PRICE anywhere. A prominent primary "Share Pricesheet" button
+      replaces the old price sheet. On tap → navigator.share() if the
+      browser supports it, else a tasteful toast "Pricesheet ready to share".
+    · FLEXIBLE CHANGE — two selectors, no page leave:
+        TYPE  : N01 / N02 / N03 / S01 / S02 / S03 (whichever exist) →
+                unitByCodeFloor(code, currentFloor) reloads plan + specs.
+        FLOOR : the band-variants for the current code (unitBands(code)),
+                each labelled by floorsLabel → reloads plan + specs.
+      Either change updates hero plan + title + carpet/beds live, resets
+      zoom, and writes ec.unit / ec.floor back to sessionStorage.
+
+  Inbound contract:
+    code  = sessionStorage 'ec.unit'  || hash 'unit'  || 'S01'
+    lvl   = sessionStorage 'ec.floor' || hash 'floor' || 45
+    u     = EC_INV.unitByCodeFloor(code, lvl) || EC_INV.unitBands(code)[0]
+
+  Theme shell kept verbatim: tokens, fonts, #stage-wrap + stage scaler,
+  topbar (brand-back wordmark + ‹ › chips + Back pill), cream veil, PWA head.
+  Back pill → floor-units.html ; brand wordmark → home.html (cream-veil).
+
+  Data source: assets/inventory-data.js → window.EC_INV.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --card-shadow: 0 12px 36px rgba(26, 24, 20, 0.05),
+                   0 4px 10px rgba(26, 24, 20, 0.04);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage ─────────────────────────────────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    isolation: isolate;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    z-index: 1;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+    background: var(--bone);
+  }
+  .stage-bg {
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    z-index: 0; pointer-events: none;
+    background-color: var(--bone);
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 1;
+    opacity: 0.025;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 5px 5px;
+    background-position: 0 0, 1px 1px;
+  }
+
+  /* ── TOP BAR (matches floor-units.html) ────────────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+    margin-left: 8px;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+  button, [role="button"], a[href], .pill {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+  }
+  .brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .brand-wordmark { width: 156px; height: 43.2px; color: var(--onyx-700); }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+  .top-chips { display: flex; align-items: center; gap: 10px; }
+  .tc {
+    width: 44px; height: 44px;
+    min-width: 44px; min-height: 44px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.7);
+    border: 1px solid var(--hair-lo);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--gold-500);
+    cursor: pointer;
+    transition: background 220ms ease, color 220ms ease, transform 220ms ease, border-color 220ms ease;
+    font-family: 'Lato', sans-serif;
+    font-size: 14px; line-height: 1;
+    user-select: none;
+  }
+  .tc:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair); }
+  .tc:active { transform: scale(0.96); }
+
+  /* ── Body grid ─────────────────────────────────────────────────── */
+  .body-grid {
+    position: absolute;
+    left: 36px; right: 36px;
+    top: 92px; bottom: 36px;
+    display: grid;
+    grid-template-columns: 1fr 412px;
+    gap: 24px;
+    z-index: 4;
+  }
+
+  /* ── LEFT card: individual plan (zoomable) ─────────────────────── */
+  .plan-card {
+    position: relative;
+    background: #FFFFFF;
+    border: 1px solid var(--hair);
+    border-radius: 18px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .plan-eyebrow {
+    position: absolute;
+    top: 22px; left: 28px;
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+    z-index: 6;
+    pointer-events: none;
+  }
+  .plan-eyebrow::before {
+    content: ''; width: 18px; height: 1px;
+    background: var(--gold-500); opacity: 0.7;
+  }
+  .plan-compass {
+    position: absolute;
+    top: 48px; left: 28px;
+    width: 50px; height: 50px;
+    z-index: 6;
+    pointer-events: none;
+    opacity: 0.92;
+  }
+  .plan-compass svg { width: 100%; height: 100%; display: block; }
+
+  /* Zoom control stack */
+  .bp-zoom-stack {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+  }
+  .bp-zoom-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.92);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 180ms, transform 180ms, border-color 180ms;
+    -webkit-appearance: none; appearance: none;
+    padding: 0;
+  }
+  .bp-zoom-btn:hover { background: var(--paper); transform: scale(1.05); border-color: var(--hair-hi); }
+  .bp-zoom-btn:active { transform: scale(0.95); }
+  .bp-zoom-btn svg { display: block; }
+  .bp-zoom-pct {
+    width: 44px;
+    height: 28px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.92);
+    border: 1px solid var(--hair-lo);
+    color: var(--gold-600);
+    display: grid; place-items: center;
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 9.5px;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  /* Zoom viewport + stage */
+  .bp-zoom-viewport {
+    position: absolute;
+    inset: 16px;
+    overflow: hidden;
+    border-radius: 12px;
+    touch-action: none;
+    cursor: grab;
+  }
+  .bp-zoom-viewport:active { cursor: grabbing; }
+  .bp-zoom-stage {
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+    transition: transform 220ms cubic-bezier(.2,.7,.2,1);
+    /* will-change only while dragging — keeps the zoomed HD plan crisp at rest. */
+    display: grid;
+    place-items: center;
+  }
+  .bp-zoom-stage.is-dragging { transition: none; will-change: transform; }
+  .plan-img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto; height: auto;
+    object-fit: contain;
+    display: block;
+    transition: opacity 260ms ease;
+  }
+  .plan-img.is-swapping { opacity: 0; }
+
+  /* ── RIGHT card: specs + selectors + share ─────────────────────── */
+  .specs-card {
+    position: relative;
+    background: rgba(252, 250, 244, 0.82);
+    border: 1px solid var(--hair);
+    border-radius: 18px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: var(--card-shadow);
+    padding: 30px 30px 26px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .spec-eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 10px;
+  }
+  .spec-eyebrow::before {
+    content: ''; width: 18px; height: 1px;
+    background: var(--gold-500); opacity: 0.7;
+  }
+  .spec-hero {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    
+    font-weight: 500;
+    font-size: 46px;
+    line-height: 1.04;
+    color: var(--onyx-700);
+    margin: 2px 0 8px;
+    letter-spacing: 0.01em;
+  }
+  .spec-sub {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  .spec-sub .dot { color: var(--gold-500); margin: 0 6px; opacity: 0.8; }
+
+  /* 3-col specs row */
+  .specs-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    margin: 0 0 20px;
+    padding: 16px 0 18px;
+    border-top: 1px solid var(--hair-lo);
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .spec-col {
+    display: flex; flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    padding: 0 6px;
+    border-left: 1px solid var(--hair-lo);
+  }
+  .spec-col:first-child { border-left: none; }
+  .spec-col .ic {
+    width: 24px; height: 24px;
+    color: var(--gold-500);
+    margin-bottom: 1px;
+  }
+  .spec-col .ic svg { width: 100%; height: 100%; display: block; }
+  .spec-col .num {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--onyx-700);
+  }
+  .spec-col .num.sm {
+    font-size: 23px;
+    letter-spacing: 0.01em;
+  }
+  .spec-col .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    line-height: 1.3;
+  }
+
+  /* ── Selectors (TYPE + FLOOR) ──────────────────────────────────── */
+  .selector { margin-bottom: 18px; }
+  .selector-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .selector-head .sh-lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 9.5px;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .selector-head .sh-cur {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+
+  /* TYPE — segmented chips */
+  .type-chips {
+    display: flex; flex-wrap: wrap; gap: 7px;
+  }
+  .type-chip {
+    flex: 1 1 auto;
+    min-width: 52px;
+    min-height: 40px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: rgba(252, 250, 244, 0.6);
+    border: 1px solid var(--hair-lo);
+    color: var(--onyx-300);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 200ms ease, color 200ms ease,
+                border-color 200ms ease, transform 180ms ease;
+    -webkit-appearance: none; appearance: none;
+  }
+  .type-chip:hover { border-color: var(--hair); color: var(--onyx-700); background: var(--paper); }
+  .type-chip:active { transform: scale(0.96); }
+  .type-chip.is-active {
+    background: var(--gold-500);
+    color: var(--paper);
+    border-color: var(--gold-500);
+    box-shadow: 0 4px 12px rgba(148,111,56,0.22);
+  }
+
+  /* FLOOR — native-feel select dressed as pill */
+  .floor-select-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .floor-select {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 42px 0 16px;
+    border-radius: 12px;
+    background: rgba(252, 250, 244, 0.7);
+    border: 1px solid var(--hair-lo);
+    color: var(--onyx-700);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    transition: border-color 200ms ease, background 200ms ease;
+  }
+  .floor-select:hover { border-color: var(--hair); background: var(--paper); }
+  .floor-select:focus-visible { outline: none; border-color: var(--hair-hi); box-shadow: 0 0 0 2px rgba(148,111,56,0.18); }
+  .floor-select-wrap::after {
+    content: '';
+    position: absolute;
+    right: 16px; top: 50%;
+    width: 8px; height: 8px;
+    margin-top: -5px;
+    border-right: 1.4px solid var(--gold-500);
+    border-bottom: 1.4px solid var(--gold-500);
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+
+  /* ── Share Pricesheet — primary button ─────────────────────────── */
+  .share-btn {
+    margin-top: auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 12px;
+    width: 100%;
+    height: 56px;
+    border-radius: 14px;
+    background: var(--onyx-700);
+    border: 1px solid var(--onyx-700);
+    color: var(--gold-100);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.34em; text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: transform 200ms ease, box-shadow 240ms ease, background 240ms ease;
+    -webkit-appearance: none; appearance: none;
+    box-shadow: 0 8px 22px rgba(26,24,20,0.18);
+  }
+  .share-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(230,196,156,0.16) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 620ms cubic-bezier(.22,.7,.2,1);
+    pointer-events: none;
+  }
+  .share-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 30px rgba(26,24,20,0.24); }
+  .share-btn:hover::before { transform: translateX(120%); }
+  .share-btn:active { transform: translateY(0) scale(0.985); }
+  .share-btn .sb-ic { width: 17px; height: 17px; color: var(--gold-200); flex-shrink: 0; }
+  .share-btn .sb-ic svg { width: 100%; height: 100%; display: block; }
+  .share-foot {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    text-align: center;
+    margin-top: 12px;
+  }
+  .share-foot .sep { color: var(--gold-500); }
+
+  /* ── Toast ─────────────────────────────────────────────────────── */
+  .toast {
+    position: absolute;
+    left: 50%; bottom: 54px;
+    transform: translate(-50%, 18px);
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 13px 22px;
+    border-radius: 999px;
+    background: var(--onyx-700);
+    color: var(--gold-100);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.16em;
+    box-shadow: 0 14px 36px rgba(26,24,20,0.28);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 60;
+    transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.7,.2,1);
+    white-space: nowrap;
+  }
+  .toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+  .toast .tk { width: 15px; height: 15px; color: var(--gold-200); }
+  .toast .tk svg { width: 100%; height: 100%; display: block; }
+
+  /* ── Submitted modal ───────────────────────────────────────────── */
+  .ec-modal {
+    position: absolute; inset: 0;
+    z-index: 80;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 280ms ease;
+  }
+  .ec-modal.is-on { opacity: 1; pointer-events: auto; }
+  .ec-modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(26, 24, 20, 0.42);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+  .ec-modal-card {
+    position: relative;
+    width: 100%; max-width: 460px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 20px;
+    box-shadow: 0 30px 80px rgba(26,24,20,0.26),
+                0 10px 26px rgba(26,24,20,0.12);
+    padding: 44px 44px 36px;
+    text-align: center;
+    transform: translateY(14px) scale(0.985);
+    transition: transform 360ms cubic-bezier(.2,.7,.2,1);
+  }
+  .ec-modal.is-on .ec-modal-card { transform: translateY(0) scale(1); }
+
+  .ec-modal-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 38px; height: 38px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--taupe-400);
+    cursor: pointer;
+    display: grid; place-items: center;
+    transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+    -webkit-appearance: none; appearance: none; padding: 0;
+  }
+  .ec-modal-close:hover { background: var(--bone); color: var(--onyx-700); border-color: var(--hair-lo); }
+  .ec-modal-close:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-modal-close svg { width: 15px; height: 15px; display: block; }
+
+  /* success mark */
+  .ec-modal-mark {
+    width: 64px; height: 64px;
+    margin: 4px auto 22px;
+    border-radius: 999px;
+    display: grid; place-items: center;
+    background:
+      radial-gradient(circle at 50% 38%, rgba(148,111,56,0.10), rgba(148,111,56,0) 70%);
+  }
+  .ec-modal-mark svg { width: 56px; height: 56px; display: block; }
+  .ec-modal-mark .ring { stroke: var(--gold-400); }
+  .ec-modal-mark .tick { stroke: var(--gold-500); }
+  /* draw-on animation when modal opens */
+  .ec-modal-mark .ring {
+    stroke-dasharray: 150; stroke-dashoffset: 150;
+    transition: stroke-dashoffset 560ms cubic-bezier(.4,0,.2,1) 90ms;
+  }
+  .ec-modal-mark .tick {
+    stroke-dasharray: 36; stroke-dashoffset: 36;
+    transition: stroke-dashoffset 380ms cubic-bezier(.4,0,.2,1) 440ms;
+  }
+  .ec-modal.is-on .ec-modal-mark .ring { stroke-dashoffset: 0; }
+  .ec-modal.is-on .ec-modal-mark .tick { stroke-dashoffset: 0; }
+
+  .ec-modal-title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    
+    font-weight: 500;
+    font-size: 40px;
+    line-height: 1.02;
+    color: var(--onyx-700);
+    margin: 0 0 10px;
+    letter-spacing: 0.01em;
+  }
+  .ec-modal-lead {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 13px;
+    line-height: 1.6;
+    color: var(--onyx-100);
+    margin: 0 auto 24px;
+    max-width: 320px;
+  }
+
+  /* details summary block */
+  .ec-modal-details {
+    text-align: left;
+    border-top: 1px solid var(--hair-lo);
+    border-bottom: 1px solid var(--hair-lo);
+    padding: 6px 0 4px;
+    margin: 0 0 22px;
+  }
+  .ec-modal-details dt, .ec-modal-details dd { margin: 0; }
+  .ec-modal-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px;
+    padding: 10px 4px;
+    border-top: 1px solid var(--hair-lo);
+  }
+  .ec-modal-row:first-child { border-top: none; }
+  .ec-modal-row .k {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--taupe-400);
+    white-space: nowrap;
+  }
+  .ec-modal-row .v {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 12.5px;
+    letter-spacing: 0.01em;
+    color: var(--onyx-700);
+    text-align: right;
+  }
+
+  .ec-modal-note {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--taupe-400);
+    line-height: 1.7;
+    margin: 0 auto 22px;
+    max-width: 320px;
+  }
+  .ec-modal-done {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 168px; height: 50px;
+    padding: 0 30px;
+    border-radius: 12px;
+    background: var(--onyx-700);
+    border: 1px solid var(--onyx-700);
+    color: var(--gold-100);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 200ms ease, box-shadow 240ms ease;
+    -webkit-appearance: none; appearance: none;
+    box-shadow: 0 8px 22px rgba(26,24,20,0.16);
+  }
+  .ec-modal-done:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(26,24,20,0.22); }
+  .ec-modal-done:active { transform: translateY(0) scale(0.985); }
+  .ec-modal-done:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500), 0 8px 22px rgba(26,24,20,0.16); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ec-modal, .ec-modal-card,
+    .ec-modal-mark .ring, .ec-modal-mark .tick { transition: opacity 120ms linear; }
+    .ec-modal-card { transform: none; }
+    .ec-modal-mark .ring, .ec-modal-mark .tick { stroke-dashoffset: 0; }
+  }
+
+  /* ── Cream-veil ─────────────────────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+</style>
+
+<script src="assets/inventory-data.js"></script>
+<script>
+  // ── Stage scaler — scale-to-fit (contain). Fixes iPad13 side overflow.
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel wordmark symbol (shared with home / floor-units) -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+
+    <div class="stage-bg" aria-hidden="true"></div>
+    <div class="stage-grain" aria-hidden="true"></div>
+
+    <!-- ── TOP BAR ───────────────────────────────────────────── -->
+    <header class="topbar">
+      <a class="brand-back" href="home.html" id="brandBack" aria-label="Embassy Citadel — Home">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <div class="top-chips">
+        <button class="tc" id="prevBtn" type="button" aria-label="Previous residence type">‹</button>
+        <button class="tc" id="nextBtn" type="button" aria-label="Next residence type">›</button>
+        <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to floor units">
+          <span class="arr" aria-hidden="true">←</span>
+          <span>Back</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── TWO-COLUMN BODY ───────────────────────────────────── -->
+    <div class="body-grid">
+
+      <!-- LEFT: individual plan card (zoomable) -->
+      <section class="plan-card" aria-label="Residence plan">
+        <div class="plan-eyebrow">Residence Plan</div>
+
+        <div class="plan-compass" aria-hidden="true">
+          <svg viewBox="0 0 52 52" fill="none">
+            <circle cx="26" cy="26" r="23" stroke="#946F38" stroke-width="1.1" fill="rgba(252,250,244,0.5)" />
+            <circle cx="26" cy="26" r="17" stroke="#946F38" stroke-width="0.6" opacity="0.4" fill="none" />
+            <line x1="26" y1="6" x2="26" y2="14" stroke="#946F38" stroke-width="1.2" />
+            <line x1="26" y1="38" x2="26" y2="46" stroke="#946F38" stroke-width="0.8" opacity="0.7" />
+            <line x1="6"  y1="26" x2="14" y2="26" stroke="#946F38" stroke-width="0.8" opacity="0.7" />
+            <line x1="38" y1="26" x2="46" y2="26" stroke="#946F38" stroke-width="0.8" opacity="0.7" />
+            <polygon points="26,4 23,11 26,9 29,11" fill="#946F38" />
+            <text x="26" y="22" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="6.5" font-weight="700"
+                  letter-spacing="0.6" fill="#946F38">N</text>
+            <text x="26" y="44" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="5" font-weight="500"
+                  letter-spacing="0.4" fill="#A89B86">S</text>
+            <text x="9" y="28" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="5" font-weight="500"
+                  letter-spacing="0.4" fill="#A89B86">W</text>
+            <text x="43" y="28" text-anchor="middle"
+                  font-family="Inter, sans-serif" font-size="5" font-weight="500"
+                  letter-spacing="0.4" fill="#A89B86">E</text>
+          </svg>
+        </div>
+
+        <div class="bp-zoom-stack">
+          <button class="bp-zoom-btn" type="button" data-zoom="in" aria-label="Zoom in">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+          </button>
+          <button class="bp-zoom-btn" type="button" data-zoom="out" aria-label="Zoom out">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
+          </button>
+          <button class="bp-zoom-btn" type="button" data-zoom="fit" aria-label="Fit to view">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 5V2h3M9 2h3v3M12 9v3H9M5 12H2V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" /></svg>
+          </button>
+          <div class="bp-zoom-pct" id="zoomPct" aria-live="polite">100%</div>
+        </div>
+
+        <!-- The individual unit plan image -->
+        <div class="bp-zoom-viewport" id="planViewport">
+          <div class="bp-zoom-stage" id="planStage">
+            <img class="plan-img" id="planImg" alt="" decoding="async" draggable="false" />
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: specs + selectors + share -->
+      <aside class="specs-card" aria-label="Residence details">
+
+        <div class="spec-eyebrow">Residence</div>
+        <h1 class="spec-hero" id="unitHero">South · Unit S01</h1>
+        <div class="spec-sub" id="unitSub">
+          Floors 43–47
+        </div>
+
+        <!-- 3-col specs (NO price) -->
+        <div class="specs-row">
+          <div class="spec-col">
+            <div class="ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4" />
+                <path d="M3 16h18v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2z" />
+                <path d="M3 16v3" /><path d="M21 16v3" />
+              </svg>
+            </div>
+            <div class="num" id="bedsVal">4</div>
+            <div class="lbl">Bedrooms</div>
+          </div>
+          <div class="spec-col">
+            <div class="ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 13h18" />
+                <path d="M5 13V6a2 2 0 0 1 2-2h2v3" />
+                <path d="M5 13v3a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-3" />
+                <path d="M7 20l-1 2" /><path d="M17 20l1 2" />
+              </svg>
+            </div>
+            <div class="num" id="bathsVal">4</div>
+            <div class="lbl">Bathrooms</div>
+          </div>
+          <div class="spec-col">
+            <div class="ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="4" width="16" height="16" rx="1.5" />
+                <path d="M4 9h16M9 4v16" />
+              </svg>
+            </div>
+            <div class="num sm" id="carpetVal">3,246</div>
+            <div class="lbl">Sq.Ft.<br/>Carpet</div>
+          </div>
+        </div>
+
+        <!-- TYPE selector -->
+        <div class="selector">
+          <div class="selector-head">
+            <span class="sh-lbl">Residence Type</span>
+            <span class="sh-cur" id="typeCur">South</span>
+          </div>
+          <div class="type-chips" id="typeChips"><!-- populated by JS --></div>
+        </div>
+
+        <!-- FLOOR selector -->
+        <div class="selector">
+          <div class="selector-head">
+            <span class="sh-lbl">Floor Band</span>
+            <span class="sh-cur" id="floorCur">Floor 45</span>
+          </div>
+          <div class="floor-select-wrap">
+            <select class="floor-select" id="floorSelect" aria-label="Floor band"><!-- populated by JS --></select>
+          </div>
+        </div>
+
+        <!-- Share Pricesheet — primary action (NO price shown) -->
+        <button class="share-btn" id="shareBtn" type="button" aria-label="Share pricesheet">
+          <span class="sb-ic" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5" />
+              <path d="M12 15V3" />
+              <path d="M8 7l4-4 4 4" />
+            </svg>
+          </span>
+          <span>Share Pricesheet</span>
+        </button>
+        <div class="share-foot">
+          Indicative pricing <span class="sep">·</span> RERA PR1170002501931
+        </div>
+      </aside>
+
+    </div>
+
+    <!-- Toast (share confirmation) -->
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span class="tk" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12l4 4L19 7" />
+        </svg>
+      </span>
+      <span id="toastMsg">Pricesheet ready to share</span>
+    </div>
+
+    <!-- Submitted modal (pricesheet request confirmation) -->
+    <div class="ec-modal" id="shareModal" role="dialog" aria-modal="true"
+         aria-labelledby="shareModalTitle" aria-describedby="shareModalLead" hidden>
+      <div class="ec-modal-backdrop" id="shareModalBackdrop"></div>
+      <div class="ec-modal-card" role="document">
+
+        <button class="ec-modal-close" id="shareModalClose" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+
+        <div class="ec-modal-mark" aria-hidden="true">
+          <svg viewBox="0 0 56 56" fill="none">
+            <circle class="ring" cx="28" cy="28" r="23.5" stroke-width="1.4" />
+            <path class="tick" d="M19 28.5l6 6 12-13" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+
+        <h2 class="ec-modal-title" id="shareModalTitle">Submitted</h2>
+        <p class="ec-modal-lead" id="shareModalLead">
+          Your pricesheet request has been submitted.
+        </p>
+
+        <dl class="ec-modal-details" id="shareModalDetails" aria-label="Request summary">
+          <div class="ec-modal-row">
+            <dt class="k">Residence</dt>
+            <dd class="v" id="smResidence">South · Unit S01</dd>
+          </div>
+          <div class="ec-modal-row">
+            <dt class="k">Floor Band</dt>
+            <dd class="v" id="smFloor">Floors 43–47</dd>
+          </div>
+          <div class="ec-modal-row">
+            <dt class="k">Bedrooms</dt>
+            <dd class="v" id="smBeds">4</dd>
+          </div>
+          <div class="ec-modal-row">
+            <dt class="k">Carpet Area</dt>
+            <dd class="v" id="smCarpet">3,246 Sq.Ft.</dd>
+          </div>
+        </dl>
+
+        <p class="ec-modal-note">
+          Our team will share the detailed pricesheet shortly.
+        </p>
+
+        <button class="ec-modal-done" id="shareModalDone" type="button">Done</button>
+
+      </div>
+    </div>
+
+    <div class="veil" id="veil" aria-hidden="true"></div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var INV = window.EC_INV;
+  var TYPE_ORDER = ['N01','N02','N03','S01','S02','S03'];
+  var ALL_CODES = ['N01','N02','N03','S01','S02','S03','MN','MS'];
+  function isMansion(c) { return c === 'MN' || c === 'MS'; }
+  function orderFor(c) { return isMansion(c) ? ['MN','MS'] : TYPE_ORDER; }
+
+  // ── Inbound: hash for back-compat with existing links, else session ──
+  var hash = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+  function read(key, sk) {
+    var h = hash.get(key);
+    if (h) return h;
+    try { return sessionStorage.getItem(sk); } catch (e) { return null; }
+  }
+  var code = (read('unit', 'ec.unit') || 'S01').toUpperCase();
+  var lvl  = parseInt(read('floor', 'ec.floor') || '45', 10);
+  if (!isFinite(lvl)) lvl = 45;
+  if (ALL_CODES.indexOf(code) < 0) code = 'S01';
+  if (isMansion(code) && [79,80,81].indexOf(lvl) < 0) lvl = 79;
+
+  function persist() {
+    try {
+      sessionStorage.setItem('ec.unit', code);
+      sessionStorage.setItem('ec.floor', String(lvl));
+    } catch (e) {}
+  }
+
+  // ── DOM refs ──────────────────────────────────────────────────────
+  var el = function (id) { return document.getElementById(id); };
+  var planImg   = el('planImg');
+  var heroEl    = el('unitHero');
+  var subEl     = el('unitSub');
+  var bedsEl    = el('bedsVal');
+  var bathsEl   = el('bathsVal');
+  var carpetEl  = el('carpetVal');
+  var typeChips = el('typeChips');
+  var typeCur   = el('typeCur');
+  var floorSel  = el('floorSelect');
+  var floorCur  = el('floorCur');
+
+  function facingOf(c) {
+    if (c === 'MN') return 'North Tower';
+    if (c === 'MS') return 'South Tower';
+    return c.charAt(0) === 'N' ? 'North' : 'South';
+  }
+
+  // ── Resolve the active unit plan ──────────────────────────────────
+  function resolveUnit() {
+    return INV.unitByCodeFloor(code, lvl) || INV.unitBands(code)[0] || null;
+  }
+
+  // ── Render specs + title + plan image for unit `u` ────────────────
+  function renderUnit(u, isInitial) {
+    if (!u) return;
+    heroEl.textContent = isMansion(u.code) ? (facingOf(u.code) + ' \u00b7 Mansion') : (facingOf(u.code) + ' \u00b7 Unit ' + u.code);
+    subEl.textContent  = u.floorsLabel;
+    bedsEl.textContent  = u.beds;
+    bathsEl.textContent = u.beds;            // bathrooms mirror bedrooms per brief
+    carpetEl.textContent = u.carpet;
+    typeCur.textContent = facingOf(u.code);
+
+    // swap plan with a soft cross-fade
+    if (isInitial) {
+      planImg.src = u.file;
+      planImg.alt = (isMansion(u.code) ? (facingOf(u.code) + ' Mansion, ') : ('Unit ' + u.code + ', ')) + u.floorsLabel + ' plan';
+    } else {
+      planImg.classList.add('is-swapping');
+      var next = new Image();
+      next.onload = function () {
+        planImg.src = u.file;
+        planImg.alt = facingOf(u.code) + ' Unit ' + u.code + ', ' + u.floorsLabel + ' plan';
+        requestAnimationFrame(function () { planImg.classList.remove('is-swapping'); });
+      };
+      next.onerror = function () { planImg.classList.remove('is-swapping'); };
+      next.src = u.file;
+    }
+    resetZoom();
+  }
+
+  // ── TYPE chips: only the types that actually exist in inventory ───
+  function buildTypeChips() {
+    typeChips.innerHTML = '';
+    var available = orderFor(code).filter(function (c) { return INV.unitBands(c).length > 0; });
+    available.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'type-chip' + (c === code ? ' is-active' : '');
+      b.textContent = isMansion(c) ? (c === 'MN' ? 'North' : 'South') : c;
+      b.setAttribute('data-code', c);
+      if (c === code) b.setAttribute('aria-current', 'true');
+      b.addEventListener('click', function () { selectType(c); });
+      typeChips.appendChild(b);
+    });
+  }
+  function refreshTypeChips() {
+    Array.prototype.forEach.call(typeChips.children, function (b) {
+      var on = b.getAttribute('data-code') === code;
+      b.classList.toggle('is-active', on);
+      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
+  }
+
+  // ── FLOOR select: the band-variants for the current code ─────────
+  function buildFloorSelect() {
+    floorSel.innerHTML = '';
+    var bands = INV.unitBands(code);
+    var current = resolveUnit();
+    bands.forEach(function (u) {
+      var o = document.createElement('option');
+      o.value = u.band;
+      o.textContent = u.floorsLabel;
+      if (current && u.band === current.band) o.selected = true;
+      floorSel.appendChild(o);
+    });
+    if (current) floorCur.textContent = current.floorsLabel || ('Floor ' + lvl);
+  }
+
+  // ── Selection handlers ────────────────────────────────────────────
+  function selectType(c) {
+    if (c === code) return;
+    code = c;
+    // keep current floor if that type serves it; resolveUnit falls back.
+    var u = resolveUnit();
+    // align lvl to a floor the new type actually has, for a stable floor select
+    if (u && u.floors.indexOf(lvl) < 0) lvl = u.floors[0];
+    persist();
+    refreshTypeChips();
+    buildFloorSelect();
+    renderUnit(u, false);
+  }
+
+  function selectBand(band) {
+    var bands = INV.unitBands(code);
+    var u = bands.filter(function (x) { return x.band === band; })[0];
+    if (!u) return;
+    lvl = u.floors[0];                 // anchor floor to the chosen band
+    persist();
+    floorCur.textContent = u.floorsLabel || ('Floor ' + lvl);
+    renderUnit(u, false);
+  }
+  floorSel.addEventListener('change', function () { selectBand(floorSel.value); });
+
+  // ── Top chips: cycle through available residence types ───────────
+  function cycleType(delta) {
+    var available = TYPE_ORDER.filter(function (c) { return INV.unitBands(c).length > 0; });
+    var i = available.indexOf(code);
+    if (i < 0) i = 0;
+    var ni = (i + delta + available.length) % available.length;
+    selectType(available[ni]);
+  }
+  el('prevBtn').addEventListener('click', function () { cycleType(-1); });
+  el('nextBtn').addEventListener('click', function () { cycleType(1); });
+
+  // ── Share Pricesheet — tasteful "Submitted" confirmation modal ────
+  var modal       = el('shareModal');
+  var modalCard   = modal.querySelector('.ec-modal-card');
+  var shareBtn    = el('shareBtn');
+  var modalDone   = el('shareModalDone');
+  var modalClose  = el('shareModalClose');
+  var modalBkdrop = el('shareModalBackdrop');
+  var smResidence = el('smResidence');
+  var smFloor     = el('smFloor');
+  var smBeds      = el('smBeds');
+  var smCarpet    = el('smCarpet');
+  var lastFocused = null;
+
+  function fillModalDetails() {
+    var u = resolveUnit();
+    if (!u) return;
+    smResidence.textContent = facingOf(u.code) + ' · Unit ' + u.code;
+    smFloor.textContent     = u.floorsLabel;
+    smBeds.textContent      = u.beds;
+    smCarpet.textContent    = u.carpet + ' Sq.Ft.';
+  }
+
+  function openModal() {
+    try { if (window.RDA) RDA.track('share_pricesheet', code, 1, {}); } catch (_) {}
+    fillModalDetails();
+    lastFocused = document.activeElement;
+    modal.hidden = false;
+    // next frame so the transition runs from hidden→on
+    requestAnimationFrame(function () {
+      modal.classList.add('is-on');
+      modalDone.focus();
+    });
+    document.addEventListener('keydown', onModalKey, true);
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-on');
+    document.removeEventListener('keydown', onModalKey, true);
+    var done = function () {
+      modal.hidden = true;
+      modal.removeEventListener('transitionend', done);
+    };
+    modal.addEventListener('transitionend', done);
+    // fallback in case transitionend doesn't fire
+    setTimeout(function () { if (!modal.classList.contains('is-on')) modal.hidden = true; }, 420);
+    if (lastFocused && lastFocused.focus) lastFocused.focus();
+  }
+
+  function onModalKey(e) {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+      e.preventDefault();
+      closeModal();
+      return;
+    }
+    // simple focus containment between the close ✕ and Done button
+    if (e.key === 'Tab' || e.keyCode === 9) {
+      var first = modalClose, last = modalDone;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  }
+
+  shareBtn.addEventListener('click', openModal);
+  modalDone.addEventListener('click', closeModal);
+  modalClose.addEventListener('click', closeModal);
+  modalBkdrop.addEventListener('click', closeModal);
+  // guard: clicks inside the card must not bubble to the backdrop close
+  modalCard.addEventListener('click', function (e) { e.stopPropagation(); });
+
+  // ── Cream-veil navigations ────────────────────────────────────────
+  function leaveTo(href) {
+    document.body.classList.add('is-leaving');
+    setTimeout(function () { window.location.href = href; }, 220);
+  }
+  el('brandBack').addEventListener('click', function (e) { e.preventDefault(); leaveTo('home.html'); });
+  el('ecBackBtn').addEventListener('click', function (e) { e.preventDefault(); leaveTo('floor-units.html'); });
+
+  // ── Zoom + pan + pinch (operates on the plan image stage) ─────────
+  var zoom = (function () {
+    var stage = el('planStage');
+    var viewport = el('planViewport');
+    var pct = el('zoomPct');
+    var scale = 1, tx = 0, ty = 0;
+    var MIN = 1, MAX = 5;
+
+    function apply() {
+      stage.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+      pct.textContent = Math.round(scale * 100) + '%';
+    }
+    function setScale(s, ox, oy) {
+      var ns = Math.max(MIN, Math.min(MAX, s));
+      if (ns === scale) return;
+      if (ox !== undefined && oy !== undefined) {
+        var r = viewport.getBoundingClientRect();
+        var cx = ox - r.left - r.width / 2;
+        var cy = oy - r.top - r.height / 2;
+        tx = cx - (cx - tx) * (ns / scale);
+        ty = cy - (cy - ty) * (ns / scale);
+      }
+      scale = ns;
+      if (scale <= 1) { tx = 0; ty = 0; }
+      apply();
+    }
+    function reset() { scale = 1; tx = 0; ty = 0; apply(); }
+
+    document.querySelectorAll('[data-zoom="in"]').forEach(function (b) {
+      b.addEventListener('click', function () { setScale(scale + 0.4); });
+    });
+    document.querySelectorAll('[data-zoom="out"]').forEach(function (b) {
+      b.addEventListener('click', function () { setScale(scale - 0.4); });
+    });
+    document.querySelectorAll('[data-zoom="fit"]').forEach(function (b) {
+      b.addEventListener('click', reset);
+    });
+
+    viewport.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      setScale(scale + (e.deltaY > 0 ? -0.18 : 0.18), e.clientX, e.clientY);
+    }, { passive: false });
+
+    viewport.addEventListener('dblclick', function (e) {
+      if (scale > 1) reset(); else setScale(2.4, e.clientX, e.clientY);
+    });
+
+    // double-tap (touch)
+    var lastTap = 0;
+    viewport.addEventListener('touchend', function (e) {
+      var now = Date.now();
+      if (now - lastTap < 300 && e.changedTouches.length === 1) {
+        var t = e.changedTouches[0];
+        if (scale > 1) reset(); else setScale(2.4, t.clientX, t.clientY);
+      }
+      lastTap = now;
+    }, { passive: true });
+
+    // drag pan
+    var dragging = false, sx = 0, sy = 0, stx = 0, sty = 0;
+    viewport.addEventListener('pointerdown', function (e) {
+      if (scale <= 1) return;
+      dragging = true; sx = e.clientX; sy = e.clientY; stx = tx; sty = ty;
+      stage.classList.add('is-dragging');
+      try { viewport.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    viewport.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      tx = stx + (e.clientX - sx); ty = sty + (e.clientY - sy); apply();
+    });
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false; stage.classList.remove('is-dragging');
+      try { viewport.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+    viewport.addEventListener('pointerup', endDrag);
+    viewport.addEventListener('pointercancel', endDrag);
+
+    // pinch
+    var pinchDist = 0, pinchScale = 1;
+    viewport.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 2) {
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinchDist = Math.hypot(dx, dy); pinchScale = scale;
+      }
+    }, { passive: true });
+    viewport.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        var dist = Math.hypot(dx, dy);
+        if (!pinchDist) return;
+        var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        setScale(pinchScale * (dist / pinchDist), cx, cy);
+      }
+    }, { passive: false });
+
+    return { reset: reset, apply: apply };
+  })();
+  function resetZoom() { zoom.reset(); }
+
+  // ── Boot ──────────────────────────────────────────────────────────
+  if (!INV) { return; }
+  persist();
+  buildTypeChips();
+  buildFloorSelect();
+  renderUnit(resolveUnit(), true);
+})();
+</script>
+
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+
+  // ── Prefetch next-screen on touchstart for faster transitions ───
+  (function() {
+    function wirePrefetch() {
+      document.querySelectorAll('a[href], button[data-href]').forEach(function(el) {
+        var href = el.getAttribute('href') || el.dataset.href;
+        if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:')) return;
+        el.addEventListener('touchstart', function() {
+          if (!document.querySelector('link[rel="prefetch"][href="' + href + '"]')) {
+            var link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = href;
+            document.head.appendChild(link);
+          }
+        }, { passive: true, once: true });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wirePrefetch);
+    } else {
+      wirePrefetch();
+    }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(function() {
+        if (location.pathname.indexOf('home.html') !== -1) return;
+        if (document.querySelector('link[rel="prefetch"][href="home.html"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'home.html';
+        document.head.appendChild(link);
+      });
+    }
+  })();
+</script>
+<!-- PWA-JS-END -->
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Clear the leaving veil whenever the page is shown (incl. bfcache
+     restore) or on popstate, so a restored screen is never left blank. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+</body>
+</html>

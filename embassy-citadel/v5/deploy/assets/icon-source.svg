@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Embassy Citadel app icon: paper-cream background, gold diamond mark + wordmark -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#FCFAF4"/>
+      <stop offset="65%" stop-color="#F4F2ED"/>
+      <stop offset="100%" stop-color="#E8E2D6"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E8CFA1"/>
+      <stop offset="50%" stop-color="#C9A567"/>
+      <stop offset="100%" stop-color="#946F38"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Paper cream background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- Outer thin gold frame -->
+  <rect x="44" y="44" width="424" height="424" rx="64" fill="none" stroke="#946F38" stroke-opacity="0.32" stroke-width="1.5"/>
+  <rect x="56" y="56" width="400" height="400" rx="56" fill="none" stroke="#946F38" stroke-opacity="0.18" stroke-width="1"/>
+
+  <!-- Diamond mark (gold lozenge with inner hairline) -->
+  <g transform="translate(256 196)">
+    <polygon points="0,-92 80,0 0,92 -80,0" fill="url(#gold)" stroke="#6E5A37" stroke-width="1.5" stroke-linejoin="miter"/>
+    <polygon points="0,-68 58,0 0,68 -58,0" fill="none" stroke="#FCFAF4" stroke-opacity="0.65" stroke-width="1.2"/>
+    <!-- Center jewel point -->
+    <circle cx="0" cy="0" r="4" fill="#FCFAF4" opacity="0.9"/>
+  </g>
+
+  <!-- Hairline divider -->
+  <line x1="156" y1="316" x2="356" y2="316" stroke="#946F38" stroke-opacity="0.45" stroke-width="1"/>
+
+  <!-- Wordmark text: EMBASSY CITADEL in serif caps -->
+  <text x="256" y="362"
+        font-family="'Cormorant Garamond', 'Cormorant', Georgia, serif"
+        font-weight="500"
+        font-size="34"
+        letter-spacing="6"
+        text-anchor="middle"
+        fill="#1A1814">EMBASSY</text>
+  <text x="256" y="402"
+        font-family="'Cormorant Garamond', 'Cormorant', Georgia, serif"
+        font-weight="500"
+        font-style="italic"
+        font-size="34"
+        letter-spacing="6"
+        text-anchor="middle"
+        fill="#946F38">Citadel</text>
+
+  <!-- Bottom tagline -->
+  <text x="256" y="436"
+        font-family="'Inter', -apple-system, system-ui, sans-serif"
+        font-weight="500"
+        font-size="10"
+        letter-spacing="4"
+        text-anchor="middle"
+        fill="#946F38"
+        opacity="0.8">WORLI · MUMBAI</text>
+</svg>

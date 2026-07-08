@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Maskable version: full-bleed paper background, mark centered with extra padding (safe zone = inner 80%) -->
+  <defs>
+    <radialGradient id="bgm" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#FCFAF4"/>
+      <stop offset="60%" stop-color="#F4F2ED"/>
+      <stop offset="100%" stop-color="#E8E2D6"/>
+    </radialGradient>
+    <linearGradient id="goldm" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E8CFA1"/>
+      <stop offset="50%" stop-color="#C9A567"/>
+      <stop offset="100%" stop-color="#946F38"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background -->
+  <rect width="512" height="512" fill="url(#bgm)"/>
+
+  <!-- Mark sits inside the safe inner 80% (so launcher crops/masks safely) -->
+  <g transform="translate(256 232)">
+    <polygon points="0,-72 62,0 0,72 -62,0" fill="url(#goldm)" stroke="#6E5A37" stroke-width="1.5" stroke-linejoin="miter"/>
+    <polygon points="0,-52 44,0 0,52 -44,0" fill="none" stroke="#FCFAF4" stroke-opacity="0.65" stroke-width="1.2"/>
+    <circle cx="0" cy="0" r="3.5" fill="#FCFAF4" opacity="0.9"/>
+  </g>
+
+  <line x1="180" y1="328" x2="332" y2="328" stroke="#946F38" stroke-opacity="0.5" stroke-width="1"/>
+
+  <text x="256" y="358"
+        font-family="'Cormorant Garamond', 'Cormorant', Georgia, serif"
+        font-weight="500"
+        font-size="26"
+        letter-spacing="5"
+        text-anchor="middle"
+        fill="#1A1814">EMBASSY</text>
+  <text x="256" y="388"
+        font-family="'Cormorant Garamond', 'Cormorant', Georgia, serif"
+        font-weight="500"
+        font-style="italic"
+        font-size="26"
+        letter-spacing="5"
+        text-anchor="middle"
+        fill="#946F38">Citadel</text>
+</svg>

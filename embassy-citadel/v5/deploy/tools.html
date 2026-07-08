@@ -1,0 +1,1893 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Tools</title>
+
+<!--
+  TOOLS v2 · Pixel-for-pixel rebuild matching mockup
+  Mockup ref: ChatGPT Image May 28, 2026, 02_51_16 AM.png
+
+  Critical mockup details enforced:
+  · Title "PRICE SHEET" in Cormorant Garamond REGULAR (not italic, not bold)
+  · Breadcrumb with gold filled inline icons and gold-dot separators
+  · Info card top-right: 3 outlined-icon rows + real-looking QR (SVG dot matrix
+    with 3 corner finder squares)
+  · Selector strip: THREE SEPARATE individually-bordered cards (was 1 before)
+  · "3 BHK Premium" pill: copper gradient + floating white-fill checkmark badge top-right
+  · Each BHK pill: ~70px tall with inline icon, meaningful padding
+  · Floor pagination: each number gets tiny dot indicator below (gold/taupe)
+  · PRICE BREAKDOWN header: gold circular ₹ badge + gold uppercase label
+  · TOTAL PRICE: large Cormorant regular, copper colour
+  · Summary pills: 5 pills, each with circular 52px cream-bg gold-border icon container
+  · Left rail tool cards: chevron-right on right edge, active gets left gold accent bar
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-100:   #F1ECDF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+    --taupe-500:  #8C7E68;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --copper:     #D87A2E;
+    --copper-dk:  #B8591A;
+    --copper-deep:#9A4814;
+
+    --hair-lo:    rgba(148, 111, 56, 0.14);
+    --hair:       rgba(148, 111, 56, 0.30);
+    --hair-hi:    rgba(148, 111, 56, 0.55);
+
+    --card-shadow: 0 8px 22px rgba(26, 24, 20, 0.05),
+                   0 2px 6px rgba(26, 24, 20, 0.03);
+    --card-shadow-soft: 0 6px 16px rgba(26, 24, 20, 0.04),
+                        0 1px 3px rgba(26, 24, 20, 0.025);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage scaler ─────────────────────────────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    isolation: isolate;
+    /* Flat paper — matches the stage's own paper edge so letterbox/pillarbox
+       margins (iPad 4:3, 65" 16:9) blend with no visible "cut". */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    z-index: 1;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+  }
+  .stage-bg {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 0;
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0.55;
+  }
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 1;
+    opacity: 0.018;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 1px;
+    mix-blend-mode: multiply;
+  }
+
+  /* ── TOP BAR ──────────────────────────────────────────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Unified left-side brand-back (same chrome as gallery/about) */
+  .ec-brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    min-height: 44px;
+  }
+  .ec-brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .ec-brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .brand-wordmark {
+    width: 156px; height: 43.2px;
+    color: var(--onyx-700);
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+  /* Right-side BACK button — cream pill, gold text, hair border */
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+
+  /* ── LEFT RAIL — TOOLS ────────────────────────────────────────────── */
+  .leftrail {
+    position: absolute;
+    left: 32px;
+    top: 96px;
+    width: 290px;
+    height: 760px;
+    z-index: 6;
+    display: flex; flex-direction: column;
+    gap: 12px;
+  }
+  .lr-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.85;
+    margin-bottom: 6px;
+    padding-left: 4px;
+  }
+  .tool-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 18px 18px 22px;
+    border-radius: 14px;
+    border: 1px solid var(--hair);
+    background: var(--paper);
+    box-shadow: var(--card-shadow-soft);
+    cursor: pointer;
+    position: relative;
+    transition: background 200ms ease, border-color 200ms ease,
+                box-shadow 240ms ease, transform 180ms ease;
+    -webkit-appearance: none; appearance: none;
+    text-align: left;
+    font-family: inherit;
+    color: var(--onyx-700);
+    width: 100%;
+    overflow: hidden;
+    min-height: 96px;
+  }
+  .tool-card:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(26,24,20,0.06); border-color: var(--hair-hi); }
+  .tool-card.is-active {
+    background: linear-gradient(180deg, #FBF3DF 0%, #F8ECD0 100%);
+    border-color: rgba(216, 122, 46, 0.36);
+    box-shadow: 0 10px 24px rgba(216, 122, 46, 0.10);
+  }
+  .tool-card.is-active::before {
+    content: '';
+    position: absolute; left: 0; top: 12px; bottom: 12px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, var(--gold-300) 0%, var(--copper) 100%);
+  }
+  .tool-card .ic-wrap {
+    width: 46px; height: 46px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: var(--bone-50);
+    border: 1px solid var(--hair-lo);
+    display: grid; place-items: center;
+    color: var(--gold-500);
+    transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+  }
+  .tool-card.is-active .ic-wrap {
+    background: rgba(255,255,255,0.65);
+    border-color: rgba(216, 122, 46, 0.32);
+    color: var(--copper-dk);
+  }
+  .tool-card .ic-wrap svg { width: 22px; height: 22px; display: block; }
+  .tool-card .body { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+  .tool-card .title {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.20em; text-transform: uppercase;
+    color: var(--onyx-700);
+    line-height: 1.1;
+  }
+  .tool-card.is-active .title { color: var(--onyx-900); }
+  .tool-card .sub {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10.5px;
+    line-height: 1.4;
+    color: var(--taupe-400);
+    letter-spacing: 0.005em;
+  }
+  .tool-card.is-active .sub { color: var(--onyx-100); opacity: 0.72; }
+  .tool-card .chev-r {
+    width: 14px; height: 14px;
+    color: var(--gold-500);
+    flex-shrink: 0;
+    margin-left: 4px;
+    opacity: 0.85;
+  }
+  .tool-card.is-active .chev-r { color: var(--copper-dk); opacity: 1; }
+
+  /* Tower thumbnail */
+  .tower-thumb {
+    margin-top: auto;
+    width: 100%;
+    flex: 1;
+    min-height: 280px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--hair);
+    background:
+      linear-gradient(180deg, transparent 0%, rgba(252,250,244,0.4) 100%),
+      url('assets/tower.png') center 18% / cover no-repeat,
+      var(--bone-50);
+    box-shadow: var(--card-shadow);
+    position: relative;
+  }
+  .tower-thumb::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(26,24,20,0) 70%, rgba(26,24,20,0.18) 100%);
+    pointer-events: none;
+  }
+
+  /* ── MAIN CONTENT PANE ───────────────────────────────────────────── */
+  .main {
+    position: absolute;
+    left: 348px;
+    right: 32px;
+    top: 92px;
+    bottom: 32px;
+    z-index: 5;
+    overflow: hidden;
+  }
+  .panel { display: none; flex-direction: column; gap: 12px; height: 100%; }
+  .panel.is-on { display: flex; }
+
+  /* Block 1 — page title + info card */
+  .page-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 2px 4px 0 4px;
+    gap: 24px;
+  }
+  .page-title-wrap { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .page-title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400;     /* REGULAR — NOT italic, NOT bold */
+    font-style: normal;
+    font-size: 46px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0;
+  }
+  .breadcrumb {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--onyx-100); opacity: 0.92;
+  }
+  .breadcrumb .bc-item { display: inline-flex; align-items: center; gap: 7px; }
+  .breadcrumb .bc-ic {
+    width: 12px; height: 12px;
+    color: var(--gold-500);
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+  .breadcrumb .bc-ic svg { width: 100%; height: 100%; display: block; fill: var(--gold-500); }
+  .breadcrumb .sep {
+    color: var(--gold-500);
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.75;
+    margin: 0 2px;
+  }
+
+  /* Info card top-right */
+  .info-card {
+    display: flex; align-items: stretch; gap: 18px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--hair);
+    background: var(--paper);
+    box-shadow: var(--card-shadow);
+    min-width: 360px;
+  }
+  .info-rows { display: flex; flex-direction: column; gap: 8px; min-width: 200px; }
+  .info-row {
+    display: grid;
+    grid-template-columns: 14px 110px 1fr;
+    align-items: center;
+    column-gap: 8px;
+    font-family: 'Lato', sans-serif;
+    font-size: 10px;
+  }
+  .info-row .ric { width: 12px; height: 12px; color: var(--gold-500); display: inline-flex; }
+  .info-row .ric svg { width: 100%; height: 100%; stroke: var(--gold-500); }
+  .info-row .k {
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .info-row .v {
+    font-weight: 500; font-size: 11px;
+    color: var(--onyx-700);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .qr {
+    width: 110px; height: 110px;
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 4px;
+    background: #FFF;
+    flex-shrink: 0;
+  }
+  .qr svg { width: 100%; height: 100%; display: block; }
+
+  /* Block 2 — SELECTOR STRIP · 3 SEPARATE CARDS */
+  .selector-row {
+    display: grid;
+    grid-template-columns: 35fr 50fr 15fr;
+    gap: 12px;
+  }
+  .selector-card {
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    padding: 18px 22px 16px;
+    display: flex; flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .sel-label {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 9px;
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+
+  /* Dropdown */
+  .dropdown {
+    display: flex; align-items: center; gap: 10px;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--hair);
+    background: var(--bone-50);
+    border-radius: 10px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 12px;
+    color: var(--onyx-700);
+    cursor: pointer;
+    transition: background 180ms ease, border-color 180ms ease;
+    width: 100%;
+  }
+  .dropdown:hover { background: var(--paper); border-color: var(--hair-hi); }
+  .dropdown .lic { width: 14px; height: 14px; color: var(--gold-500); display: inline-flex; flex-shrink: 0; }
+  .dropdown .lic svg { width: 100%; height: 100%; fill: var(--gold-500); }
+  .dropdown .label { flex: 1; }
+  .dropdown .chev { width: 12px; height: 12px; color: var(--gold-500); flex-shrink: 0; }
+
+  /* Floor pagination — number + dot indicator */
+  .floor-pager {
+    display: flex; align-items: flex-start; gap: 2px;
+    margin-top: 2px;
+    justify-content: space-between;
+  }
+  .floor-pager .pgn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--gold-500); background: rgba(148,111,56,0.06);
+    border: 1px solid var(--hair-lo);
+    cursor: pointer; padding: 0;
+    -webkit-appearance: none; appearance: none;
+    transition: background 180ms ease, border-color 180ms ease;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .floor-pager .pgn:hover { background: var(--bone-200); border-color: var(--hair); }
+  .floor-pager .pgn svg { width: 10px; height: 10px; }
+  .floor-pager .num-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  .floor-pager .num {
+    min-width: 28px; height: 28px;
+    border-radius: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 8px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 12px;
+    color: var(--onyx-300);
+    cursor: pointer;
+    transition: background 180ms ease, color 180ms ease;
+    -webkit-appearance: none; appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .floor-pager .num:hover { background: var(--bone-100); color: var(--onyx-700); }
+  .floor-pager .num.is-active {
+    background: linear-gradient(135deg, var(--gold-300) 0%, var(--copper) 100%);
+    color: #FFF;
+    border-color: var(--copper-dk);
+    box-shadow: 0 2px 8px rgba(216, 122, 46, 0.32);
+  }
+  .floor-pager .dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--taupe-300);
+    transition: background 180ms ease, transform 180ms ease;
+  }
+  .floor-pager .num-wrap.is-active .dot {
+    background: var(--copper);
+    transform: scale(1.3);
+  }
+
+  /* BHK pill tiles — tall, with active = copper gradient + checkmark badge */
+  .bhk-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .bhk-pill {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    height: 64px;
+    padding: 0 10px;
+    border-radius: 12px;
+    border: 1px solid var(--hair);
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    position: relative;
+    transition: background 180ms ease, border-color 180ms ease, color 180ms ease, transform 160ms ease, box-shadow 180ms ease;
+    -webkit-appearance: none; appearance: none;
+    text-align: center;
+  }
+  .bhk-pill:hover {
+    border-color: var(--hair-hi);
+    background: var(--bone-50);
+    transform: translateY(-1px);
+  }
+  .bhk-pill .bic { width: 18px; height: 18px; color: var(--gold-500); flex-shrink: 0; display: inline-flex; }
+  .bhk-pill .bic svg { width: 100%; height: 100%; fill: currentColor; }
+  .bhk-pill .label { line-height: 1.2; text-align: center; white-space: normal; }
+
+  .bhk-pill.is-active {
+    background: linear-gradient(135deg, #D87A2E 0%, #B8591A 100%);
+    color: #FFFFFF;
+    border-color: var(--copper-dk);
+    box-shadow: 0 6px 14px rgba(216, 107, 42, 0.28),
+                inset 0 1px 0 rgba(255,255,255,0.18);
+  }
+  .bhk-pill.is-active .bic { color: #FFFFFF; }
+  .bhk-pill.is-active .bic svg { fill: #FFFFFF; }
+
+  /* Floating checkmark badge */
+  .bhk-pill .check-badge {
+    position: absolute;
+    top: -8px; right: -8px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2px solid var(--gold-500);
+    display: none;
+    align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  }
+  .bhk-pill.is-active .check-badge { display: inline-flex; }
+  .bhk-pill .check-badge svg { width: 11px; height: 11px; color: var(--copper-dk); }
+
+  /* Block 3 — PRICE BREAKDOWN */
+  .pb-card {
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    padding: 16px 26px 18px;
+    flex: 1;
+    min-height: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .pb-head {
+    display: flex; align-items: center; gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .pb-head .rupee {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-300) 0%, var(--gold-500) 100%);
+    color: #FFFFFF;
+    display: grid; place-items: center;
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 16px;
+    box-shadow: 0 2px 6px rgba(148,111,56,0.24);
+  }
+  .pb-head .label {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .pb-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+    flex: 1;
+  }
+  .pb-table thead th {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 9.5px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--taupe-400);
+    text-align: right;
+    padding: 14px 8px 10px;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .pb-table thead th:first-child { text-align: left; padding-left: 0; }
+  .pb-table thead th:last-child  { padding-right: 0; }
+  .pb-table tbody td {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 12.5px;
+    color: var(--onyx-700);
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--hair-lo);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .pb-table tbody td:first-child { text-align: left; padding-left: 0; color: var(--onyx-100); }
+  .pb-table tbody td:last-child  { padding-right: 0; font-weight: 500; }
+  .pb-table tbody tr.sub td {
+    color: var(--copper);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding-top: 12px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .pb-table tbody tr.sub td:first-child { color: var(--copper); }
+  .pb-table tbody tr.sub td:last-child { color: var(--copper); font-size: 14px; }
+  .pb-table tbody tr.tax td { border-bottom: 1px solid var(--hair-lo); }
+  .pb-table tbody tr.total td {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: normal;
+    font-weight: 400;     /* REGULAR */
+    font-size: 26px;
+    letter-spacing: 0.02em;
+    color: var(--copper);
+    padding-top: 16px;
+    padding-bottom: 6px;
+    border-bottom: none;
+    text-transform: none;
+  }
+  .pb-table tbody tr.total td:first-child {
+    color: var(--copper);
+    letter-spacing: 0.04em;
+    font-size: 20px;
+  }
+
+  /* Block 4 — SUMMARY PILLS · 5 with circular icon containers */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    padding: 12px 20px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .sm-item {
+    display: flex; align-items: center; gap: 12px;
+    min-width: 0;
+  }
+  .sm-item .sp-icon-circle {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: var(--bone-50);
+    border: 1px solid rgba(148, 111, 56, 0.32);
+    display: grid; place-items: center;
+    color: var(--gold-500);
+    flex-shrink: 0;
+  }
+  .sm-item .sp-icon-circle svg { width: 20px; height: 20px; fill: currentColor; }
+  .sm-item .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .sm-item .k {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 8.5px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .sm-item .v {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 12.5px;
+    color: var(--onyx-700);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
+
+  /* ── EMI / FSI calculator panes ───────────────────────────────────── */
+  .calc-row {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+  .calc-card {
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    padding: 22px 26px;
+    display: flex; flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+  }
+  .calc-head {
+    display: flex; align-items: center; gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .calc-head .label {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 11px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .calc-head .rupee {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-300) 0%, var(--gold-500) 100%);
+    color: #FFFFFF;
+    display: grid; place-items: center;
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 14px;
+  }
+  .calc-field { display: flex; flex-direction: column; gap: 6px; }
+  .calc-field .k {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 9.5px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .calc-field .inputwrap {
+    display: flex; align-items: center; gap: 0;
+    border: 1px solid var(--hair);
+    background: var(--bone-50);
+    border-radius: 10px;
+    overflow: hidden;
+    height: 40px;
+  }
+  .calc-field .prefix {
+    padding: 0 12px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 12px;
+    color: var(--gold-500);
+    border-right: 1px solid var(--hair-lo);
+    height: 100%;
+    display: inline-flex; align-items: center;
+  }
+  .calc-field input {
+    flex: 1;
+    border: none; outline: none;
+    background: transparent;
+    padding: 0 14px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 13px;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+    -webkit-appearance: none;
+    width: 100%;
+    min-width: 0;
+  }
+  .calc-field input::placeholder { color: var(--taupe-400); }
+  .calc-field .suffix {
+    padding: 0 12px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 11px;
+    color: var(--taupe-400);
+    border-left: 1px solid var(--hair-lo);
+    height: 100%;
+    display: inline-flex; align-items: center;
+  }
+
+  .calc-results {
+    display: flex; flex-direction: column;
+    gap: 0;
+    margin-top: auto;
+  }
+  .calc-rrow {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .calc-rrow:last-child { border-bottom: none; padding-top: 18px; }
+  .calc-rrow .rk {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .calc-rrow .rv {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 16px;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+  }
+  .calc-rrow.hero .rk { color: var(--copper); font-weight: 600; }
+  .calc-rrow.hero .rv {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-style: normal;
+    font-size: 32px;
+    color: var(--copper);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  .calc-side {
+    background: linear-gradient(180deg, #FBF3DF 0%, #F4ECD9 100%);
+    border: 1px solid rgba(216, 122, 46, 0.32);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    padding: 26px 28px;
+    display: flex; flex-direction: column;
+    gap: 18px;
+  }
+  .calc-side .eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--copper);
+  }
+  .calc-side h3 {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 26px;
+    color: var(--onyx-700);
+    margin: 0;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+  .calc-side .desc {
+    font-family: 'Lato', sans-serif;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--onyx-100);
+    opacity: 0.78;
+    margin: 0;
+  }
+
+  /* ── Slider field (range input with cream track + gold thumb) ───── */
+  .slider-field { display: flex; flex-direction: column; gap: 8px; }
+  .slider-field .sf-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px;
+  }
+  .slider-field .sf-label {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 9.5px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .slider-field .sf-value {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 13.5px;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+  .slider-field .sf-value .unit {
+    font-weight: 500; font-size: 10.5px;
+    color: var(--taupe-400);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    margin-left: 4px;
+  }
+  .slider-field .sf-bounds {
+    display: flex; justify-content: space-between;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--taupe-400); opacity: 0.72;
+    margin-top: 2px;
+  }
+  .slider-field .sf-range {
+    --pct: 0%;
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 28px;
+    background: transparent;
+    margin: 0; padding: 0;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  /* WebKit track */
+  .slider-field .sf-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(to right,
+      var(--gold-500) 0%, var(--gold-500) var(--pct),
+      var(--bone-200) var(--pct), var(--bone-200) 100%);
+    border: 1px solid var(--hair-lo);
+  }
+  /* Firefox track */
+  .slider-field .sf-range::-moz-range-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--bone-200);
+    border: 1px solid var(--hair-lo);
+  }
+  .slider-field .sf-range::-moz-range-progress {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--gold-500);
+  }
+  /* WebKit thumb */
+  .slider-field .sf-range::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-300) 0%, var(--gold-500) 100%);
+    border: 1px solid var(--gold-500);
+    box-shadow: 0 1px 4px rgba(148,111,56,0.32), 0 0 0 4px rgba(252,250,244,0.85);
+    margin-top: -8px;
+    cursor: grab;
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+  .slider-field .sf-range:hover::-webkit-slider-thumb {
+    transform: scale(1.08);
+    box-shadow: 0 2px 8px rgba(148,111,56,0.40), 0 0 0 5px rgba(252,250,244,0.92);
+  }
+  .slider-field .sf-range:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.04); }
+  /* Firefox thumb */
+  .slider-field .sf-range::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-300) 0%, var(--gold-500) 100%);
+    border: 1px solid var(--gold-500);
+    box-shadow: 0 1px 4px rgba(148,111,56,0.32), 0 0 0 4px rgba(252,250,244,0.85);
+    cursor: grab;
+  }
+  .slider-field .sf-range:focus { outline: none; }
+  .slider-field .sf-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--gold-300), 0 1px 4px rgba(148,111,56,0.32);
+  }
+
+  /* Cream veil */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+  body.fast-entry .veil {
+    opacity: 1;
+    animation: veilWakeOut 700ms cubic-bezier(0.4, 0, 0.2, 1) 80ms forwards;
+  }
+  @keyframes veilWakeOut { to { opacity: 0; } }
+
+  /* Entry settle */
+  .leftrail, .main {
+    animation: settleIn 700ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+  }
+  .main { animation-delay: 160ms; }
+  @keyframes settleIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .leftrail, .main { animation: none; }
+  }
+</style>
+
+<script>
+  // Stage scaler — scale-to-fit (contain). Fixes iPad13 side overflow.
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel wordmark -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<!-- Reusable gold-filled inline icon symbols for breadcrumb / summary -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <!-- Filled pin -->
+  <symbol id="i-pin" viewBox="0 0 24 24">
+    <path d="M12 2C7.6 2 4 5.6 4 10c0 5.5 7.2 11.5 7.5 11.75a.75.75 0 0 0 1 0C12.8 21.5 20 15.5 20 10c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+  </symbol>
+  <!-- Filled layers / stack -->
+  <symbol id="i-layers" viewBox="0 0 24 24">
+    <path d="M12 2.2 1.6 7.4 12 12.6 22.4 7.4z"/>
+    <path d="M1.6 12.4 12 17.6l10.4-5.2-2.2-1.1L12 15.4l-8.2-4.1z"/>
+    <path d="M1.6 16.4 12 21.6l10.4-5.2-2.2-1.1L12 19.4l-8.2-4.1z"/>
+  </symbol>
+  <!-- Filled building -->
+  <symbol id="i-building" viewBox="0 0 24 24">
+    <path d="M4 21V8.5L12 3l8 5.5V21h-6v-5h-4v5H4zm5-9h2v-2H9v2zm4 0h2v-2h-2v2z"/>
+  </symbol>
+  <!-- Filled tower (alt building for summary) -->
+  <symbol id="i-tower" viewBox="0 0 24 24">
+    <path d="M6 22V9l6-5 6 5v13h-4v-5h-4v5H6zm4-9h1.5v-2H10v2zm2.5 0H14v-2h-1.5v2z"/>
+  </symbol>
+  <!-- Filled floor stack -->
+  <symbol id="i-floor" viewBox="0 0 24 24">
+    <rect x="3" y="5" width="18" height="3" rx="1"/>
+    <rect x="3" y="10.5" width="18" height="3" rx="1"/>
+    <rect x="3" y="16" width="18" height="3" rx="1"/>
+  </symbol>
+  <!-- Filled unit / grid -->
+  <symbol id="i-unit" viewBox="0 0 24 24">
+    <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>
+  </symbol>
+  <!-- Filled house -->
+  <symbol id="i-house" viewBox="0 0 24 24">
+    <path d="M12 3 2 11h3v9h6v-6h2v6h6v-9h3z"/>
+  </symbol>
+  <!-- Target / area -->
+  <symbol id="i-target" viewBox="0 0 24 24">
+    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 3.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+    <div class="stage-bg"></div>
+    <div class="stage-grain"></div>
+
+    <!-- ╔══ TOP BAR ══╗ -->
+    <header class="topbar">
+      <a class="ec-brand-back" id="brandLink" aria-label="Embassy Citadel">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to home">
+        <span class="arr" aria-hidden="true">←</span>
+        <span>Back</span>
+      </button>
+    </header>
+
+    <!-- ╔══ LEFT RAIL — TOOLS ══╗ -->
+    <aside class="leftrail">
+      <div class="lr-eyebrow">Tools</div>
+
+      <button class="tool-card is-active" id="tabPrice" type="button" data-tool="price">
+        <span class="ic-wrap" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+            <path d="M14 3v5h5"/>
+            <path d="M8 12h8M8 15h8M8 18h5"/>
+          </svg>
+        </span>
+        <span class="body">
+          <span class="title">Price Sheet</span>
+          <span class="sub">Explore pricing, charges and breakdown for available units.</span>
+        </span>
+        <svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+
+      <button class="tool-card" id="tabEMI" type="button" data-tool="emi">
+        <span class="ic-wrap" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="3" width="16" height="18" rx="2"/>
+            <path d="M8 7h8M8 11h2M12 11h4M8 15h2M12 15h4M8 19h2M12 19h4"/>
+          </svg>
+        </span>
+        <span class="body">
+          <span class="title">EMI Calculator</span>
+          <span class="sub">Plan your loan EMI and monthly outgo.</span>
+        </span>
+        <svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+
+      <button class="tool-card" id="tabFSI" type="button" data-tool="fsi">
+        <span class="ic-wrap" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="6" height="10"/>
+            <rect x="9.5" y="7" width="5" height="14"/>
+            <rect x="15" y="3" width="6" height="18"/>
+          </svg>
+        </span>
+        <span class="body">
+          <span class="title">FSI Calculator</span>
+          <span class="sub">Permissible FSI, built-up area and utilization.</span>
+        </span>
+        <svg class="chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+
+      <div class="tower-thumb" aria-hidden="true"></div>
+    </aside>
+
+    <!-- ╔══ MAIN CONTENT ══╗ -->
+    <main class="main">
+
+      <!-- ╔══ PANEL · PRICE SHEET ══╗ -->
+      <section class="panel is-on" id="panelPrice">
+
+        <!-- Block 1 — page title + info card -->
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">Price Sheet</h1>
+            <div class="breadcrumb" id="breadcrumb">
+              <span class="bc-item">
+                <span class="bc-ic"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg></span>
+                <span id="bcTower">Tower A</span>
+              </span>
+              <span class="sep">·</span>
+              <span class="bc-item">
+                <span class="bc-ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></span>
+                <span id="bcFloor">12th Floor</span>
+              </span>
+              <span class="sep">·</span>
+              <span class="bc-item">
+                <span class="bc-ic"><svg viewBox="0 0 24 24"><use href="#i-building"/></svg></span>
+                <span id="bcType">3 BHK Premium</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-rows">
+              <div class="info-row">
+                <span class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></span>
+                <span class="k">Date</span>
+                <span class="v" id="psDate">28 May 2026</span>
+              </div>
+              <div class="info-row">
+                <span class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 13.5 12 22l-9-9V3h10z"/><circle cx="8" cy="8" r="1.3"/></svg></span>
+                <span class="k">Price Sheet No.</span>
+                <span class="v">EC/PS/26-27/0123</span>
+              </div>
+              <div class="info-row">
+                <span class="ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h8l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
+                <span class="k">RERA No.</span>
+                <span class="v">P51900006284</span>
+              </div>
+            </div>
+            <div class="qr" aria-hidden="true">
+              <svg id="qrSvg" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Block 2 — SELECTOR STRIP · 3 SEPARATE CARDS -->
+        <div class="selector-row">
+
+          <!-- CARD 1 · SELECT FLOOR -->
+          <div class="selector-card" id="selectFloorCard">
+            <div class="sel-label">Select Floor</div>
+            <button class="dropdown" type="button">
+              <span class="lic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></span>
+              <span class="label" id="floorDropLabel">12th Floor</span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="floor-pager" id="floorPager">
+              <button class="pgn" type="button" data-floor-step="-1" aria-label="Previous floor">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+              </button>
+              <div class="num-wrap" data-floor="10"><button class="num" type="button">10</button><span class="dot"></span></div>
+              <div class="num-wrap" data-floor="11"><button class="num" type="button">11</button><span class="dot"></span></div>
+              <div class="num-wrap is-active" data-floor="12"><button class="num is-active" type="button">12</button><span class="dot"></span></div>
+              <div class="num-wrap" data-floor="13"><button class="num" type="button">13</button><span class="dot"></span></div>
+              <div class="num-wrap" data-floor="14"><button class="num" type="button">14</button><span class="dot"></span></div>
+              <div class="num-wrap" data-floor="15"><button class="num" type="button">15</button><span class="dot"></span></div>
+              <div class="num-wrap" data-floor="16"><button class="num" type="button">16</button><span class="dot"></span></div>
+              <button class="pgn" type="button" data-floor-step="1" aria-label="Next floor">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- CARD 2 · SELECT UNIT TYPE -->
+          <div class="selector-card" id="selectTypeCard">
+            <div class="sel-label">Select Unit Type</div>
+            <div class="bhk-row" id="bhkRow">
+              <button class="bhk-pill" type="button" data-bhk="1bhk">
+                <span class="bic"><svg viewBox="0 0 24 24"><path d="M5 21V9l7-5 7 5v12h-4v-6h-6v6H5z"/></svg></span>
+                <span class="label">1 BHK</span>
+                <span class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span>
+              </button>
+              <button class="bhk-pill" type="button" data-bhk="2bhk">
+                <span class="bic"><svg viewBox="0 0 24 24"><path d="M3 21V9l9-6 9 6v12h-5v-5h-3v5h-3v-5H8v5H3z"/></svg></span>
+                <span class="label">2 BHK</span>
+                <span class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span>
+              </button>
+              <button class="bhk-pill is-active" type="button" data-bhk="3bhkp">
+                <span class="bic"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13h-5v-6h-3v6h-3v-6H8v6H3z"/></svg></span>
+                <span class="label">3 BHK Premium</span>
+                <span class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span>
+              </button>
+              <button class="bhk-pill" type="button" data-bhk="4bhk">
+                <span class="bic"><svg viewBox="0 0 24 24"><path d="M2 21V8l10-5 10 5v13h-5v-5h-3v5h-4v-5H7v5H2z"/></svg></span>
+                <span class="label">4 BHK</span>
+                <span class="check-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- CARD 3 · SELECT UNIT -->
+          <div class="selector-card" id="selectUnitCard">
+            <div class="sel-label">Select Unit</div>
+            <button class="dropdown" type="button" id="unitDropdown">
+              <span class="lic"><svg viewBox="0 0 24 24"><use href="#i-unit"/></svg></span>
+              <span class="label" id="unitDropLabel">Unit 03</span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Block 3 — PRICE BREAKDOWN -->
+        <div class="pb-card">
+          <div class="pb-head">
+            <span class="rupee">₹</span>
+            <span class="label">Price Breakdown</span>
+          </div>
+          <table class="pb-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Area (Sq.Ft.)</th>
+                <th>Rate (₹ / Sq.Ft.)</th>
+                <th>Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="pbBody">
+              <tr><td>Basic Sale Price</td>           <td id="psBasicArea">1,245.00</td><td>18,000</td><td id="psBasicAmt">₹ 2,24,10,000</td></tr>
+              <tr><td>Preferential Location Charges (PLC)</td><td id="psPlcArea">1,245.00</td><td>1,000</td><td id="psPlcAmt">₹ 12,45,000</td></tr>
+              <tr><td>Other Charges</td>              <td>–</td><td>–</td><td id="psOtherAmt">₹ 8,76,000</td></tr>
+              <tr><td>Car Parking (2 Nos.)</td>       <td>–</td><td>–</td><td>₹ 10,00,000</td></tr>
+              <tr class="sub"><td>Sub Total</td><td></td><td></td><td id="psSubAmt">₹ 2,55,31,000</td></tr>
+              <tr class="tax"><td>GST &amp; Taxes</td><td></td><td></td><td id="psTaxAmt">₹ 22,97,790</td></tr>
+              <tr class="total ps-total"><td>Total Price</td><td></td><td></td><td id="psTotalAmt">₹ 2,78,28,790</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Block 4 — SUMMARY PILLS · 5 with circular icon containers -->
+        <div class="summary">
+          <div class="sm-item">
+            <span class="sp-icon-circle"><svg viewBox="0 0 24 24"><use href="#i-tower"/></svg></span>
+            <span class="text"><span class="k">Tower</span><span class="v" id="smTower">Tower A</span></span>
+          </div>
+          <div class="sm-item">
+            <span class="sp-icon-circle"><svg viewBox="0 0 24 24"><use href="#i-floor"/></svg></span>
+            <span class="text"><span class="k">Floor</span><span class="v" id="smFloor">12th Floor</span></span>
+          </div>
+          <div class="sm-item">
+            <span class="sp-icon-circle"><svg viewBox="0 0 24 24"><use href="#i-unit"/></svg></span>
+            <span class="text"><span class="k">Unit</span><span class="v" id="smUnit">Unit 03</span></span>
+          </div>
+          <div class="sm-item">
+            <span class="sp-icon-circle"><svg viewBox="0 0 24 24"><use href="#i-house"/></svg></span>
+            <span class="text"><span class="k">Type</span><span class="v" id="smType">3 BHK Premium</span></span>
+          </div>
+          <div class="sm-item">
+            <span class="sp-icon-circle"><svg viewBox="0 0 24 24"><use href="#i-target"/></svg></span>
+            <span class="text"><span class="k">Carpet Area</span><span class="v" id="smCarpet">1,245 Sq.Ft.</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ╔══ PANEL · EMI CALCULATOR ══╗ -->
+      <section class="panel" id="panelEMI">
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">EMI Calculator</h1>
+            <div class="breadcrumb">
+              <span class="bc-item">
+                <span class="bc-ic"><svg viewBox="0 0 24 24"><use href="#i-pin"/></svg></span>
+                <span>Loan Planner</span>
+              </span>
+              <span class="sep">·</span>
+              <span class="bc-item">
+                <span class="bc-ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></span>
+                <span>Reducing Balance Method</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-row" style="border-radius:8px;">
+          <div class="calc-card">
+            <div class="calc-head"><span class="rupee">₹</span><span class="label">Loan Inputs</span></div>
+
+            <div class="slider-field">
+              <div class="sf-head">
+                <span class="sf-label">Loan Amount</span>
+                <span class="sf-value" id="emiAmountLbl">₹ 2,00,00,000</span>
+              </div>
+              <input type="range" class="sf-range" id="emiAmount"
+                     min="1000000" max="100000000" step="50000" value="20000000"
+                     aria-label="Loan amount in rupees" />
+              <div class="sf-bounds"><span>₹ 10 L</span><span>₹ 10 Cr</span></div>
+            </div>
+
+            <div class="slider-field">
+              <div class="sf-head">
+                <span class="sf-label">Interest Rate</span>
+                <span class="sf-value" id="emiRateLbl">8.50<span class="unit">% p.a.</span></span>
+              </div>
+              <input type="range" class="sf-range" id="emiRate"
+                     min="6" max="14" step="0.05" value="8.5"
+                     aria-label="Annual interest rate percent" />
+              <div class="sf-bounds"><span>6.00 %</span><span>14.00 %</span></div>
+            </div>
+
+            <div class="slider-field">
+              <div class="sf-head">
+                <span class="sf-label">Loan Tenure</span>
+                <span class="sf-value" id="emiYearsLbl">20<span class="unit">Years</span></span>
+              </div>
+              <input type="range" class="sf-range" id="emiYears"
+                     min="5" max="30" step="1" value="20"
+                     aria-label="Loan tenure in years" />
+              <div class="sf-bounds"><span>5 Years</span><span>30 Years</span></div>
+            </div>
+          </div>
+
+          <div class="calc-card calc-side">
+            <span class="eyebrow">Monthly Outgo</span>
+            <div class="calc-results">
+              <div class="calc-rrow hero">
+                <span class="rk">Monthly EMI</span>
+                <span class="rv" id="emiResult">₹ 1,73,569</span>
+              </div>
+              <div class="calc-rrow">
+                <span class="rk">Total Interest Payable</span>
+                <span class="rv" id="emiInterest">₹ 2,16,56,508</span>
+              </div>
+              <div class="calc-rrow">
+                <span class="rk">Total Amount Payable</span>
+                <span class="rv" id="emiTotal">₹ 4,16,56,508</span>
+              </div>
+            </div>
+            <p class="desc">Computed via reducing-balance method. Figures indicative; actual lender terms apply.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ╔══ PANEL · FSI CALCULATOR ══╗ -->
+      <section class="panel" id="panelFSI">
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">FSI Calculator</h1>
+            <div class="breadcrumb">
+              <span class="bc-item">
+                <span class="bc-ic"><svg viewBox="0 0 24 24"><use href="#i-building"/></svg></span>
+                <span>Built-up Planner</span>
+              </span>
+              <span class="sep">·</span>
+              <span class="bc-item">
+                <span class="bc-ic"><svg viewBox="0 0 24 24"><use href="#i-layers"/></svg></span>
+                <span>Mumbai DCR Reference</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-row">
+          <div class="calc-card">
+            <div class="calc-head"><span class="rupee">▦</span><span class="label">Plot Inputs</span></div>
+
+            <div class="slider-field">
+              <div class="sf-head">
+                <span class="sf-label">Plot Area</span>
+                <span class="sf-value" id="fsiPlotLbl">50,000<span class="unit">Sq.Ft.</span></span>
+              </div>
+              <input type="range" class="sf-range" id="fsiPlot"
+                     min="5000" max="200000" step="500" value="50000"
+                     aria-label="Plot area in square feet" />
+              <div class="sf-bounds"><span>5,000 Sq.Ft.</span><span>2,00,000 Sq.Ft.</span></div>
+            </div>
+
+            <div class="slider-field">
+              <div class="sf-head">
+                <span class="sf-label">Permissible FSI</span>
+                <span class="sf-value" id="fsiRatioLbl">4.0<span class="unit">Ratio</span></span>
+              </div>
+              <input type="range" class="sf-range" id="fsiRatio"
+                     min="1.0" max="6.0" step="0.1" value="4.0"
+                     aria-label="Permissible floor space index ratio" />
+              <div class="sf-bounds"><span>1.0</span><span>6.0</span></div>
+            </div>
+
+            <div class="slider-field">
+              <div class="sf-head">
+                <span class="sf-label">Side Margins</span>
+                <span class="sf-value" id="fsiMarginLbl">12<span class="unit">Feet</span></span>
+              </div>
+              <input type="range" class="sf-range" id="fsiMargin"
+                     min="6" max="30" step="1" value="12"
+                     aria-label="Side margin in feet" />
+              <div class="sf-bounds"><span>6 ft</span><span>30 ft</span></div>
+            </div>
+          </div>
+
+          <div class="calc-card calc-side">
+            <span class="eyebrow">Build Allowance</span>
+            <div class="calc-results">
+              <div class="calc-rrow hero">
+                <span class="rk">Permissible Built-up Area</span>
+                <span class="rv" id="fsiBuilt">2,00,000 Sq.Ft.</span>
+              </div>
+              <div class="calc-rrow">
+                <span class="rk">Carpet Area (~75%)</span>
+                <span class="rv" id="fsiCarpet">1,50,000 Sq.Ft.</span>
+              </div>
+              <div class="calc-rrow">
+                <span class="rk">Setback Area (Excluded)</span>
+                <span class="rv" id="fsiSetback">7,632 Sq.Ft.</span>
+              </div>
+            </div>
+            <p class="desc">Indicative computation per Mumbai DCR norms. Setback area uses perimeter × margin assuming a square plot.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Cream veil for navigation fades -->
+    <div class="veil" id="veil"></div>
+
+  </div><!-- /#stage -->
+</div><!-- /#stage-wrap -->
+
+<script>
+  // ── Build real-looking QR (SVG dot matrix, 25×25 with finder squares) ──
+  (function buildQRSvg() {
+    const svg = document.getElementById('qrSvg');
+    if (!svg) return;
+    const N = 25;
+    let seed = 12345;
+    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+
+    const cells = [];
+    for (let r = 0; r < N; r++) {
+      cells[r] = [];
+      for (let c = 0; c < N; c++) cells[r][c] = false;
+    }
+
+    // Finder squares — 7x7 in 3 corners
+    function drawFinder(rOff, cOff) {
+      for (let r = 0; r < 7; r++) {
+        for (let c = 0; c < 7; c++) {
+          const edge = (r === 0 || r === 6 || c === 0 || c === 6);
+          const inner = (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+          cells[rOff + r][cOff + c] = edge || inner;
+        }
+      }
+    }
+    drawFinder(0, 0);          // top-left
+    drawFinder(0, N - 7);      // top-right
+    drawFinder(N - 7, 0);      // bottom-left
+
+    // Reserved areas (finders + separators)
+    function isReserved(r, c) {
+      if (r < 8 && c < 8) return true;
+      if (r < 8 && c >= N - 8) return true;
+      if (r >= N - 8 && c < 8) return true;
+      return false;
+    }
+
+    // Timing patterns
+    for (let i = 8; i < N - 8; i++) {
+      cells[6][i] = (i % 2 === 0);
+      cells[i][6] = (i % 2 === 0);
+    }
+
+    // Data area — pseudo-random
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        if (isReserved(r, c)) continue;
+        if (r === 6 || c === 6) continue;
+        cells[r][c] = rnd() > 0.52;
+      }
+    }
+
+    // Render
+    let html = '';
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        if (cells[r][c]) {
+          html += '<rect x="' + c + '" y="' + r + '" width="1" height="1" fill="#1F1B15"/>';
+        }
+      }
+    }
+    svg.innerHTML = html;
+  })();
+
+  // ── Indian number formatting ───────────────────────────────────────
+  function fmtIN(num) {
+    if (num === null || num === undefined || isNaN(num)) return '0';
+    const n = Math.round(num);
+    const s = String(Math.abs(n));
+    if (s.length <= 3) return (n < 0 ? '-' : '') + s;
+    const last3 = s.slice(-3);
+    const rest = s.slice(0, -3);
+    const restFmt = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    return (n < 0 ? '-' : '') + restFmt + ',' + last3;
+  }
+  function rs(n) { return '₹ ' + fmtIN(n); }
+
+  function ordinal(n) {
+    const s = ['th','st','nd','rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  // ── State ───────────────────────────────────────────────────────────
+  const STATE = {
+    tool: 'price',
+    floor: 12,
+    bhk: '3bhkp',
+    unit: 'Unit 03',
+    tower: 'Tower A',
+  };
+
+  const BHK_CONFIG = {
+    '1bhk':  { label: '1 BHK',           area: 600,  rate: 18000 },
+    '2bhk':  { label: '2 BHK',           area: 900,  rate: 18000 },
+    '3bhkp': { label: '3 BHK Premium',   area: 1245, rate: 18000 },
+    '4bhk':  { label: '4 BHK',           area: 1800, rate: 18000 },
+  };
+
+  // ── Update breadcrumb + summary + price table ──────────────────────
+  function applyPriceState() {
+    const cfg = BHK_CONFIG[STATE.bhk];
+    const floorLabel = ordinal(STATE.floor) + ' Floor';
+
+    document.getElementById('bcTower').textContent = STATE.tower;
+    document.getElementById('bcFloor').textContent = floorLabel;
+    document.getElementById('bcType').textContent  = cfg.label;
+
+    document.getElementById('floorDropLabel').textContent = floorLabel;
+    document.getElementById('unitDropLabel').textContent = STATE.unit;
+
+    document.getElementById('smTower').textContent  = STATE.tower;
+    document.getElementById('smFloor').textContent  = floorLabel;
+    document.getElementById('smUnit').textContent   = STATE.unit;
+    document.getElementById('smType').textContent   = cfg.label;
+    document.getElementById('smCarpet').textContent = fmtIN(cfg.area) + ' Sq.Ft.';
+
+    const area = cfg.area;
+    const bsp = area * cfg.rate;
+    const plc = area * 1000;
+    const other = Math.round(8_76_000 * (area / 1245));
+    const parking = 10_00_000;
+    const sub = bsp + plc + other + parking;
+    const tax = Math.round(sub * 0.09);
+    const total = sub + tax;
+
+    document.getElementById('psBasicArea').textContent = fmtIN(area) + '.00';
+    document.getElementById('psPlcArea').textContent   = fmtIN(area) + '.00';
+    document.getElementById('psBasicAmt').textContent  = rs(bsp);
+    document.getElementById('psPlcAmt').textContent    = rs(plc);
+    document.getElementById('psOtherAmt').textContent  = rs(other);
+    document.getElementById('psSubAmt').textContent    = rs(sub);
+    document.getElementById('psTaxAmt').textContent    = rs(tax);
+    document.getElementById('psTotalAmt').textContent  = rs(total);
+
+    document.querySelectorAll('.bhk-pill').forEach(p => {
+      p.classList.toggle('is-active', p.dataset.bhk === STATE.bhk);
+    });
+    document.querySelectorAll('.floor-pager .num-wrap').forEach(w => {
+      const active = Number(w.dataset.floor) === STATE.floor;
+      w.classList.toggle('is-active', active);
+      const num = w.querySelector('.num');
+      if (num) num.classList.toggle('is-active', active);
+    });
+  }
+
+  // ── Tool tab switching ─────────────────────────────────────────────
+  function setTool(tool) {
+    STATE.tool = tool;
+    document.querySelectorAll('.tool-card').forEach(c => {
+      c.classList.toggle('is-active', c.dataset.tool === tool);
+    });
+    document.getElementById('panelPrice').classList.toggle('is-on', tool === 'price');
+    document.getElementById('panelEMI').classList.toggle('is-on',   tool === 'emi');
+    document.getElementById('panelFSI').classList.toggle('is-on',   tool === 'fsi');
+  }
+  document.querySelectorAll('.tool-card').forEach(c => {
+    c.addEventListener('click', () => setTool(c.dataset.tool));
+  });
+
+  // ── Floor pagination ────────────────────────────────────────────────
+  document.querySelectorAll('.floor-pager .num-wrap').forEach(w => {
+    w.addEventListener('click', () => {
+      STATE.floor = Number(w.dataset.floor);
+      applyPriceState();
+    });
+  });
+  document.querySelectorAll('.floor-pager .pgn').forEach(p => {
+    p.addEventListener('click', () => {
+      const step = Number(p.dataset.floorStep);
+      const next = Math.max(10, Math.min(16, STATE.floor + step));
+      STATE.floor = next;
+      applyPriceState();
+    });
+  });
+
+  // ── BHK pill switching ──────────────────────────────────────────────
+  document.querySelectorAll('.bhk-pill').forEach(p => {
+    p.addEventListener('click', () => {
+      STATE.bhk = p.dataset.bhk;
+      applyPriceState();
+    });
+  });
+
+  // ── Unit dropdown cycle ─────────────────────────────────────────────
+  document.getElementById('unitDropdown').addEventListener('click', () => {
+    const units = ['Unit 01','Unit 02','Unit 03','Unit 04','Unit 05','Unit 06'];
+    const i = units.indexOf(STATE.unit);
+    STATE.unit = units[(i + 1) % units.length];
+    applyPriceState();
+  });
+
+  // ── Range slider · update --pct gold fill on input ──────────────────
+  function paintRange(el) {
+    const min = Number(el.min) || 0;
+    const max = Number(el.max) || 100;
+    const val = Number(el.value) || 0;
+    const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
+    el.style.setProperty('--pct', pct + '%');
+  }
+
+  // ── Format helper for loan amount label (₹ X L / X Cr) ──────────────
+  function fmtLoanAmount(n) {
+    // Always show as ₹ <Indian-grouped number>
+    return '₹ ' + fmtIN(n);
+  }
+
+  // ── EMI calculator ──────────────────────────────────────────────────
+  function calcEMI() {
+    const elP = document.getElementById('emiAmount');
+    const elR = document.getElementById('emiRate');
+    const elY = document.getElementById('emiYears');
+    const P = Number(elP.value) || 0;
+    const annual = Number(elR.value) || 0;
+    const years  = Number(elY.value) || 0;
+    const r = (annual / 100) / 12;
+    const n = years * 12;
+    let emi = 0;
+    if (P > 0 && r > 0 && n > 0) {
+      emi = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+    } else if (P > 0 && n > 0) {
+      emi = P / n;
+    }
+    const totalPayment = emi * n;
+    const totalInterest = totalPayment - P;
+
+    // Slider labels
+    document.getElementById('emiAmountLbl').textContent = fmtLoanAmount(P);
+    document.getElementById('emiRateLbl').innerHTML =
+      annual.toFixed(2) + '<span class="unit">% p.a.</span>';
+    document.getElementById('emiYearsLbl').innerHTML =
+      years + '<span class="unit">' + (years === 1 ? 'Year' : 'Years') + '</span>';
+
+    // Slider gold fill
+    paintRange(elP); paintRange(elR); paintRange(elY);
+
+    // Results
+    document.getElementById('emiResult').textContent   = rs(emi);
+    document.getElementById('emiInterest').textContent = rs(totalInterest);
+    document.getElementById('emiTotal').textContent    = rs(totalPayment);
+  }
+  ['emiAmount','emiRate','emiYears'].forEach(id => {
+    document.getElementById(id).addEventListener('input', calcEMI);
+  });
+  calcEMI();
+
+  // ── FSI calculator ──────────────────────────────────────────────────
+  function calcFSI() {
+    const elP = document.getElementById('fsiPlot');
+    const elR = document.getElementById('fsiRatio');
+    const elM = document.getElementById('fsiMargin');
+    const plot   = Number(elP.value) || 0;
+    const ratio  = Number(elR.value) || 0;
+    const margin = Number(elM.value) || 0;
+    const built = plot * ratio;
+    const carpet = built * 0.75;
+    const side = Math.sqrt(Math.max(0, plot));
+    const setback = Math.max(0, 4 * side * margin - 4 * margin * margin);
+
+    // Slider labels
+    document.getElementById('fsiPlotLbl').innerHTML =
+      fmtIN(plot) + '<span class="unit">Sq.Ft.</span>';
+    document.getElementById('fsiRatioLbl').innerHTML =
+      ratio.toFixed(1) + '<span class="unit">Ratio</span>';
+    document.getElementById('fsiMarginLbl').innerHTML =
+      margin + '<span class="unit">' + (margin === 1 ? 'Foot' : 'Feet') + '</span>';
+
+    // Slider gold fill
+    paintRange(elP); paintRange(elR); paintRange(elM);
+
+    // Results
+    document.getElementById('fsiBuilt').textContent   = fmtIN(built)   + ' Sq.Ft.';
+    document.getElementById('fsiCarpet').textContent  = fmtIN(carpet)  + ' Sq.Ft.';
+    document.getElementById('fsiSetback').textContent = fmtIN(setback) + ' Sq.Ft.';
+  }
+  ['fsiPlot','fsiRatio','fsiMargin'].forEach(id => {
+    document.getElementById(id).addEventListener('input', calcFSI);
+  });
+  calcFSI();
+
+  // ── Cream-veil navigation transitions ───────────────────────────────
+  function navFade(href) {
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = href; }, 220);
+  }
+  const brandLink = document.getElementById('brandLink');
+  if (brandLink) brandLink.addEventListener('click', e => { e.preventDefault(); navFade('home.html?from=tools'); });
+  const ecBackBtn = document.getElementById('ecBackBtn');
+  if (ecBackBtn) {
+    const goBack = (e) => { if (e) e.preventDefault(); navFade('home.html?from=tools'); };
+    ecBackBtn.addEventListener('click', goBack);
+    ecBackBtn.addEventListener('touchend', goBack, { passive: false });
+  }
+  // Fast-entry mode when arriving from home
+  (function () {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('from') === 'home') document.body.classList.add('fast-entry');
+    } catch (_) {}
+  })();
+
+  // Initial render
+  applyPriceState();
+
+  // ── Open the requested tool from ?tool=price|emi|fsi ────────────────
+  (function () {
+    try {
+      const t = (new URLSearchParams(window.location.search).get('tool') || '').toLowerCase();
+      if (t === 'price' || t === 'emi' || t === 'fsi') setTool(t);
+    } catch (_) {}
+  })();
+</script>
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+
+  // ── Prefetch next-screen on touchstart for faster transitions ───
+  (function() {
+    function wirePrefetch() {
+      document.querySelectorAll('a[href], button[data-href]').forEach(function(el) {
+        var href = el.getAttribute('href') || el.dataset.href;
+        if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:')) return;
+        el.addEventListener('touchstart', function() {
+          if (!document.querySelector('link[rel="prefetch"][href="' + href + '"]')) {
+            var link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = href;
+            document.head.appendChild(link);
+          }
+        }, { passive: true, once: true });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wirePrefetch);
+    } else {
+      wirePrefetch();
+    }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(function() {
+        if (location.pathname.indexOf('home.html') !== -1) return;
+        if (document.querySelector('link[rel="prefetch"][href="home.html"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'home.html';
+        document.head.appendChild(link);
+      });
+    }
+  })();
+</script>
+<!-- PWA-JS-END -->
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+</body>
+</html>

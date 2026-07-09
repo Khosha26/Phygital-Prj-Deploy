@@ -1,0 +1,1263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Grounds · The Lanterns</title>
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE LANTERNS — five lanterns, one living garden
+  ──────────────────────────────────────────────────────────────────────
+  TWO VIEWS IN ONE FILE (JS toggle, no navigation):
+    VIEW A — OVERVIEW ("the constellation"): a row of five cut-out lantern
+             pavilions on a reflective ground. Tap a lantern → VIEW B.
+    VIEW B — DETAIL: left narrative + features · centre framed hero render ·
+             right LANTERN DETAILS card · bottom filmstrip + ‹ › arrows.
+  Order left→right: WINTER · SPRING · ALL SEASONS (centre, hero) · SUMMER · AUTUMN
+  Deep link ?l=center|winter|spring|summer|autumn opens VIEW B directly.
+  Content sourced from the Landscape Concept deck.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  /* iPad standalone PWA (installed): drop the top chrome below the status bar and let the
+     backdrop bleed under the bottom home-indicator band, so the app reads truly full-screen.
+     Inert in a normal browser tab (display-mode is not standalone there). */
+  @media (display-mode:standalone){
+    :where(.top,.topbar,.dtop,.loc>.bar){margin-top:env(safe-area-inset-top,0px)}
+    :where(body,#home,.wrap,.stage,main)>:where(.back,.float360,.nav360,.views,.corner-logo,.hour-dial){margin-top:env(safe-area-inset-top,0px)}
+    body,.bg,#map{min-height:100lvh}
+  }
+
+  :root{
+    /* Embassy ONE redesign — deck palette (ink-navy + bone) */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#efe8da; --bone-2:#e6dcc8; --paper:#faf7f0;
+    --taupe:#6e5c58; --champ:#c9a84c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#121621; --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette */
+    --parch:#efe8da; --muted:#7a7264; --faint:#8c919c;
+    --gold:#c9a84c; --gold-d:#b9a583; --gold-l:#c9a84c; --gold-lt:#c9a84c; --brass:#c9a84c;
+    --line:rgba(18,22,33,.12); --leather1:#1a2030; --leather2:#121621; --green:#121621; --card:#e6dcc8; --sage:#9da585; --water:#8aa0a8;
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a;
+    --on-navy:#ece8e0; --on-navy-dim:#9aa1ad;
+    --ease:cubic-bezier(.23,1,.32,1); --expo:cubic-bezier(.23,1,.32,1); --overshoot:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); background:#efe8da; font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  /* BEIGE theme background — the ONE tower render kept as a whisper-faint architectural presence */
+  .bg{position:fixed; inset:0; z-index:0; background:radial-gradient(125% 95% at 50% 0%, #efe8da, #e0d5c0 64%), #efe8da}
+  /* the tower render, desaturated + multiply-blended so it reads as a soft grey presence on beige */
+  .bg::before{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-hero.webp) center 16% / cover no-repeat;
+    filter:saturate(.18) brightness(1.02) contrast(.98); opacity:.10; mix-blend-mode:multiply}
+  /* soft warm vignette + centre light-pool so the pale lanterns read against the beige */
+  .bg::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(120% 85% at 50% 42%, rgba(255,252,246,.35), transparent 58%),
+      linear-gradient(180deg, rgba(224,213,192,0) 0%, rgba(216,203,178,.14) 46%, rgba(200,186,158,.42) 100%)}
+
+  /* ── TOP BAR (shared) ─────────────────────────────────────── */
+  .top{position:fixed; top:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    padding:clamp(16px,2.2vh,28px) clamp(22px,3vw,54px) 0; gap:12px; pointer-events:none}
+  .top>*{pointer-events:auto}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:#121621; border:1px solid rgba(18,22,33,.25); color:#faf7f0; font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.32em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.6), 0 8px 18px -8px rgba(8,11,18,.28), 0 0 10px rgba(236,232,224,.55);
+    -webkit-backdrop-filter:none; backdrop-filter:none; transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  @media (hover:hover){ .back:hover{ background:#121621; border-color:#c9a84c;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.72), 0 10px 22px -8px rgba(8,11,18,.32), 0 0 14px rgba(236,232,224,.72); } }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px; stroke:#faf7f0}
+  .eyebrow{justify-self:center; font-size:clamp(9px,1.2vh,13px); letter-spacing:.42em; text-transform:uppercase; color:var(--gold-d); white-space:nowrap; transition:opacity .45s var(--expo)}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--on-light-dim)}
+
+  /* ══════════════════════════════════════════════════════════
+     VIEW A — OVERVIEW
+     ══════════════════════════════════════════════════════════ */
+  .view{position:fixed; inset:0; z-index:5; opacity:0; visibility:hidden; transition:opacity .55s var(--expo), visibility .55s}
+  .view.on{opacity:1; visibility:visible}
+
+  .ov{position:relative; display:flex; flex-direction:column; align-items:center; height:100%; box-sizing:border-box;
+    padding:clamp(74px,11vh,120px) clamp(20px,3vw,60px) 0}
+  .ov-head{text-align:center; flex:0 0 auto}
+  .ov-head h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1.04; letter-spacing:.16em; text-transform:uppercase;
+    font-size:clamp(34px,5.8vh,70px); color:var(--ink)}
+  .ov-head h1 em{font-style:italic; font-weight:500; text-transform:none; color:var(--champ)}
+  .ov-diamond{display:flex; align-items:center; justify-content:center; gap:14px; margin:clamp(10px,1.5vh,18px) 0 clamp(12px,1.7vh,20px)}
+  .ov-diamond .r{width:clamp(40px,7vw,90px); height:1px; background:linear-gradient(90deg,transparent,var(--gold))}
+  .ov-diamond .r.l{background:linear-gradient(90deg,var(--gold),transparent)}
+  .ov-diamond .d{width:7px; height:7px; background:var(--gold); transform:rotate(45deg); box-shadow:0 0 0 4px rgba(236,232,224,.12)}
+  .ov-sub{font-weight:300; color:var(--on-light-dim); font-size:clamp(12px,1.55vh,17px); line-height:1.65; max-width:64ch; margin:0 auto}
+  .ov-body{font-weight:300; color:var(--on-light-dim); font-size:clamp(11px,1.35vh,15px); line-height:1.7; max-width:58ch; margin:clamp(8px,1.2vh,14px) auto 0}
+
+  /* the constellation row */
+  /* 5 lanterns clustered dead-centre, evenly spaced, sitting on one common ground
+     line (align-items:flex-end), the whole block vertically centred via auto margins.
+     Clear side margins keep anything from clipping off-screen. */
+  /* BASELINE: the row is pinned so the model BASES rest on a common line at ~72% of
+     viewport height (its bottom edge = 28vh from the bottom). align-items:flex-end
+     aligns every 3D host's bottom (= each model's base) on that single line. */
+  .row{position:absolute; left:0; right:0; bottom:26vh; width:100%; max-width:100%; display:flex;
+    align-items:flex-end; justify-content:center; gap:clamp(5px,0.8vw,17px);
+    transform:scale(0.77); transform-origin:center bottom}   /* whole group scaled 30% smaller */
+  /* a soft, glossy reflective floor the lanterns rest on (warm cream sheen + faint horizon) */
+  .row::before{content:none}   /* removed the horizontal floor band behind the lanterns */
+  .lant{position:relative; z-index:1; flex:0 1 auto; display:flex; flex-direction:column; align-items:center; cursor:pointer;
+    background:none; border:0; padding:0; -webkit-tap-highlight-color:transparent;
+    opacity:0; transition:transform .55s var(--expo), opacity .7s var(--expo)}
+  .lant.shown{opacity:1}   /* revealed one-by-one once the 3D model is ready (no top-then-settle flash) */
+  .lant .pav{position:relative; display:flex; flex-direction:column; align-items:center}
+  /* the lantern (3D iso render on a uniform 820x1180 canvas, bottom-aligned) with a
+     soft drop shadow for lift. one height drives all five; bases line up via flex-end. */
+  .lant .cut{height:clamp(300px,40vh,560px); width:auto; object-fit:contain; display:block;
+    filter:drop-shadow(0 26px 26px rgba(8,11,18,.20));
+    transition:transform .6s var(--expo), filter .6s var(--expo)}
+  /* grounded contact shadow — a soft ellipse under the base for weight */
+  .lant .pav::after{content:""; position:absolute; left:50%; bottom:clamp(30px,4vh,64px);
+    transform:translateX(-50%); width:64%; height:clamp(14px,1.8vh,26px); z-index:-1;
+    background:radial-gradient(ellipse at center, rgba(8,11,18,.30), rgba(8,11,18,0) 70%);
+    filter:blur(3px); pointer-events:none}
+  /* mirror reflection beneath each lantern — fades out, pulled up to hug the base */
+  .lant .refl{display:block; height:clamp(300px,40vh,560px); width:auto; object-fit:contain;
+    transform:scaleY(-1); opacity:.24; margin-top:-21%; pointer-events:none;
+    -webkit-mask:linear-gradient(to bottom, rgba(0,0,0,.7) 0%, transparent 52%);
+            mask:linear-gradient(to bottom, rgba(0,0,0,.7) 0%, transparent 52%)}
+  .lant .ground{display:none}
+  /* live 3D lantern host (replaces the flat cut-out for an interactive 360 spin) */
+  .lant3d{height:clamp(340px,49vh,620px); width:clamp(240px,19vw,500px); cursor:grab;
+    touch-action:none; -webkit-tap-highlight-color:transparent}
+  .lant.center .lant3d{height:clamp(330px,47vh,580px); width:clamp(260px,21vw,520px)}  /* hero */
+  .lant[data-key="spring"] .lant3d{height:clamp(380px,56vh,700px); width:clamp(250px,20vw,560px)}  /* brought down, size kept via margin */
+  .lant3d:active{cursor:grabbing}
+  .lant3d canvas{display:block; width:100%; height:100%;
+    filter:drop-shadow(0 26px 26px rgba(8,11,18,.20))}
+  .lant3d.loading{background:radial-gradient(ellipse at 50% 60%, rgba(236,232,224,.12), transparent 70%)}
+  /* when the live 3D model is mounted, collapse the flat-image space so the contact
+     shadow, reflection and label all sit RIGHT beneath the model (not 560px below) */
+  .lant.is3d .cut{display:none}
+  .lant.is3d .refl{display:none}
+  .lant.is3d .pav::after{display:none}
+  .lant.is3d .pav{padding-bottom:clamp(14px,2.4vh,38px)}   /* reserve room for the reflection */
+  .lant.is3d .lant3d{position:relative;
+    /* pull the mirror UP so it sits right beneath the model base (the tall canvas leaves empty
+       space below the base; box-reflect 0 dropped the reflection too far down). ~7vh closes the gap. */
+    -webkit-box-reflect:below -7vh linear-gradient(to bottom, rgba(0,0,0,.5) 0%, rgba(0,0,0,.2) 24%, transparent 50%)}
+  .lant.is3d .lant3d canvas{filter:drop-shadow(0 12px 14px rgba(8,11,18,.18))}
+  /* grounded contact ellipse right under the model base */
+  .lant.is3d .lant3d::after{content:""; position:absolute; left:50%; bottom:7%;
+    transform:translateX(-50%); width:56%; height:clamp(9px,1.3vh,18px); z-index:-1;
+    background:radial-gradient(ellipse at center, rgba(8,11,18,.36), rgba(8,11,18,0) 70%);
+    filter:blur(3px); pointer-events:none}
+  .lant .label{margin-top:clamp(8px,1.4vh,18px); text-align:center}
+  .lant .label .s{font-size:clamp(9px,1.2vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--gold-d);
+    transition:color .4s, letter-spacing .4s}
+  .lant .label .c{font-size:clamp(7.5px,.95vh,10.5px); letter-spacing:.26em; text-transform:uppercase; color:var(--on-light-dim); margin-top:5px}
+  /* centre hero lantern — same footprint (shared baseline) but gold-emphasised label */
+  .lant.center .label .s{font-size:clamp(10px,1.35vh,15px); color:var(--gold)}
+  @media (hover:hover){
+    .lant:hover{transform:translateY(-12px)}
+    .lant:hover .cut{filter:drop-shadow(0 30px 34px rgba(8,11,18,.34)) brightness(1.05)}
+    .lant:hover .label .s{color:var(--gold-l); letter-spacing:.4em}
+  }
+  .lant:focus-visible{outline:none}
+  .lant:focus-visible .label .s{color:var(--gold-l)}
+  /* fallback if cut-out image missing — show a quiet glyph plate so layout holds */
+  .lant .cut.miss, .lant .refl.miss{visibility:hidden}
+  .lant .pav.fallback::before{content:""; position:absolute; inset:0; bottom:0; margin:auto;
+    width:clamp(54px,9vw,120px); height:clamp(150px,32vh,360px);
+    background:linear-gradient(180deg, rgba(247,236,210,.5), rgba(236,232,224,.18));
+    border:1px solid rgba(236,232,224,.4); border-radius:50% 50% 8px 8px / 30% 30% 8px 8px}
+
+  /* tap hint */
+  .ov-hint{position:absolute; left:0; right:0; bottom:clamp(20px,7vh,72px); display:flex; align-items:center; justify-content:center; gap:11px;
+    color:var(--on-light-dim); font-size:clamp(10px,1.2vh,13px);
+    letter-spacing:.26em; text-transform:uppercase}
+  .ov-hint svg{width:18px; height:18px; stroke:var(--gold-d); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round;
+    animation:tap 2.6s var(--ease) infinite}
+  @keyframes tap{0%,72%,100%{transform:translateY(0)}82%{transform:translateY(4px)}}
+
+  /* ══════════════════════════════════════════════════════════
+     VIEW B — DETAIL
+     ══════════════════════════════════════════════════════════ */
+  .dt{display:grid;
+    grid-template-columns:minmax(280px,1fr) minmax(0,1.55fr) minmax(258px,.82fr);
+    grid-template-rows:1fr auto; gap:clamp(20px,2.6vw,52px);
+    padding:clamp(72px,10.5vh,116px) clamp(26px,3.6vw,72px) clamp(20px,3vh,40px); height:100%}
+
+  /* LEFT column */
+  .dt-left{grid-column:1; grid-row:1; display:flex; flex-direction:column; justify-content:center; min-width:0;
+    transition:opacity .5s var(--expo)}
+  .dt-left h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:.98; margin-bottom:6px;
+    font-size:clamp(34px,5.6vh,68px); color:var(--ink)}
+  .dt-left .tag{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; color:var(--champ);
+    font-size:clamp(16px,2.3vh,28px); line-height:1.12}
+  .dt-left .narr{font-weight:300; color:var(--on-light-dim); line-height:1.8; font-size:clamp(12.5px,1.55vh,17px); max-width:42ch;
+    margin-top:clamp(14px,2vh,22px)}
+  .dt-left .rule{width:46px; height:1px; background:var(--gold); margin:clamp(16px,2.4vh,28px) 0 clamp(14px,2vh,22px); opacity:.7}
+  .feat{display:flex; flex-direction:column; gap:clamp(10px,1.5vh,16px)}
+  .feat .fl{display:flex; align-items:flex-start; gap:12px}
+  .feat .fl .ic{flex:0 0 auto; width:clamp(17px,2.2vh,22px); height:clamp(17px,2.2vh,22px); margin-top:1px;
+    stroke:var(--gold); fill:none; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round}
+  .feat .fl .tx{min-width:0}
+  .feat .fl .tx .k{font-size:clamp(9px,1.1vh,12px); letter-spacing:.24em; text-transform:uppercase; color:var(--gold-d); font-weight:500}
+  .feat .fl .tx .v{font-weight:300; color:var(--on-light-dim); font-size:clamp(12px,1.5vh,16px); line-height:1.4; margin-top:2px}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:clamp(14px,2vh,22px)}
+  .chips .chip{font-size:clamp(8.5px,1.05vh,11px); letter-spacing:.18em; text-transform:uppercase; color:var(--champ);
+    border:1px solid rgba(18,22,33,.25); border-radius:999px; padding:6px 13px;
+    background:#121621;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+
+  /* CENTRE hero */
+  .dt-hero{grid-column:2; grid-row:1; position:relative; min-width:0; display:flex; align-items:center; justify-content:center}
+  .frame{position:relative; width:100%; height:100%; max-height:64vh; overflow:visible;
+    background:transparent; box-shadow:none; outline:none}
+  .frame img{width:100%; height:100%; object-fit:cover; display:block;
+    transition:transform 1s var(--expo), opacity .5s var(--expo)}
+  .frame img.hidden{display:none}
+  .frame.swap img{opacity:0; transform:scale(1.035)}
+  .frame::after{content:none}   /* no dark overlay — model floats on the cream background */
+  /* live interactive 3D viewer host inside the gold frame */
+  .frame .hero3d{position:absolute; inset:0; z-index:1; cursor:grab; touch-action:none;
+    -webkit-tap-highlight-color:transparent}
+  .frame .hero3d:active{cursor:grabbing}
+  .frame .hero3d canvas{display:block; width:100%; height:100%;
+    filter:drop-shadow(0 34px 40px rgba(8,11,18,.22))}   /* subtle shadow behind the floating model */
+  .frame .hero3d.loading::after{content:""; position:absolute; left:50%; top:50%; width:34px; height:34px;
+    margin:-17px 0 0 -17px; border-radius:50%; border:2px solid rgba(236,232,224,.25);
+    border-top-color:rgba(236,232,224,.85); animation:spin 0.9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* subtle gold "drag to rotate · scroll to zoom" hint, lower corner of the frame */
+  .frame .hint3d{position:absolute; right:clamp(14px,1.6vw,24px); bottom:clamp(14px,2vh,24px); z-index:4;
+    display:inline-flex; align-items:center; gap:8px; pointer-events:none;
+    color:#d8cbb8; font-size:clamp(8px,1vh,11px); letter-spacing:.2em; text-transform:uppercase;
+    opacity:0; transition:opacity .6s var(--expo)}
+  .frame .hint3d.show{opacity:.72} .frame .hint3d.gone{opacity:0}
+  .frame .hint3d svg{width:14px; height:14px; stroke:#d8cbb8; fill:none; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round}
+  .hcap{position:absolute; left:clamp(16px,1.8vw,28px); bottom:clamp(14px,2vh,24px); z-index:5; color:var(--ink); pointer-events:none; transition:opacity .5s var(--expo)}
+  .hcap .hk{font-size:clamp(8.5px,1.1vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--on-light-dim)}
+  .hcap .hn{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(20px,3vh,40px); line-height:1; margin-top:3px}
+
+  /* RIGHT details card */
+  .dt-card{grid-column:3; grid-row:1; align-self:center; transition:opacity .5s var(--expo)}
+  .card{background:#1b2338;
+    border:1px solid rgba(201,168,76,.20); border-radius:16px; color:var(--on-dark);
+    padding:clamp(18px,2.4vh,28px) clamp(16px,1.7vw,24px);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    display:flex; flex-direction:column}
+  /* real render preview inside the right card — click to open the full-screen zoom viewer */
+  .card-photo{display:block; width:100%; padding:0; border:0; margin:0 0 clamp(12px,1.7vh,20px); cursor:pointer; position:relative;
+    border-radius:12px; overflow:hidden; background:#121621; aspect-ratio:4/3;
+    box-shadow:0 16px 34px -18px rgba(0,0,0,.66), inset 0 0 0 1px rgba(201,168,76,.18);
+    transition:transform .16s var(--expo), box-shadow .3s}
+  .card-photo img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .55s var(--expo)}
+  .card-photo:active{transform:scale(.99)}
+  @media(hover:hover){ .card-photo:hover img{transform:scale(1.05)} .card-photo:hover{box-shadow:0 22px 44px -18px rgba(0,0,0,.72), inset 0 0 0 1px rgba(201,168,76,.34)} }
+  .card-photo .card-photo-cue{position:absolute; right:9px; bottom:9px; display:inline-flex; align-items:center; gap:6px;
+    padding:5px 11px; border-radius:999px; font-family:"Jost",sans-serif; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--on-dark);
+    background:rgba(9,12,24,.55); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:1px solid rgba(201,168,76,.28)}
+  .card-photo .card-photo-cue svg{width:12px; height:12px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+  .card .ch{font-size:clamp(9px,1.15vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--champ); font-weight:500;
+    padding-bottom:clamp(12px,1.6vh,16px); border-bottom:1px solid var(--line-dark); margin-bottom:clamp(12px,1.6vh,16px)}
+  .card .crow{display:flex; align-items:flex-start; gap:11px; padding:clamp(8px,1.1vh,12px) 0}
+  .card .crow+.crow{border-top:1px solid var(--line-dark)}
+  .card .crow .ic{flex:0 0 auto; width:clamp(16px,2vh,20px); height:clamp(16px,2vh,20px); margin-top:1px;
+    stroke:var(--gold); fill:none; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round}
+  .card .crow .tx{min-width:0}
+  .card .crow .tx .k{font-size:clamp(8.5px,1.05vh,11px); letter-spacing:.22em; text-transform:uppercase; color:var(--on-dark-dim)}
+  .card .crow .tx .v{font-weight:300; color:var(--on-dark); font-size:clamp(11.5px,1.45vh,15px); line-height:1.35; margin-top:2px}
+  .card .xpl{margin-top:clamp(16px,2.2vh,24px); display:inline-flex; align-items:center; justify-content:center; gap:10px;
+    background:#121621;
+    border:1px solid rgba(18,22,33,.25); color:#ece8e0; cursor:pointer;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    font-size:clamp(9px,1.1vh,12px); letter-spacing:.3em; text-transform:uppercase; padding:13px 18px; border-radius:11px;
+    transition:background .3s, border-color .3s, transform .15s}
+  @media (hover:hover){ .card .xpl:hover{border-color:rgba(201,168,76,.38)} } .card .xpl:active{transform:scale(.98)}
+  .card .xpl svg{width:14px; height:14px; stroke:#faf7f0; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; transition:transform .4s var(--expo)}
+  .card.expanded .xpl svg{transform:rotate(180deg)}
+  .card .more{max-height:0; overflow:hidden; opacity:0; transition:max-height .5s var(--expo), opacity .4s var(--expo), margin .5s var(--expo); margin-top:0}
+  .card.expanded .more{max-height:240px; opacity:1; margin-top:clamp(12px,1.6vh,16px)}
+  .card .more p{font-weight:300; color:var(--on-dark-dim); font-size:clamp(11px,1.4vh,14px); line-height:1.7; font-style:italic}
+
+  /* BOTTOM filmstrip */
+  .dt-strip{grid-column:1 / -1; grid-row:2; display:flex; align-items:center; justify-content:center; gap:clamp(10px,1.4vw,22px)}
+  .arrow{flex:0 0 auto; width:clamp(40px,4.6vh,52px); height:clamp(40px,4.6vh,52px); border-radius:50%; cursor:pointer;
+    background:#121621;
+    border:1px solid rgba(18,22,33,.25); color:#faf7f0; display:grid; place-items:center;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:background .25s, border-color .25s, transform .15s, color .25s}
+  @media (hover:hover){ .arrow:hover{border-color:rgba(201,168,76,.38); color:#faf7f0} } .arrow:active{transform:scale(.94)}
+  .arrow svg{width:40%; height:40%; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  .strip{display:flex; gap:clamp(8px,.9vw,15px); flex:0 1 auto; justify-content:center; min-width:0}
+  .thumb{position:relative; flex:0 0 auto; width:clamp(78px,9.5vw,150px); aspect-ratio:5/4; border-radius:12px; overflow:hidden; cursor:pointer;
+    border:1.5px solid transparent; background:#121621; box-shadow:0 8px 18px -10px rgba(8,11,18,.5);
+    transition:transform .3s var(--expo), border-color .3s, box-shadow .3s, opacity .3s; opacity:.66; filter:saturate(.92)}
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s var(--expo)}
+  .thumb .tl{position:absolute; left:0; right:0; bottom:0; z-index:2; padding:14px 6px 5px; text-align:center;
+    font-size:clamp(7px,.95vh,10.5px); letter-spacing:.2em; text-transform:uppercase; color:#ece8e0;
+    background:linear-gradient(to top, rgba(8,11,18,.82), rgba(8,11,18,0))}
+  @media (hover:hover){ .thumb:hover{opacity:1; transform:translateY(-3px)} .thumb:hover img{transform:scale(1.06)} }
+  .thumb.on{opacity:1; border-color:var(--gold-l); box-shadow:0 12px 26px -10px rgba(8,11,18,.6); filter:saturate(1.05)}
+  .thumb.on::after{content:""; position:absolute; inset:0; box-shadow:inset 0 0 0 2px rgba(255,206,120,.5); border-radius:11px; pointer-events:none}
+
+  /* fades */
+  .dt-left.fade,.dt-card.fade,.hcap.fade{opacity:0}
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .8s var(--expo) forwards} @keyframes fin{to{opacity:1;transform:none}}
+
+  /* ── PORTRAIT / narrow ──────────────────────────────────────── */
+  @media (max-aspect-ratio:1/1){
+    /* OVERVIEW: header sits clear of the fixed top bar; the constellation
+       becomes a flowing grid where every lantern is small enough to fit. */
+    .ov{padding-top:clamp(96px,16vh,150px); overflow-y:auto; -webkit-overflow-scrolling:touch; justify-content:flex-start}
+    .row{position:static; bottom:auto; transform:none; flex-wrap:wrap; align-items:flex-end;
+      gap:clamp(6px,2vw,18px); margin:clamp(14px,3vh,28px) auto clamp(80px,12vh,120px)}
+    .lant{flex:0 0 30%}
+    .lant.center{flex:0 0 46%; order:-1}
+    /* shrink the (tall) 3D canvas + flat cut-outs so the row never overflows the phone */
+    .lant3d, .lant.center .lant3d, .lant[data-key="spring"] .lant3d{
+      height:clamp(150px,26vh,300px); width:clamp(120px,30vw,260px)}
+    .lant.center .lant3d{height:clamp(170px,30vh,330px); width:clamp(140px,38vw,300px)}
+    .lant .cut, .lant .refl{height:clamp(120px,22vh,220px)}
+    .lant.center .cut,.lant.center .refl{height:clamp(150px,28vh,280px)}
+    .ov-hint{position:static; margin:clamp(8px,2vh,18px) auto clamp(18px,4vh,30px)}
+
+    /* DETAIL: stack hero / narrative / card / strip, page scrolls */
+    .dt{grid-template-columns:1fr; grid-template-rows:auto auto auto auto;
+      padding-top:clamp(92px,15vh,140px); overflow-y:auto; -webkit-overflow-scrolling:touch;
+      height:auto; min-height:100%; gap:clamp(16px,2.4vh,28px)}
+    .dt-hero{grid-column:1; grid-row:1; order:0} .frame{max-height:42vh; aspect-ratio:16/10}
+    .dt-left{grid-column:1; grid-row:2; order:1; justify-content:flex-start}
+    .dt-left .narr{max-width:none}
+    .dt-card{grid-column:1; grid-row:3; order:2; align-self:stretch}
+    .dt-strip{grid-column:1; grid-row:4; order:3}
+    .strip{overflow-x:auto; justify-content:flex-start; -webkit-overflow-scrolling:touch}
+    .thumb{width:96px}
+  }
+  /* ── PHONE PORTRAIT: stack the top bar, balance the title ── */
+  @media (max-aspect-ratio:1/1) and (max-width:520px){
+    .top{grid-template-columns:1fr; justify-items:start; gap:6px; padding-bottom:8px}
+    .eyebrow{justify-self:start; white-space:normal}
+    .corner{justify-self:start}
+    .ov{padding-top:clamp(104px,20vh,150px)}
+    .ov-head h1{font-size:clamp(30px,9vw,46px)}
+    .ov-sub{font-size:14px} .ov-body{font-size:13px}
+    .dt{padding-top:clamp(104px,20vh,150px)}
+    .dt-left h1{font-size:clamp(30px,9vw,44px)}
+    .dt-left .narr{font-size:14px}
+    .card .ch,.card .crow .tx .v{}
+  }
+  /* ── LANDSCAPE PHONE: keep title below the bar, constellation in one row ── */
+  @media (max-height:480px) and (min-aspect-ratio:1/1){
+    .ov{padding-top:clamp(60px,16vh,84px); overflow-y:auto; -webkit-overflow-scrolling:touch}
+    .ov-head h1{font-size:clamp(22px,7vh,34px)}
+    .ov-head .ov-diamond{margin:6px 0}
+    .ov-sub,.ov-body{font-size:clamp(11px,2.6vh,13px); margin-top:4px}
+    .row{bottom:18vh; transform:scale(.7)}
+    .ov-hint{bottom:clamp(8px,3vh,16px)}
+    .dt{padding-top:clamp(58px,15vh,80px); gap:clamp(12px,2vw,28px)}
+    .dt-left h1{font-size:clamp(22px,7vh,34px)}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:#121621!important; border:1px solid rgba(18,22,33,.25)!important; color:#faf7f0!important; font-family:"Jost",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(6px)!important; backdrop-filter:blur(6px)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  @media (hover:hover){ .back:hover{background:#121621!important; border-color:var(--gold-lt)!important; box-shadow:0 10px 24px -10px rgba(6,9,16,.6)!important} }
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:#faf7f0!important}
+
+  /* ── "VIEW PHOTO" pill on the hero frame — opens the real render in the zoom viewer ── */
+  .viewphoto{position:absolute; right:clamp(12px,1.2vw,20px); bottom:clamp(12px,1.4vh,20px); z-index:4; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px; padding:9px 15px; border-radius:999px;
+    font-family:"Jost",sans-serif; font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.24em; text-transform:uppercase; color:var(--on-dark);
+    background:#121621;
+    border:1px solid rgba(18,22,33,.25);
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:transform .16s var(--ease-out), background .2s, border-color .2s}
+  .viewphoto svg{width:15px; height:15px; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  .viewphoto:active{transform:scale(.96)}
+  @media(hover:hover){ .viewphoto:hover{border-color:rgba(201,168,76,.38)} }
+
+  /* ── FULL-SCREEN ZOOMABLE VIEWER (real lantern render) ── */
+  .lblow{position:fixed; inset:0; z-index:80; background:var(--ink); display:none; align-items:center; justify-content:center;
+    opacity:0; transition:opacity .3s var(--ease-out); overflow:hidden; -webkit-user-select:none; user-select:none; touch-action:none}
+  .lblow.on{display:flex; opacity:1}
+  .lblow img{max-width:94vw; max-height:92vh; object-fit:contain; border-radius:6px; box-shadow:0 40px 90px rgba(0,0,0,.6);
+    transform:translate(0,0) scale(1); transform-origin:center center; will-change:transform;
+    transition:transform .2s var(--ease-out); cursor:grab; -webkit-user-drag:none; touch-action:none}
+  .lblow img.grab{cursor:grabbing; transition:none}
+  .lblowx{position:fixed; top:24px; right:26px; z-index:82; width:46px; height:46px; border-radius:50%; cursor:pointer;
+    display:grid; place-items:center; color:#faf7f0; background:#121621;
+    border:1px solid rgba(236,232,224,.24); -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1);
+    transition:transform .16s var(--ease-out), background .2s}
+  .lblowx:active{transform:scale(.97)}
+  @media(hover:hover){ .lblowx:hover{background:#121621} }
+  .lblowx svg{width:42%; height:42%; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+  /* zoom control cluster */
+  .lblow-zoom{position:fixed; right:26px; bottom:24px; z-index:82; display:flex; align-items:center; gap:10px}
+  .lzb{width:46px; height:46px; border-radius:50%; cursor:pointer; display:grid; place-items:center; color:#faf7f0;
+    background:#121621; border:1px solid rgba(236,232,224,.24);
+    -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1);
+    transition:transform .16s var(--ease-out), background .2s, opacity .2s}
+  .lzb:active{transform:scale(.94)}
+  @media(hover:hover){ .lzb:hover{background:#121621} }
+  .lzb svg{width:44%; height:44%; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+  .lzb.off{opacity:.32; pointer-events:none}
+  .lzlvl{min-width:52px; text-align:center; color:var(--on-dark-dim); font-family:"Jost",sans-serif; font-size:12px; letter-spacing:.12em}
+  .lblow-hint{position:fixed; bottom:26px; left:0; right:0; text-align:center; z-index:81; color:var(--on-dark-dim);
+    font-size:11px; letter-spacing:.26em; text-transform:uppercase; pointer-events:none}
+  /* wave-2: 360° view button + full-screen viewer (navy-on-beige, top-right) */
+  .float360{display:inline-flex; align-items:center; gap:9px; cursor:pointer; padding:10px 16px; border-radius:999px;
+    border:1px solid rgba(18,22,33,.25); color:#faf7f0; background:#121621; font-family:"Jost",sans-serif; font-weight:500;
+    letter-spacing:.2em; text-transform:uppercase; font-size:clamp(9px,1.15vh,13px); white-space:nowrap;
+    box-shadow:0 8px 20px -10px rgba(6,9,16,.5); transition:transform .16s var(--ease), background .2s, border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{background:#121621; border-color:rgba(201,168,76,.6); transform:translateY(-2px)} }
+  .float360 svg{width:clamp(16px,2vh,20px); height:auto; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:90; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s ease}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:calc(env(safe-area-inset-top,0px) + clamp(14px,2.4vh,26px)); left:calc(env(safe-area-inset-left,0px) + clamp(14px,2.4vw,26px)); z-index:91;
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:11px 18px; border-radius:999px; border:1px solid rgba(236,232,224,.24); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px)}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621} }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <!-- shared top bar -->
+  <div class="top">
+    <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+    <div class="eyebrow" id="eyebrow">The Grounds · The Lanterns</div>
+    <button class="float360" id="btn360" aria-label="360 degree view" style="justify-self:end">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+      <span>360&deg; View</span>
+    </button>
+  </div>
+
+  <!-- ══ VIEW A — OVERVIEW ══ -->
+  <section class="view on" id="viewOv">
+    <div class="ov">
+      <header class="ov-head fadein">
+        <h1><em>Five</em> lanterns mark the grounds</h1>
+        <div class="ov-diamond"><span class="r l"></span><span class="d"></span><span class="r"></span></div>
+        <p class="ov-sub">Each tuned to a season and a moment</p>
+        <p class="ov-body">Spring at the Miyawaki forest. Monsoon over the rain terrace. The central lantern, all year, floats at the pool&rsquo;s edge.</p>
+      </header>
+      <div class="row" id="row"></div>
+      <div class="ov-hint">
+        <svg viewBox="0 0 24 24"><path d="M9 11V6.5a1.5 1.5 0 0 1 3 0V11"/><path d="M12 11V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 11V7a1.5 1.5 0 0 1 3 0v6.5a6 6 0 0 1-6 6h-1.2a4 4 0 0 1-3-1.35l-3.1-3.5a1.6 1.6 0 0 1 2.3-2.2L9 14"/></svg>
+        Tap a lantern to explore
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ VIEW B — DETAIL ══ -->
+  <section class="view" id="viewDt">
+    <div class="dt">
+      <div class="dt-left" id="dtLeft">
+        <h1 id="dName">The Central Lantern</h1>
+        <div class="tag" id="dTag">A Quiet Axis of Light</div>
+        <p class="narr" id="dNarr"></p>
+        <div class="rule"></div>
+        <div class="feat" id="dFeat"></div>
+        <div class="chips" id="dChips"></div>
+      </div>
+
+      <div class="dt-hero">
+        <div class="frame" id="frame">
+          <img id="heroImg" class="hidden" src="../assets/renders/lanterns/center.webp" alt="">
+          <div class="hero3d" id="hero3d" aria-label="Interactive 3D model — drag to rotate, scroll to zoom"></div>
+          <div class="hint3d" id="hint3d" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 12a9 9 0 0 0-9-9"/><path d="M3 12h4M17 12h4"/></svg>
+            Drag to rotate · scroll to zoom
+          </div>
+          <div class="hcap" id="hcap"><div class="hk" id="hk">All Seasons</div><div class="hn" id="hn">The Central Lantern</div></div>
+        </div>
+      </div>
+
+      <div class="dt-card" id="dtCard">
+        <div class="card" id="card">
+          <button class="card-photo" id="cardPhoto" type="button" aria-label="View the full render in full screen">
+            <img id="cardImg" src="../assets/renders/lanterns/center.webp" alt="Lantern render" draggable="false">
+            <span class="card-photo-cue"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Enlarge</span>
+          </button>
+          <div class="ch">Lantern Details</div>
+          <div id="cardRows"></div>
+          <button class="xpl" id="xpl" aria-expanded="false">Explore Details
+            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="more" id="more"><p id="moreText"></p></div>
+        </div>
+      </div>
+
+      <div class="dt-strip">
+        <button class="arrow" id="prev" aria-label="Previous lantern"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="strip" id="strip"></div>
+        <button class="arrow" id="next" aria-label="Next lantern"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- full-screen zoomable viewer for the real lantern render -->
+  <div class="lblow" id="lblow" aria-hidden="true">
+    <img id="lblowImg" src="" alt="Lantern render">
+    <button class="lblowx" id="lblowx" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="lblow-zoom">
+      <button class="lzb" id="lzOut" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      <span class="lzlvl" id="lzLvl">100%</span>
+      <button class="lzb" id="lzIn" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="lzb" id="lzReset" aria-label="Reset zoom"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-7 3.3"/><path d="M4 3v4h4"/></svg></button>
+    </div>
+    <div class="lblow-hint" id="lblowHint">Pinch or scroll to zoom · drag to pan · tap to close</div>
+  </div>
+
+<script>
+  var R='../assets/renders/lanterns/';   /* hero renders */
+  var C='../assets/lanterns/cut/';        /* cut-out pavilions */
+
+  /* gold line-icon set (inline SVG path bodies) */
+  var ICON={
+    festival:'<circle cx="12" cy="12" r="3.4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+    location:'<path d="M12 21s-6.5-5.7-6.5-10.3A6.5 6.5 0 0 1 18.5 10.7C18.5 15.3 12 21 12 21z"/><circle cx="12" cy="10.6" r="2.3"/>',
+    materials:'<path d="M3.5 8.5l8.5-4.5 8.5 4.5-8.5 4.5z"/><path d="M3.5 12.5l8.5 4.5 8.5-4.5"/><path d="M3.5 16l8.5 4.5L20.5 16"/>',
+    feature:'<path d="M12 3.5l2.3 5.6 6 .5-4.6 3.9 1.5 5.8L12 16.6 6.3 19.3l1.5-5.8L3.2 9.6l6-.5z"/>',
+    season:'<circle cx="12" cy="12" r="3.6"/><path d="M12 4.5v-1M12 20.5v1M4.5 12h-1M20.5 12h1M6.7 6.7l-.7-.7M18 18l-.7-.7M17.3 6.7l.7-.7M6 18l.7-.7"/>'
+  };
+  function svg(name){ return '<svg class="ic" viewBox="0 0 24 24">'+ICON[name]+'</svg>'; }
+
+  /* DATA — order: winter, spring, center(All Seasons), summer, autumn */
+  var LANTS=[
+    {key:'winter', season:'WINTER', name:'Winter Lantern', tag:'Festival of the Sun', hero:'twin.webp', cut:'winter.webp',
+      festival:'Makara Sankranti · Jan 14–15', location:'Main Drop-off', materials:'Clay jali brick', feature:'Entrance icon · Winter blossom tree',
+      chips:['Clay Jali','Winter Bloom'], sub:'',
+      narr:'Marking the winter solstice and the harvest, the Winter Lantern is the garden’s entrance icon — a clay-jali beacon glowing beside a winter-blossoming tree (Tabernaemontana corymbosa).'},
+    {key:'spring', season:'SPRING', name:'Spring Lantern', tag:'The Lunar New Year', hero:'spring.webp', cut:'spring.webp',
+      festival:'Ugadi · Mar–Apr', location:'Miyawaki Forest', materials:'Expanded metal · timber', feature:'A folly in the forest · Spring blossom',
+      chips:['Forest Folly','First Bloom'], sub:'',
+      narr:'Celebrated across Karnataka as the start of the lunar calendar, the Spring Lantern is a folly hidden within the Miyawaki forest, marking the year’s first bloom.'},
+    {key:'center', season:'ALL SEASONS', name:'The Central Lantern', tag:'The Heart of the Garden', hero:'center.webp', cut:'center.webp',
+      festival:'Brahma · All year round', location:'Cascade Edge · Infinity pool', materials:'Pilkington frosted glass', feature:'Reacts to the weather · Floats on water',
+      chips:['Frosted Glass','Floats on Water'], sub:'A Quiet Axis of Light', central:true,
+      narr:'At the heart of the garden rises the Central Lantern — a quiet axis of light. Frosted glass floating at the infinity pool’s edge, it reacts to the weather and gathers every season into one eternal glow.'},
+    {key:'summer', season:'SUMMER', name:'Summer Lantern', tag:'The Solstice', hero:'summer.webp', cut:'summer.webp',
+      festival:'Karka Sankranti · Jul–Aug', location:'Rain Terrace', materials:'Black glass · water', feature:'Monsoon cabana · Reflection on water',
+      chips:['Monsoon Cabana','Stillness'], sub:'',
+      narr:'At the summer solstice, the Summer Lantern is a monsoon cabana mirrored on still water — shelter and reflection held as one.'},
+    {key:'autumn', season:'AUTUMN', name:'Autumn Lantern', tag:'Festival of Lights', hero:'autumn.webp', cut:'autumn.webp',
+      festival:'Diwali · Oct–Nov', location:'The Bridge', materials:'SUS wire mesh', feature:'Moon lantern · Night-blooming fragrance',
+      chips:['Moon Lantern','Night Bloom'], sub:'',
+      narr:'For Diwali — the most natural connection of all — the Autumn Lantern rises as a moon among night-blooming flowers, fragrant long after dark.'}
+  ];
+  function title(s){ return s.charAt(0)+s.slice(1).toLowerCase(); }
+  function idx(key){ for(var i=0;i<LANTS.length;i++){ if(LANTS[i].key===key) return i; } return 2; }
+
+  /* ── elements ── */
+  var viewOv=document.getElementById('viewOv'), viewDt=document.getElementById('viewDt');
+  var eyebrow=document.getElementById('eyebrow'), back=document.getElementById('back');
+  var rowEl=document.getElementById('row');
+  var frame=document.getElementById('frame'), heroImg=document.getElementById('heroImg');
+  var hk=document.getElementById('hk'), hn=document.getElementById('hn'), hcap=document.getElementById('hcap');
+  var dtLeft=document.getElementById('dtLeft'), dtCard=document.getElementById('dtCard');
+  var dName=document.getElementById('dName'), dTag=document.getElementById('dTag'), dNarr=document.getElementById('dNarr'),
+      dFeat=document.getElementById('dFeat'), dChips=document.getElementById('dChips');
+  var cardRows=document.getElementById('cardRows'), card=document.getElementById('card'),
+      xpl=document.getElementById('xpl'), moreText=document.getElementById('moreText'),
+      cardImg=document.getElementById('cardImg');
+  var stripEl=document.getElementById('strip');
+
+  var view='overview';   /* 'overview' | 'detail' */
+  var cur=2;             /* default = centre */
+
+  /* ── build VIEW A constellation ── */
+  LANTS.forEach(function(l, i){
+    var b=document.createElement('button'); b.className='lant'+(l.central?' center':''); b.setAttribute('data-i', i);
+    b.setAttribute('data-key', l.key);
+    b.setAttribute('aria-label', l.name+', explore');
+    b.innerHTML=
+      '<div class="pav">'+
+        '<img class="cut" src="'+C+l.cut+'" alt="" draggable="false">'+
+        '<div class="ground"></div>'+
+        '<img class="refl" src="'+C+l.cut+'" alt="" aria-hidden="true" draggable="false">'+
+      '</div>'+
+      '<div class="label"><div class="s">'+l.season+'</div>'+(l.central?'<div class="c">The Central Lantern</div>':'')+'</div>';
+    b.addEventListener('click', function(){ openDetail(i); });
+    /* if a cut-out fails to load, hide imagery + use a quiet fallback plate so layout holds */
+    var pav=b.querySelector('.pav');
+    b.querySelectorAll('img').forEach(function(im){
+      im.addEventListener('error', function(){ im.classList.add('miss'); pav.classList.add('fallback'); });
+    });
+    rowEl.appendChild(b);
+  });
+
+  /* ── build filmstrip ── */
+  LANTS.forEach(function(l, i){
+    var t=document.createElement('button'); t.className='thumb'; t.setAttribute('data-i', i); t.setAttribute('aria-label', l.name);
+    t.innerHTML='<img src="'+R+l.hero+'" alt="" draggable="false"><span class="tl">'+l.season+'</span>';
+    t.addEventListener('click', function(){ setLantern(i); });
+    stripEl.appendChild(t);
+  });
+
+  /* ── populate detail for current lantern (with soft fade) ── */
+  function paint(l){
+    dName.textContent=l.name; dTag.textContent=l.sub || l.tag;
+    dNarr.textContent=l.narr;
+    dFeat.innerHTML=
+      row('festival','Festival',l.festival)+
+      row('location','Location',l.location)+
+      row('materials','Materials',l.materials)+
+      row('feature','Feature',l.feature);
+    dChips.innerHTML=(l.chips||[]).map(function(c){ return '<span class="chip">'+c+'</span>'; }).join('');
+    cardRows.innerHTML=
+      crow('festival','Festival',l.festival)+
+      crow('location','Location',l.location)+
+      crow('materials','Materials',l.materials)+
+      crow('feature','Feature',l.feature)+
+      crow('season','Season',title(l.season));
+    moreText.textContent=l.narr;
+    if(cardImg) cardImg.src=R+l.hero;   // right-card render preview follows the selected lantern
+    hk.textContent=title(l.season); hn.textContent=l.name;
+  }
+  function row(ic,k,v){ return '<div class="fl">'+svg(ic)+'<div class="tx"><div class="k">'+k+'</div><div class="v">'+v+'</div></div></div>'; }
+  function crow(ic,k,v){ return '<div class="crow">'+svg(ic)+'<div class="tx"><div class="k">'+k+'</div><div class="v">'+v+'</div></div></div>'; }
+
+  /* ── switch lantern (cross-fade hero + text) ── */
+  function loadHero(key){
+    if(window.__heroViewer){ window.__heroViewer.open(key); }
+    else { window.__pendingHero = key; }   // module not ready yet (deep-link); it mounts on init
+  }
+  function setLantern(i){
+    cur=i; var l=LANTS[i];
+    document.querySelectorAll('.thumb').forEach(function(t){ t.classList.toggle('on', +t.getAttribute('data-i')===i); });
+    eyebrow.textContent=title(l.season)+' · '+l.tag.toUpperCase();
+    // collapse expanded card cleanly on switch
+    card.classList.remove('expanded'); xpl.setAttribute('aria-expanded','false');
+    // fade out text/caption (the 3D viewer reloads the new glb under the cover of the fade)
+    hcap.classList.add('fade');
+    dtLeft.classList.add('fade'); dtCard.classList.add('fade');
+    setTimeout(function(){
+      heroImg.src=R+l.hero;            // keep static render in sync as fallback
+      paint(l);
+      loadHero(l.key);                 // reload the interactive viewer with the new lantern
+      requestAnimationFrame(function(){
+        hcap.classList.remove('fade');
+        dtLeft.classList.remove('fade'); dtCard.classList.remove('fade');
+      });
+    }, 250);
+  }
+
+  /* ── view toggles ── */
+  /* expose for the 3D lantern module (tap-to-enter) */
+  window.__openDetail = function(i){ openDetail(i); };
+  function openDetail(i){
+    cur=i;
+    try{window.RDA&&RDA.track('lantern_view', (LANTS[i]&&LANTS[i].season)||('lantern '+i));}catch(_){}
+    view='detail';
+    window.__OV_PAUSE=true;                        // stop the overview's 5 GPU loops while inside the detail viewer
+    eyebrow.textContent=title(LANTS[i].season)+' · '+LANTS[i].tag.toUpperCase();
+    // set instantly (no out-fade needed; whole view fades in)
+    document.querySelectorAll('.thumb').forEach(function(t){ t.classList.toggle('on', +t.getAttribute('data-i')===i); });
+    card.classList.remove('expanded'); xpl.setAttribute('aria-expanded','false');
+    heroImg.src=R+LANTS[i].hero; paint(LANTS[i]);
+    viewOv.classList.remove('on'); viewDt.classList.add('on');
+    loadHero(LANTS[i].key);            // mount/reload the interactive 3D hero viewer
+    syncHash(LANTS[i].key);
+  }
+  function openOverview(){
+    view='overview';
+    window.__OV_PAUSE=false;                       // resume the overview spin when back on the grid
+    eyebrow.textContent='The Grounds · The Lanterns';
+    viewDt.classList.remove('on'); viewOv.classList.add('on');
+    if(window.__heroViewer){ window.__heroViewer.dispose(); }  // free GPU when leaving detail
+    window.__pendingHero=null;
+    syncHash('');
+  }
+
+  function syncHash(key){
+    try{
+      var url=new URL(location.href);
+      if(key){ url.searchParams.set('l', key); } else { url.searchParams.delete('l'); }
+      history.replaceState(null,'',url);
+    }catch(e){}
+  }
+
+  /* ── explore details toggle (tasteful: reveals full narrative) ── */
+  xpl.addEventListener('click', function(){
+    var open=card.classList.toggle('expanded');
+    xpl.setAttribute('aria-expanded', open?'true':'false');
+  });
+
+  /* ── arrows ── */
+  document.getElementById('prev').addEventListener('click', function(){ setLantern((cur-1+LANTS.length)%LANTS.length); });
+  document.getElementById('next').addEventListener('click', function(){ setLantern((cur+1)%LANTS.length); });
+
+  /* ── RETURN: in detail → overview; in overview → close screen ── */
+  back.addEventListener('click', function(){
+    if(view==='detail'){ openOverview(); }
+    else { try{ parent.postMessage('eo-screen-close','*'); }catch(e){} }
+  });
+
+  /* ── keyboard ── */
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){
+      if(view==='detail'){ openOverview(); }
+      else { try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } }
+      return;
+    }
+    if(view==='detail'){
+      if(e.key==='ArrowRight'){ setLantern((cur+1)%LANTS.length); }
+      if(e.key==='ArrowLeft'){ setLantern((cur-1+LANTS.length)%LANTS.length); }
+    }
+  });
+
+  /* ── deep link: ?l=key opens detail directly ── */
+  (function init(){
+    var key=''; try{ key=(new URL(location.href)).searchParams.get('l')||''; }catch(e){}
+    key=(key||'').toLowerCase().trim();
+    var valid=['winter','spring','center','summer','autumn'];
+    if(key && valid.indexOf(key)>=0){ openDetail(idx(key)); }
+    else { paint(LANTS[cur]); document.querySelectorAll('.thumb').forEach(function(t){ t.classList.toggle('on', +t.getAttribute('data-i')===cur); }); openOverview(); }
+  })();
+</script>
+<!-- leaf/foliage motif removed per redesign -->
+<script>window.__ready=true;</script>
+<script>
+  /* ── FULL-SCREEN BLOW-UP for the lantern render image ──
+     Swipe-up on the hero frame blows the current lantern render up to full
+     screen (ink bg, image contained); a clean tap is the fallback trigger.
+     Swipe-down or tap on the overlay (or the close button / Esc) dismisses.
+     Runs alongside the 3D hero viewer — a horizontal/large drag still orbits. */
+  (function(){
+    var frameEl=document.getElementById('frame');
+    var ov=document.getElementById('lblow'), ovImg=document.getElementById('lblowImg');
+    if(!frameEl || !ov || !ovImg) return;
+    var SW=55, MIN=1, MAX=5;                    // px swipe threshold, zoom bounds
+    var z=1, tx=0, ty=0;
+    var lvl=document.getElementById('lzLvl');
+    var btnIn=document.getElementById('lzIn'), btnOut=document.getElementById('lzOut');
+    var isCtrl=function(t){ return t && t.closest && t.closest('.lblow-zoom, .lblowx'); };
+
+    function curHero(){ return (typeof LANTS!=='undefined' && LANTS[cur]) ? LANTS[cur].hero : 'center.webp'; }
+    function clampPan(){
+      var bw=ovImg.offsetWidth||innerWidth, bh=ovImg.offsetHeight||innerHeight;
+      var maxX=Math.max(0,(bw*z-innerWidth)/2)+bw*0.15, maxY=Math.max(0,(bh*z-innerHeight)/2)+bh*0.15;
+      tx=Math.max(-maxX,Math.min(maxX,tx)); ty=Math.max(-maxY,Math.min(maxY,ty));
+    }
+    function apply(smooth){
+      ovImg.style.transition = smooth ? '' : 'none';
+      ovImg.style.transform='translate('+tx+'px,'+ty+'px) scale('+z+')';
+      if(lvl) lvl.textContent=Math.round(z*100)+'%';
+      if(btnOut) btnOut.classList.toggle('off', z<=MIN+0.001);
+      if(btnIn)  btnIn.classList.toggle('off', z>=MAX-0.001);
+    }
+    function setZoom(nz, cx, cy, smooth){
+      nz=Math.max(MIN,Math.min(MAX,nz));
+      if(cx==null){ cx=innerWidth/2; cy=innerHeight/2; }
+      var ox=innerWidth/2+tx, oy=innerHeight/2+ty, k=nz/z;   // image centre on screen
+      tx=(ox-cx)*k+cx-innerWidth/2; ty=(oy-cy)*k+cy-innerHeight/2; z=nz;
+      if(z<=MIN){ tx=0; ty=0; }
+      clampPan(); apply(smooth!==false);
+    }
+    function reset(){ z=1; tx=0; ty=0; apply(true); }
+
+    function openBlow(){
+      if(typeof view!=='undefined' && view!=='detail') return;   // only from the detail hero
+      ovImg.src='../assets/renders/lanterns/'+curHero();
+      z=1; tx=0; ty=0; apply(false);
+      ov.classList.add('on'); ov.setAttribute('aria-hidden','false');
+    }
+    function closeBlow(){ ov.classList.remove('on'); ov.setAttribute('aria-hidden','true'); }
+
+    // ── open trigger: ONLY the render preview in the right details card (the 3D hero no longer opens the image) ──
+    var vp=document.getElementById('cardPhoto');
+    if(vp) vp.addEventListener('click', function(e){ e.stopPropagation(); openBlow(); });
+
+    // ── zoom controls + wheel ──
+    btnIn.addEventListener('click', function(e){ e.stopPropagation(); setZoom(z+0.6); });
+    btnOut.addEventListener('click', function(e){ e.stopPropagation(); setZoom(z-0.6); });
+    document.getElementById('lzReset').addEventListener('click', function(e){ e.stopPropagation(); reset(); });
+    ov.addEventListener('wheel', function(e){ e.preventDefault(); setZoom(z*(e.deltaY<0?1.12:1/1.12), e.clientX, e.clientY, false); }, {passive:false});
+
+    // ── pointer model: pan (1 finger when zoomed) · pinch (2 fingers) · tap/swipe close (at 1x) ──
+    var pts={}, downX=0, downY=0, downT=0, panning=false, moved=false;
+    var pinchD0=0, pinchZ0=1, pinchCx=0, pinchCy=0, lastTapT=0;
+    function pcount(){ return Object.keys(pts).length; }
+    function centre(){ var xs=0,ys=0,n=0,k; for(k in pts){ xs+=pts[k].x; ys+=pts[k].y; n++; } return {x:xs/n,y:ys/n}; }
+
+    ov.addEventListener('pointerdown', function(e){
+      if(isCtrl(e.target)) return;
+      if(ov.setPointerCapture){ try{ ov.setPointerCapture(e.pointerId); }catch(_){}}
+      pts[e.pointerId]={x:e.clientX,y:e.clientY};
+      var n=pcount();
+      if(n===1){ downX=e.clientX; downY=e.clientY; downT=Date.now(); moved=false; panning=(z>1); if(z>1) ovImg.classList.add('grab'); }
+      else if(n===2){ var a=[],k; for(k in pts) a.push(pts[k]); pinchD0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1; pinchZ0=z; var c=centre(); pinchCx=c.x; pinchCy=c.y; panning=false; }
+    });
+    ov.addEventListener('pointermove', function(e){
+      if(!pts[e.pointerId]) return;
+      var prev=pts[e.pointerId], mx=e.clientX-prev.x, my=e.clientY-prev.y;
+      pts[e.pointerId]={x:e.clientX,y:e.clientY};
+      if(pcount()>=2){ var a=[],k; for(k in pts) a.push(pts[k]); var d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1; setZoom(pinchZ0*(d/pinchD0), pinchCx, pinchCy, false); moved=true; }
+      else if(panning && z>1){ tx+=mx; ty+=my; moved=true; clampPan(); apply(false); }
+      else if(Math.abs(e.clientX-downX)>7||Math.abs(e.clientY-downY)>7){ moved=true; }
+    });
+    function up(e){
+      var had=pts[e.pointerId]; delete pts[e.pointerId]; ovImg.classList.remove('grab');
+      if(isCtrl(e.target) || pcount()>0 || !had) return;
+      var dx=e.clientX-downX, dy=e.clientY-downY, dt=Date.now()-downT;
+      if(z<=1){
+        if(dy > SW && Math.abs(dy) > Math.abs(dx)){ closeBlow(); return; }        // swipe-down closes
+        if(!moved && dt<350){ closeBlow(); }                                      // clean tap closes
+      } else if(!moved && dt<350){                                               // double-tap resets when zoomed
+        var now=Date.now(); if(now-lastTapT<300){ reset(); lastTapT=0; } else lastTapT=now;
+      }
+    }
+    ov.addEventListener('pointerup', up);
+    ov.addEventListener('pointercancel', function(e){ delete pts[e.pointerId]; ovImg.classList.remove('grab'); });
+
+    document.getElementById('lblowx').addEventListener('click', function(e){ e.stopPropagation(); closeBlow(); });
+    document.addEventListener('keydown', function(e){
+      if(!ov.classList.contains('on')) return;
+      if(e.key==='Escape'){ e.stopPropagation(); closeBlow(); }
+      else if(e.key==='+'||e.key==='='){ setZoom(z+0.6); }
+      else if(e.key==='-'||e.key==='_'){ setZoom(z-0.6); }
+      else if(e.key==='0'){ reset(); }
+    }, true);
+  })();
+</script>
+
+<!-- ============================================================
+     3D LANTERN BUTTONS  (interactive 360 spin + tap-to-enter)
+     REVERT: set a key to false (or {} ) to fall back to the flat
+     2D cut-out image for that lantern. winter.webp is untouched.
+     ============================================================ -->
+<script>window.__LANTERN_3D = {
+  winter: { glb:'../assets/lanterns/3d/winter.glb', margin:0.94 },
+  spring: { glb:'../assets/lanterns/3d/spring.glb', margin:0.62, bias:0.10 },
+  summer: { glb:'../assets/lanterns/3d/summer.glb', margin:0.94 },
+  autumn: { glb:'../assets/lanterns/3d/autumn.glb', margin:0.94 },
+  center: { glb:'../assets/lanterns/3d/center.glb', margin:0.94 }
+};</script>
+<script type="importmap">
+{ "imports": { "three": "../assets/vendor/three/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from '../assets/vendor/three/GLTFLoader.js';
+import { DRACOLoader } from '../assets/vendor/three/DRACOLoader.js';
+
+// shared loader: Draco decoder vendored locally so it works offline (kiosk)
+const draco = new DRACOLoader();
+draco.setDecoderPath('../assets/vendor/draco/');
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(draco);
+
+// PARSE-ONCE CACHE: each glb is fetched + parsed a single time; every consumer
+// (overview buttons AND the detail hero viewer) clones from the cached scene.
+// Geometry/textures are shared between clones, so opening a lantern's detail
+// view is instant after the overview has loaded — no re-download, no re-parse.
+const GLB_CACHE = {};
+function loadGLB(url){
+  if(!GLB_CACHE[url]){
+    GLB_CACHE[url] = new Promise(function(resolve, reject){
+      gltfLoader.load(url, resolve, undefined, function(err){
+        delete GLB_CACHE[url];        // allow a retry after a transient failure
+        reject(err);
+      });
+    });
+  }
+  return GLB_CACHE[url];
+}
+
+// procedural studio-gradient environment so glass/metal reads (milky frost + reflections)
+function makeEnvTexture(){
+  const c = document.createElement('canvas'); c.width = 16; c.height = 64;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0,0,0,64);
+  grd.addColorStop(0.0,'#fff6e9'); grd.addColorStop(0.5,'#dad4c8'); grd.addColorStop(1.0,'#6b6258');
+  g.fillStyle = grd; g.fillRect(0,0,16,64);
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function buildEnv(renderer){
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = pmrem.fromEquirectangular(makeEnvTexture()).texture;
+  pmrem.dispose();
+  return env;
+}
+
+// Foliage fix (SHARED): leaf-card materials export as alpha-BLEND, which three.js depth-sorts
+// badly (leaves vanish). Convert any TEXTURED material to an alpha-TEST cutout so every leaf
+// card renders, both sides, no sorting artifacts. Frosted glass (no map) is left transparent.
+function applyFoliageAlpha(model){
+  model.traverse(function(o){
+    if(!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach(function(m){
+      if(m.map){
+        m.alphaTest = 0.28; m.transparent = false; m.depthWrite = true;
+        m.side = THREE.DoubleSide; m.map.colorSpace = THREE.SRGBColorSpace;
+        m.needsUpdate = true;
+      }
+    });
+  });
+}
+
+const CFG = window.__LANTERN_3D || {};
+Object.keys(CFG).forEach(function(key){ try{ mount(key, CFG[key]); }catch(e){ console.warn('3D lantern failed', key, e); } });
+/* safety net: nothing stays invisible even if a model never loads */
+setTimeout(function(){ document.querySelectorAll('.lant:not(.shown)').forEach(function(b){ b.classList.add('shown'); }); }, 2600);
+
+function mount(key, conf){
+  const btn = document.querySelector('.lant[data-key="'+key+'"]');
+  if(!btn || !conf || !conf.glb) return;
+  const idx = +btn.getAttribute('data-i');
+  btn.classList.add('is3d');                 // collapses the flat-image space (CSS)
+  const pav = btn.querySelector('.pav');
+  const cut = pav.querySelector('.cut');
+  const refl = pav.querySelector('.refl');
+
+  const host = document.createElement('div');
+  host.className = 'lant3d loading';
+  pav.insertBefore(host, pav.firstChild);
+
+  const renderer = new THREE.WebGLRenderer({ alpha:true, antialias:false, powerPreference:'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 1.25));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  host.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.environment = buildEnv(renderer);   // image-based lighting for glass + metal
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+
+  // soft, neutral lighting (model has no baked lights)
+  scene.add(new THREE.HemisphereLight(0xfff4e2, 0x6b5236, 2.1));
+  const key1 = new THREE.DirectionalLight(0xffffff, 2.6); key1.position.set(4,6,5); scene.add(key1);
+  const key2 = new THREE.DirectionalLight(0xffe9c8, 1.1); key2.position.set(-5,3,-3); scene.add(key2);
+
+  const pivot = new THREE.Group(); scene.add(pivot);
+  let dragging = false, moved = 0, lastX = 0, autorotate = true;
+  let fitRadius = 2, lookY = 1, loaded = false;
+  const MARGIN = (conf.margin || 0.75);   // <1 = bigger on screen; per-lantern override (40% larger)
+  const BASE_BIAS = (conf.bias!==undefined ? conf.bias : 0.28); // higher = base sits lower in frame (hugs the 72% baseline)
+  const AZ = Math.PI*0.25, EL = 0.50; // 3/4 elevated view direction
+
+  // place the camera so the model's BOUNDING SPHERE fits the canvas at ANY rotation (never clips),
+  // aimed slightly high so the model's base hugs the bottom (room beneath for shadow + reflection)
+  function placeCamera(){
+    const vfov = THREE.MathUtils.degToRad(camera.fov);
+    const hfov = 2*Math.atan(Math.tan(vfov/2)*camera.aspect);
+    const dist = (fitRadius / Math.sin(Math.min(vfov,hfov)/2)) * MARGIN;
+    const ce = Math.cos(EL), se = Math.sin(EL);
+    const aimY = lookY + fitRadius*BASE_BIAS;
+    camera.position.set(Math.cos(AZ)*ce*dist, se*dist + aimY, Math.sin(AZ)*ce*dist);
+    camera.lookAt(0, aimY, 0);
+  }
+  function size(){
+    const w = host.clientWidth || 240, h = host.clientHeight || 400;
+    renderer.setSize(w, h, false);
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+    if(loaded) placeCamera();
+  }
+
+  loadGLB(conf.glb).then(function(gltf){
+    const model = gltf.scene.clone(true);   // clone from cache (geometry/textures shared)
+    applyFoliageAlpha(model);            // shared foliage alpha-test pass (see top of module)
+    const box = new THREE.Box3().setFromObject(model);
+    const c = box.getCenter(new THREE.Vector3());
+    model.position.x -= c.x; model.position.z -= c.z; model.position.y -= box.min.y;
+    pivot.add(model);
+    pivot.updateMatrixWorld(true);
+    // bounding sphere about the vertical axis -> safe framing through the full spin
+    const sph = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere());
+    fitRadius = sph.radius; lookY = sph.center.y; loaded = true;
+    placeCamera();
+    pivot.rotation.y = Math.PI*0.15;
+    pivot.rotation.y = Math.PI*0.15;
+    host.classList.remove('loading');
+    size();
+    setTimeout(function(){ btn.classList.add('shown'); }, idx*150);   // reveal this lantern in place, one-by-one
+  }).catch(function(err){
+    // load failed -> revert to the flat 2D image
+    console.warn('glb load failed, using 2D fallback', err);
+    btn.classList.remove('is3d');                  // restore the flat-image layout
+    host.remove(); if(cut) cut.style.visibility='';
+    btn.classList.add('shown');
+  });
+
+  // hide the flat image while 3D is active (kept in DOM for instant revert)
+  if(cut) cut.style.visibility='hidden';
+  if(refl) refl.style.display='none';
+
+  // ---- interaction: drag to spin, tap to enter ----
+  host.addEventListener('pointerdown', function(e){
+    dragging=true; moved=0; lastX=e.clientX; autorotate=false;
+    host.setPointerCapture(e.pointerId);
+  });
+  host.addEventListener('pointermove', function(e){
+    if(!dragging) return;
+    const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx);
+    pivot.rotation.y += dx*0.012;
+  });
+  function endDrag(e){
+    if(!dragging) return; dragging=false;
+    try{ host.releasePointerCapture(e.pointerId); }catch(_){}
+    if(moved < 6 && window.__openDetail){ window.__openDetail(idx); }   // tap = go inside
+    setTimeout(function(){ autorotate=true; }, 2600);                    // resume idle spin
+  }
+  host.addEventListener('pointerup', endDrag);
+  host.addEventListener('pointercancel', endDrag);
+  // canvas swallows the button's native click so a drag never navigates
+  host.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); }, true);
+
+  window.addEventListener('resize', size);
+  size();
+  (function loop(){
+    requestAnimationFrame(loop);
+    if(window.__OV_PAUSE) return;                 // pause all 5 overview loops while the detail viewer is open
+    if(autorotate && !dragging) pivot.rotation.y += 0.004;
+    renderer.render(scene, camera);
+  })();
+}
+
+/* ============================================================
+   VIEW B — INTERACTIVE DETAIL HERO VIEWER
+   A dedicated full-orbit viewer mounted inside the gold .frame.
+   Reuses the shared gltfLoader, buildEnv() and applyFoliageAlpha().
+   - drag    -> orbit around Y (yaw) + tilt on X (pitch, clamped ±70°)
+   - wheel   -> zoom (clamped)
+   - pinch   -> zoom (clamped)
+   - auto-frames via bounding sphere; slow auto-rotate stops on interaction.
+   open(key) (re)loads the correct glb each time; dispose() tears the
+   previous viewer down fully (renderer + geometry + textures + listeners)
+   so switching lanterns never leaks or stacks canvases.
+   ============================================================ */
+const HERO = (function(){
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PITCH_MAX = THREE.MathUtils.degToRad(70);   // clamp X tilt so it never flips
+  let active = null;                                 // the live viewer instance (or null)
+  let token = 0;                                     // guards async loads against rapid switching
+
+  function dispose(){
+    if(!active) return;
+    const a = active; active = null;
+    cancelAnimationFrame(a.raf);
+    window.removeEventListener('resize', a.onResize);
+    if(a.ro) a.ro.disconnect();
+    a.host.removeEventListener('pointerdown', a.onDown);
+    a.host.removeEventListener('pointermove', a.onMove);
+    a.host.removeEventListener('pointerup',   a.onUp);
+    a.host.removeEventListener('pointercancel', a.onUp);
+    a.host.removeEventListener('wheel', a.onWheel);
+    // free the per-viewer GPU context. Geometry/materials/textures are NOT
+    // disposed: they live in the shared GLB_CACHE (also used by the five
+    // overview canvases) — renderer.dispose() releases this context's copies.
+    if(a.env) a.env.dispose();
+    a.renderer.dispose();
+    if(a.renderer.domElement && a.renderer.domElement.parentNode) a.renderer.domElement.parentNode.removeChild(a.renderer.domElement);
+    a.host.classList.remove('loading');
+  }
+
+  function open(key){
+    const conf = (window.__LANTERN_3D || {})[key];
+    const host = document.getElementById('hero3d');
+    const heroImg = document.getElementById('heroImg');
+    const hint = document.getElementById('hint3d');
+    if(!host) return;
+    const myToken = ++token;
+
+    // tear down any previous viewer first (no stacked canvases / leaks)
+    dispose();
+
+    // no glb for this key -> fall back to the static render
+    if(!conf || !conf.glb){
+      if(heroImg) heroImg.classList.remove('hidden');
+      host.style.display = 'none';
+      if(hint) hint.classList.remove('show');
+      return;
+    }
+    host.style.display = '';
+    if(heroImg) heroImg.classList.add('hidden');
+    host.classList.add('loading');
+
+    const renderer = new THREE.WebGLRenderer({ alpha:true, antialias:false, powerPreference:'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 1.25));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    host.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const env = buildEnv(renderer);
+    scene.environment = env;             // same IBL as the overview so glass/metal match
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.05, 200);
+
+    // same lighting rig as the overview mount
+    scene.add(new THREE.HemisphereLight(0xfff4e2, 0x6b5236, 2.1));
+    const k1 = new THREE.DirectionalLight(0xffffff, 2.6); k1.position.set(4,6,5); scene.add(k1);
+    const k2 = new THREE.DirectionalLight(0xffe9c8, 1.1); k2.position.set(-5,3,-3); scene.add(k2);
+
+    const pivot = new THREE.Group(); scene.add(pivot);
+
+    // orbit state (spherical around the framed centre)
+    let yaw = Math.PI*0.18, pitch = THREE.MathUtils.degToRad(8);
+    let baseDist = 4, dist = 4, distMin = 1, distMax = 12;
+    let lookY = 1, loaded = false;
+    let autorotate = !REDUCED;
+    let dragging = false, lastX = 0, lastY = 0;
+    let pinchStart = 0, pinchDist0 = 0;
+    const pointers = new Map();
+
+    function placeCamera(){
+      const cy = Math.sin(pitch), cxz = Math.cos(pitch);
+      camera.position.set(
+        Math.sin(yaw)*cxz*dist,
+        cy*dist + lookY,
+        Math.cos(yaw)*cxz*dist
+      );
+      camera.lookAt(0, lookY, 0);
+    }
+    function size(){
+      const w = host.clientWidth || 600, h = host.clientHeight || 400;
+      if(w===0 || h===0) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w/h; camera.updateProjectionMatrix();
+      // refit distance so the bounding sphere stays framed at this aspect
+      if(loaded){ refit(); placeCamera(); }
+    }
+    function refit(){
+      const vfov = THREE.MathUtils.degToRad(camera.fov);
+      const hfov = 2*Math.atan(Math.tan(vfov/2)*camera.aspect);
+      baseDist = (fitR / Math.sin(Math.min(vfov,hfov)/2)) * 1.18;  // margin so it never clips
+      distMin = baseDist*0.45; distMax = baseDist*2.4;
+      dist = THREE.MathUtils.clamp(dist===0?baseDist:dist, distMin, distMax);
+    }
+
+    let fitR = 2;
+    loadGLB(conf.glb).then(function(gltf){
+      if(myToken !== token) return;      // a newer open() superseded this load (cache stays intact)
+      const model = gltf.scene.clone(true);   // clone from cache (geometry/textures shared)
+      applyFoliageAlpha(model);          // shared foliage alpha-test pass
+      const box = new THREE.Box3().setFromObject(model);
+      const c = box.getCenter(new THREE.Vector3());
+      // centre the model in the frame (centre X/Y/Z about the bounding-sphere centre)
+      model.position.sub(c);
+      pivot.add(model);
+      pivot.updateMatrixWorld(true);
+      const sph = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere());
+      fitR = sph.radius; lookY = sph.center.y;
+      loaded = true; dist = 0; refit(); placeCamera();
+      host.classList.remove('loading');
+      size();
+      if(hint){
+        hint.classList.add('show');
+        setTimeout(function(){ hint.classList.add('gone'); hint.classList.remove('show'); }, 4200);
+      }
+    }).catch(function(err){
+      if(myToken !== token) return;
+      console.warn('hero glb load failed, using 2D fallback', key, err);
+      dispose();
+      if(heroImg) heroImg.classList.remove('hidden');
+      host.style.display = 'none';
+    });
+
+    // ---- interaction ----
+    function dismissHint(){ if(hint){ hint.classList.add('gone'); hint.classList.remove('show'); } }
+    function onDown(e){
+      pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      host.setPointerCapture(e.pointerId);
+      autorotate = false; dismissHint();
+      if(pointers.size===1){ dragging=true; lastX=e.clientX; lastY=e.clientY; }
+      else if(pointers.size===2){
+        dragging=false;
+        const p=[...pointers.values()];
+        pinchDist0 = Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y) || 1;
+        pinchStart = dist;
+      }
+    }
+    function onMove(e){
+      if(!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      if(pointers.size===2){
+        const p=[...pointers.values()];
+        const d = Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y) || 1;
+        dist = THREE.MathUtils.clamp(pinchStart * (pinchDist0/d), distMin, distMax);
+        if(loaded) placeCamera();
+        return;
+      }
+      if(!dragging) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      yaw   -= dx*0.010;                                   // orbit around vertical Y
+      pitch  = THREE.MathUtils.clamp(pitch + dy*0.010, -PITCH_MAX, PITCH_MAX);  // tilt X, clamped
+      if(loaded) placeCamera();
+    }
+    function onUp(e){
+      pointers.delete(e.pointerId);
+      try{ host.releasePointerCapture(e.pointerId); }catch(_){}
+      if(pointers.size<2) pinchDist0 = 0;
+      if(pointers.size===0) dragging=false;
+      else if(pointers.size===1){ const p=[...pointers.values()][0]; lastX=p.x; lastY=p.y; dragging=true; }
+    }
+    function onWheel(e){
+      e.preventDefault();
+      autorotate=false; dismissHint();
+      const f = Math.exp(e.deltaY*0.0015);                 // smooth multiplicative zoom
+      dist = THREE.MathUtils.clamp(dist*f, distMin, distMax);
+      if(loaded) placeCamera();
+    }
+    host.addEventListener('pointerdown', onDown);
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerup', onUp);
+    host.addEventListener('pointercancel', onUp);
+    host.addEventListener('wheel', onWheel, {passive:false});
+
+    const onResize = size;
+    window.addEventListener('resize', onResize);
+    let ro = null;
+    if(window.ResizeObserver){ ro = new ResizeObserver(size); ro.observe(host); }
+
+    let raf = 0;
+    (function loop(){
+      raf = requestAnimationFrame(loop);
+      if(autorotate && !dragging && loaded){ yaw += 0.0035; placeCamera(); }
+      renderer.render(scene, camera);
+    })();
+
+    active = { host, renderer, scene, env, onResize, ro,
+               onDown, onMove, onUp, onWheel, get raf(){ return raf; } };
+    size();
+  }
+
+  return { open: open, dispose: dispose };
+})();
+window.__heroViewer = HERO;
+// if VIEW B was deep-linked open before this module ran, mount its viewer now
+if(window.__pendingHero){ const k = window.__pendingHero; window.__pendingHero=null; HERO.open(k); }
+</script>
+  <!-- wave-2: 360° full-screen viewer -->
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
+  </div>
+  <script>
+  (function(){ var b=document.getElementById("btn360"), v=document.getElementById("view360"), f=document.getElementById("frame360"), bk=document.getElementById("back360");
+    if(!b||!v||!f) return;
+    function close(){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },440); }
+    b.addEventListener("click", function(){ try{window.RDA&&RDA.track('360_view','lanterns');}catch(_){} f.src="https://www.turiya.co/360/EmbassyOne/"; v.classList.add("show"); v.setAttribute("aria-hidden","false"); });
+    if(bk) bk.addEventListener("click", close);
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && v.classList.contains("show")){ e.stopImmediatePropagation(); close(); } }, true);
+  })();
+  </script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

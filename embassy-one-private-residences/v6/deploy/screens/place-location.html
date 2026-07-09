@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Address · Location</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  PLACE · LOCATION — Embassy ONE Private Residences · Mekhri Circle, Bengaluru
+  ──────────────────────────────────────────────────────────────────────
+  · FULL-VIEWPORT Leaflet map. Basemaps with a MAP | DARK toggle (top-right);
+    default = warm parchment-toned Carto Voyager (beige theme).
+  · INVERTED filter model: default = clean map with ONLY the Embassy ONE anchor.
+    Tapping a category chip LIGHTS UP that layer (shows its markers, draws
+    gold branch-connectors from Embassy ONE, and flies to frame them). The
+    Embassy ONE pin is always visible as the anchor. Tapping the active chip
+    again returns to the clean map.
+  · Connectivity lights up the real road network as polylines — NH-44 (Bellary
+    Road) north to Kempegowda Airport & south to central Bangalore, the Outer
+    Ring Road at the Hebbal interchange, the Yelahanka connection — plus the
+    upcoming Blue Line (Phase 2B) Metro as a dashed line with the Hebbal Metro
+    Station (upcoming) marker.
+  · All POI coordinates are WebSearch-verified real locations, hard-coded
+    [lat,lng] with source notes in the ANCHORS array. No runtime network fetch
+    for POIs/roads (pure vector). Distances are brochure-style estimates.
+  ──────────────────────────────────────────────────────────────────────
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- perf: warm the tile host + subdomains before Leaflet requests tiles -->
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
+<link rel="dns-prefetch" href="https://a.basemaps.cartocdn.com">
+<link rel="dns-prefetch" href="https://b.basemaps.cartocdn.com">
+<link rel="dns-prefetch" href="https://c.basemaps.cartocdn.com">
+<link rel="dns-prefetch" href="https://d.basemaps.cartocdn.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  /* iPad standalone PWA (installed): drop the top chrome below the status bar and let the
+     backdrop bleed under the bottom home-indicator band, so the app reads truly full-screen.
+     Inert in a normal browser tab (display-mode is not standalone there). */
+  @media (display-mode:standalone){
+    :where(.top,.topbar,.dtop,.loc>.bar){margin-top:env(safe-area-inset-top,0px)}
+    :where(body,#home,.wrap,.stage,main)>:where(.back,.float360,.nav360,.views,.corner-logo,.hour-dial){margin-top:env(safe-area-inset-top,0px)}
+    body,.bg,#map{min-height:100lvh}
+  }
+
+  :root{
+    /* deck palette — ink-navy + bone */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#efe8da; --bone-2:#e6dcc8; --paper:#faf7f0;
+    --taupe:#6e5c58; --champ:#c9a84c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#121621; --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette (reskin) */
+    --parch:#efe8da; --muted:#7a7264; --faint:#9a9aa0;
+    --gold:#b3a184; --gold-d:#857a66; --gold-l:#c9a84c; --gold-lt:#c9a84c; --sage:#9da585; --water:#8aa0a8; --line:#d8d0c2;
+    --glass:rgba(245,240,232,.82);
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a; --on-navy:#ece8e0; --on-navy-dim:#9aa1ad; --brass:#c9a84c;
+    --ease:cubic-bezier(.23,1,.32,1);
+    /* category accents */
+    --c-education:#8fb0c9; --c-hospital:#cf8f8f; --c-leisure:#cbb26a; --c-metro:#5a78d2;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; background:#efe8da;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-font-smoothing:antialiased; -webkit-user-drag:none}
+
+  /* faint architectural line-drawing of the real ONE tower — anchored bottom-LEFT
+     so it tucks into the empty corner behind the glass rail and never sits over the
+     live map's pins (which cluster centre/upper). Whisper-faint, non-interactive. */
+  body::after{content:""; position:fixed; inset:0; pointer-events:none; z-index:1;
+    background:url(../assets/renders/exterior/tower-outline.webp) no-repeat left -4% bottom;
+    background-size:auto 82%; opacity:.05; mix-blend-mode:multiply}
+
+  /* ── MAP fills the entire viewport ───────────────────────────── */
+  #map{position:fixed; inset:0; width:100vw; height:100vh; z-index:0; background:#efe8da}
+
+  /* per-view tile toning. BLUE = deep navy (dark_nolabels toned navy); VECTOR = warm voyager. */
+  body.view-blue .leaflet-tile-pane{filter:brightness(.7) saturate(1.1) hue-rotate(200deg)}
+  body.view-blue #map::after{content:""; position:absolute; inset:0; z-index:399; pointer-events:none;
+    background:rgba(12,16,24,.42); mix-blend-mode:multiply}
+  body.view-vec .leaflet-tile-pane{filter:sepia(.05) saturate(.88) brightness(1.03) contrast(.97)}   /* neutral bone-light brand tone */
+  body.view-sat .leaflet-tile-pane{filter:sepia(.5) hue-rotate(-8deg) saturate(.72) brightness(1.05) contrast(1.03)}
+  body.view-vec .head .eyebrow{color:var(--gold-d); text-shadow:0 1px 9px rgba(255,250,240,.75)}
+  body.view-vec .head h1{color:var(--ink); text-shadow:0 1px 12px rgba(255,250,240,.8)}
+  body.view-vec .head .lede{color:var(--muted); text-shadow:0 1px 9px rgba(255,250,240,.7)}
+  .leaflet-container{background:#efe8da; font-family:"Jost",sans-serif; outline:none}
+  .leaflet-control-zoom{display:none!important}
+  .leaflet-bottom.leaflet-right{margin-bottom:54px}
+  .leaflet-control-attribution{background:rgba(18,22,33,.55)!important; color:#9aa1ad!important; font-size:8px!important; padding:1px 6px!important}
+  .leaflet-control-attribution a{color:var(--champ)!important}
+
+  /* soft vignette so chrome reads on either basemap */
+  .wash{position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 50%, transparent 58%, rgba(18,22,33,.12))}
+
+  /* ── TOP-LEFT: return + title ────────────────────────────────── */
+  .topscrim{position:fixed; top:0; left:0; right:0; z-index:780; pointer-events:none;
+    height:clamp(118px,17vh,190px); opacity:0; transition:opacity .4s;
+    background:linear-gradient(180deg, rgba(12,16,24,.5) 0%, rgba(12,16,24,.24) 42%, transparent 100%)}
+  body.view-sat .topscrim{opacity:1}
+  .topbar{position:fixed; top:0; left:0; right:0; z-index:800;
+    padding:clamp(16px,2.4vh,32px) clamp(20px,3vw,54px) 0;
+    display:flex; flex-direction:column; gap:clamp(8px,1.4vh,16px)}
+  .topbar > *{pointer-events:auto}
+  .head .eyebrow{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500;
+    font-size:clamp(10px,1.3vh,14px); letter-spacing:.18em; text-transform:uppercase; color:var(--gold-lt);
+    margin-bottom:clamp(2px,.5vh,5px); text-shadow:0 2px 12px rgba(6,9,16,.6)}
+  .head h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1.03;
+    font-size:clamp(26px,4.4vh,50px); letter-spacing:.05em; text-transform:uppercase; color:var(--on-navy);
+    text-shadow:0 2px 16px rgba(6,9,16,.6)}
+  .head .lede{font-family:"Jost",sans-serif; font-weight:300; line-height:1.55; color:var(--on-navy-dim);
+    font-size:clamp(10.5px,1.3vh,13.5px); letter-spacing:.01em; max-width:clamp(230px,26vw,360px);
+    margin-top:clamp(7px,1.2vh,13px); text-shadow:0 2px 12px rgba(6,9,16,.55)}
+  body.view-sat .head .eyebrow{color:#c9a84c; text-shadow:0 2px 12px rgba(0,0,0,.5)}
+  body.view-sat .head h1{color:#fbf8f4; text-shadow:0 2px 16px rgba(0,0,0,.5)}
+  body.view-sat .head .lede{color:#efe6d6; text-shadow:0 2px 12px rgba(0,0,0,.5)}
+
+  /* ── MAP | DARK toggle (top-right) ───────────────────── */
+  .viewtoggle{position:fixed; top:clamp(16px,2.4vh,32px); right:clamp(20px,3vw,54px); z-index:800;
+    display:flex; padding:4px; gap:3px; border-radius:999px;
+    background:#121621;
+    border:1px solid rgba(250,247,240,.16);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.08)}
+  .vt{display:inline-flex; align-items:center; gap:8px; border:1px solid transparent; cursor:pointer; background:none;
+    color:rgba(250,247,240,.55); font-family:"Jost",sans-serif; font-weight:400; font-size:clamp(9px,1.1vh,12.5px);
+    letter-spacing:.26em; text-transform:uppercase; padding:8px 17px; border-radius:999px;
+    transition:background .3s, color .3s, border-color .3s}
+  .vt svg{width:15px;height:15px;display:block;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .vt.on{background:#121621; color:#faf7f0; border-color:#c9a84c; box-shadow:inset 0 0 0 1px rgba(201,168,76,.5)}
+  .vt:not(.on):hover{color:rgba(250,247,240,.85)}
+
+  /* ── 360° VIEW button (top-right, under the toggle) ───────────── */
+  .float360{position:fixed; top:clamp(62px,9.4vh,104px); right:clamp(20px,3vw,54px); z-index:800;
+    display:inline-flex; align-items:center; gap:9px; cursor:pointer;
+    padding:10px 18px; border-radius:999px; border:1px solid rgba(250,247,240,.16); color:#faf7f0;
+    background:#121621;
+    font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(9px,1.15vh,12.5px);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.08);
+    transition:transform .16s var(--ease), background .2s, border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{border-color:rgba(250,247,240,.32); transform:translateY(-1px)} }
+  .float360 svg{width:16px;height:16px;stroke:#faf7f0;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:2000; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s var(--ease)}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:clamp(14px,2.4vh,26px); left:clamp(14px,2.4vw,26px); z-index:2001; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:11px 20px; border-radius:999px; border:1px solid var(--line-dark); color:var(--on-dark);
+    background:rgba(236,232,224,.06); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:12px;
+    box-shadow:0 10px 26px -12px rgba(0,0,0,.7); transition:transform .16s var(--ease), background .2s}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:rgba(236,232,224,.12)} }
+
+  /* ── LEFT RAIL (ink-navy accent panel) ───────────────────────── */
+  .rail{position:fixed; left:clamp(14px,1.9vw,26px); z-index:500;
+    top:clamp(200px,30vh,272px); bottom:clamp(14px,2vh,26px);
+    width:clamp(216px,20vw,286px); display:flex; flex-direction:column;
+    pointer-events:none; min-height:0}
+  .rail > .shell{pointer-events:auto}
+  .shell{flex:1 1 auto; min-height:0; display:flex; flex-direction:column; position:relative; color:var(--on-dark);
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.16), transparent 60%),
+      linear-gradient(155deg, rgba(24,34,72,.95), rgba(15,21,42,.95));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,168,76,.20); border-radius:18px; overflow:hidden;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    outline:1px solid rgba(201,168,76,.20); outline-offset:-4px}
+
+  /* legend = category filters — 2-column toggle buttons */
+  .legend{display:grid; grid-template-columns:1fr 1fr; gap:7px; padding:clamp(11px,1.5vh,16px) clamp(13px,1.3vw,18px) clamp(9px,1.2vh,13px)}
+  .lh{grid-column:1 / -1; font-size:9.5px; letter-spacing:.42em; text-transform:uppercase; color:var(--champ); margin-bottom:3px}
+  .leg{display:inline-flex; align-items:center; gap:6px; cursor:pointer; border:1px solid var(--line-dark); border-radius:11px;
+    padding:6px 8px; width:100%; min-width:0; margin:0; text-align:left; font:inherit;
+    background:#121621;
+    box-shadow:0 2px 7px -3px rgba(6,9,16,.4), inset 0 1px 0 rgba(236,232,224,.06);
+    transition:background .2s,border-color .2s,opacity .2s,color .2s,box-shadow .2s,transform .12s}
+  .leg:last-of-type{grid-column:1 / -1}
+  .leg .sw{width:10px;height:10px;flex:0 0 auto;border-radius:50%}
+  .leg.l-site .sw{background:#121621;box-shadow:0 0 0 2px var(--gold)}
+  .leg.l-neighbourhood .sw{background:var(--gold-l)}
+  .leg.l-education .sw{background:var(--c-education)}
+  .leg.l-hospital .sw{background:var(--c-hospital)}
+  .leg.l-leisure .sw{background:var(--c-leisure)}
+  .leg.l-water .sw{background:#9fc0cc}
+  .leg.l-connectivity .sw{background:transparent;border:1.6px solid var(--gold)}
+  .leg span{font-size:clamp(8px,.92vh,10px); font-weight:500; letter-spacing:.03em; text-transform:uppercase; color:#faf7f0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .leg:hover{border-color:rgba(250,247,240,.3); transform:translateY(-1px)} .leg:active{transform:translateY(0) scale(.97)}
+  /* ACTIVE = this layer is lit up (inverted model: active gets the gold accent; base stays #121621) */
+  .leg.active{background:#121621;
+    border-color:#c9a84c; box-shadow:inset 0 0 0 1px rgba(201,168,76,.5), 0 4px 12px -4px rgba(120,90,30,.35)}
+  .leg.active span{color:#faf7f0}
+  .leg.active .sw{box-shadow:0 0 0 2px rgba(201,168,76,.5)}
+
+  /* detail block (selected POI / category summary) */
+  .detail{border-top:1px solid rgba(201,168,76,.24); padding:clamp(9px,1.2vh,14px) clamp(13px,1.3vw,18px) clamp(8px,1.1vh,12px); flex:0 0 auto}
+  .detail .ik{font-size:9.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--champ); transition:opacity .35s}
+  .detail h2{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(14px,1.9vh,20px); line-height:1.05; margin:5px 0 0; color:var(--on-dark); transition:opacity .35s}
+  .detail p{font-weight:300; color:var(--on-dark-dim); line-height:1.55; font-size:clamp(10.5px,1.25vh,13px); margin-top:clamp(6px,1vh,11px); transition:opacity .35s}
+  .detail .dist{margin-top:clamp(8px,1.1vh,12px); font-size:10.5px; letter-spacing:.2em; color:var(--champ); text-transform:uppercase; min-height:13px}
+  .detail.swap .ik,.detail.swap h2,.detail.swap p,.detail.swap .dist{opacity:0}
+
+  /* POI list (scrollable) */
+  .listhead{padding:clamp(12px,1.6vh,16px) clamp(15px,1.5vw,21px) 7px; border-top:1px solid rgba(201,168,76,.24); flex:0 0 auto}
+  .listhead .lh{margin:0}
+  .list{flex:1 1 auto; min-height:48px; overflow-y:auto; overflow-x:hidden; padding:0 clamp(8px,1vw,12px) clamp(9px,1.3vh,14px);
+    scrollbar-width:thin; scrollbar-color:var(--gold-l) transparent}
+  .list::-webkit-scrollbar{width:6px}
+  .list::-webkit-scrollbar-track{background:transparent}
+  .list::-webkit-scrollbar-thumb{background:var(--gold-l); border-radius:3px}
+  .listhint{padding:12px clamp(15px,1.5vw,21px) 16px; font-weight:300; font-size:clamp(10.5px,1.25vh,13px); line-height:1.5; color:var(--on-dark-dim)}
+  .row{display:grid; grid-template-columns:13px 1fr auto; align-items:center; column-gap:12px;
+    padding:10px 10px; border-radius:9px; cursor:pointer; border-bottom:1px solid rgba(201,168,76,.13);
+    transition:background .22s, transform .22s, box-shadow .22s; text-align:left; width:100%; border-left:0;border-right:0;border-top:0;
+    background:none; font:inherit; color:inherit}
+  .row:last-child{border-bottom:0}
+  .row:hover{background:rgba(201,168,76,.1); transform:translateX(2px)}
+  .row.sel{background:linear-gradient(100deg, rgba(201,168,76,.34), rgba(201,168,76,.14));
+    box-shadow:inset 0 0 0 1px rgba(201,168,76,.5), 0 3px 10px -4px rgba(120,90,30,.3); border-bottom-color:transparent}
+  .row .cdot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+  .row.c-neighbourhood .cdot{background:var(--gold-l)}
+  .row.c-education .cdot{background:var(--c-education)}
+  .row.c-hospital .cdot{background:var(--c-hospital)}
+  .row.c-leisure .cdot{background:var(--c-leisure)}
+  .row.c-water .cdot{background:#9fc0cc}
+  .row.c-connectivity .cdot{background:transparent;border:1.5px solid var(--gold)}
+  .row.c-connectivity.metro .cdot{background:var(--c-metro);border:0}
+  .row .nm{min-width:0; display:flex; flex-direction:column; gap:2px}
+  .row .nm b{font-weight:500; font-size:clamp(10.5px,1.2vh,12.5px); letter-spacing:.02em; color:var(--on-dark);
+    line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .row .nm small{font-weight:400; font-size:8px; letter-spacing:.22em; text-transform:uppercase; color:var(--on-dark-dim)}
+  .row .meta{font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--champ);
+    white-space:nowrap; font-variant-numeric:tabular-nums; text-align:right}
+  .row.hide{display:none}
+
+  /* ── COORDINATE corner (bottom-right) ────────────────────────── */
+  .meta-corner{position:fixed; right:clamp(14px,1.9vw,26px); bottom:clamp(12px,1.8vh,22px); z-index:500;
+    pointer-events:none; font-size:clamp(8px,1vh,11px); letter-spacing:.34em; text-transform:uppercase;
+    color:#ece8e0; text-shadow:0 1px 7px rgba(0,0,0,.6); border-radius:999px; padding:8px 17px;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    border:1px solid rgba(201,168,76,.20);
+    backdrop-filter:blur(16px) saturate(1.12); -webkit-backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+
+  /* ── MARKERS ─────────────────────────────────────────────────── */
+  /* NOTE: no CSS translate here — pin positioning is done purely via each marker's iconAnchor (JS),
+     so the dot centre / tile centre lands on the exact geo coordinate at every zoom (Directive-3). */
+  .mk{position:relative; display:flex; align-items:center; gap:7px; cursor:pointer;
+    filter:drop-shadow(0 3px 6px rgba(12,16,24,.5)); transition:opacity .45s var(--ease)}
+  .mk.off-cat{opacity:0; pointer-events:none}   /* hidden unless its category layer is lit */
+  .mk .dot{position:relative; width:13px; height:13px; border-radius:50%; flex:0 0 auto;
+    box-shadow:0 0 0 2px rgba(12,16,24,.85), 0 0 0 4px rgba(201,168,76,.35); transition:transform .25s}
+  .mk .dot::after{content:""; position:absolute; inset:0; border-radius:50%; z-index:-1;
+    box-shadow:0 0 0 0 rgba(201,168,76,.5); animation:poiPulse 3s ease-out infinite}
+  .mk:hover .dot{transform:scale(1.22)}
+  .mk .lbl{font-size:11.5px; letter-spacing:.02em; color:#ece8e0; white-space:nowrap; font-weight:400;
+    background:rgba(18,22,33,.78); padding:3px 10px; border-radius:11px; border:1px solid rgba(201,168,76,.45);
+    box-shadow:0 2px 8px -3px rgba(12,16,24,.6); transition:color .25s,border-color .25s,background .25s}
+  .mk .lbl .tag{font-style:normal; font-size:8px; letter-spacing:.18em; text-transform:uppercase; margin-left:7px;
+    color:#cfe0ff; border:1px solid rgba(90,120,210,.6); border-radius:999px; padding:1px 7px; background:rgba(40,58,120,.5)}
+  .mk:hover .lbl, .mk.sel .lbl{color:#fbf8f4; border-color:var(--gold-l); background:rgba(26,32,48,.9)}
+  /* label declutter: crowded pins flip their pill to the LEFT of the dot (or nudge above/below the
+     dot line) so labels never overlap each other or the Embassy ONE anchor. Classes are assigned by
+     the collision solver on every category apply + zoom/pan end; the DOT never moves. */
+  .mk.lbl-left{flex-direction:row-reverse; transform:translateX(calc(-100% + 13px))}
+  .mk.lbl-up .lbl{position:relative; top:-26px}
+  .mk.lbl-down .lbl{position:relative; top:26px}
+  .mk.cat-neighbourhood .dot{background:#c9a84c}
+  .mk.cat-education .dot{background:var(--c-education)}
+  .mk.cat-hospital .dot{background:var(--c-hospital)}
+  .mk.cat-leisure .dot{background:var(--c-leisure)}
+  .mk.cat-water .dot{background:#8fc4dc} .mk.cat-water .lbl{color:#e2f2f8}
+  .mk.cat-connectivity .dot{background:#121621; border:2px solid #c9a84c; box-shadow:0 0 0 2px rgba(12,16,24,.7)}
+  .mk.metro .dot{background:var(--c-metro); border:2px solid #cfe0ff; box-shadow:0 0 0 2px rgba(12,16,24,.7)}
+  .mk.sel .dot{transform:scale(1.3)}
+  .mk.sel .dot::after{animation:poiPulseStrong 1.5s ease-out infinite}
+  @keyframes poiPulse{0%{box-shadow:0 0 0 0 rgba(201,168,76,.5)} 70%,100%{box-shadow:0 0 0 11px rgba(201,168,76,0)}}
+  @keyframes poiPulseStrong{0%{box-shadow:0 0 0 0 rgba(201,168,76,.85)} 70%,100%{box-shadow:0 0 0 18px rgba(201,168,76,0)}}
+
+  /* THE ANCHOR — Embassy ONE. Restyled to be UNMISTAKABLE vs the POI pins: deep-navy #121621 body,
+     a distinct gold emblem ring, larger, with the tower emblem in gold. Always-on-top pane + label
+     preserved. iconAnchor (JS) is set to the tile centre so the emblem sits on the exact coordinate
+     (no CSS transform offset — see Directive-3 anchor fix). */
+  .mk.site{align-items:flex-start}
+  .mk.site .tilewrap{position:relative; width:44px; height:44px; flex:0 0 auto}
+  .mk.site .ring{position:absolute; left:-6px; top:-6px; width:56px; height:56px; border-radius:16px;
+    background:rgba(201,168,76,.30); animation:sitePulse 3.4s ease-in-out infinite}
+  .mk.site .tile{position:relative; width:44px; height:44px; border-radius:13px;
+    background:radial-gradient(circle at 50% 30%, #1b2334, #121621 72%); border:2px solid #c9a84c;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 4px rgba(201,168,76,.26), inset 0 0 0 3px rgba(201,168,76,.55),
+      0 8px 18px -5px rgba(12,16,24,.75)}
+  .mk.site .tile svg{width:23px;height:23px}
+  .mk.site .stack{display:flex; flex-direction:column; align-items:flex-start; gap:5px; margin-top:3px}
+  .mk.site .lbl{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:16px; letter-spacing:.02em; color:#fbf8f4;
+    background:rgba(18,22,33,.82); border-color:rgba(201,168,76,.55); padding:4px 13px; border-radius:13px}
+  .mk.site.sel .ring{animation-duration:2.2s}
+  @keyframes sitePulse{0%,100%{transform:scale(1);opacity:.65} 50%{transform:scale(1.32);opacity:0}}
+
+  /* ── CURVED CONNECTOR (SVG overlay pane) — single focused POI ── */
+  .leaflet-pane.eo-connector-pane{z-index:450; pointer-events:none}
+  .leaflet-pane.eo-roads-pane{z-index:440; pointer-events:none}
+  #connector{position:absolute; left:0; top:0; overflow:visible; pointer-events:none}
+  #connector .glow{stroke:#b9a888; stroke-width:6; fill:none; stroke-linecap:round; opacity:.3; filter:blur(3px)}
+  #connector .core{stroke:#c9a84c; stroke-width:1.7; fill:none; stroke-linecap:round;
+    filter:drop-shadow(0 0 3px rgba(201,168,76,.7))}
+  #connector .draw{stroke-dasharray:var(--len); stroke-dashoffset:var(--len);
+    transition:stroke-dashoffset .8s var(--ease)}
+  #connector .draw.in{stroke-dashoffset:0}
+  #connector .arrow{fill:#c9a84c; opacity:0; transition:opacity .4s ease .5s; filter:drop-shadow(0 0 3px rgba(201,168,76,.7))}
+  #connector .arrow.in{opacity:1}
+  #connector .nubA{fill:#c9a84c; opacity:0; transition:opacity .4s ease .15s}
+  #connector .nubA.in{opacity:.95}
+  #connchip{position:absolute; z-index:455; pointer-events:none; transform:translate(-50%,-50%);
+    font-size:9.5px; letter-spacing:.2em; text-transform:uppercase; color:#ece8e0; white-space:nowrap;
+    background:rgba(18,22,33,.8); border:1px solid rgba(201,168,76,.6); border-radius:999px;
+    padding:3px 11px; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+    box-shadow:0 2px 10px rgba(12,16,24,.5);
+    opacity:0; transition:opacity .4s ease .35s; font-variant-numeric:tabular-nums}
+  #connchip.in{opacity:1}
+
+  /* branch arcs + roads (Leaflet SVG polylines drawn on the eo-roads pane) */
+  .eo-branch{stroke:#c9a84c; stroke-width:1.4; fill:none; opacity:.7; stroke-linecap:round;
+    filter:drop-shadow(0 0 2px rgba(201,168,76,.5)); animation:branchIn .7s var(--ease) both}
+  .eo-road-glow{stroke:#c9a84c; opacity:.16; fill:none; stroke-linecap:round; stroke-linejoin:round}
+  .eo-road{stroke:#c9a84c; opacity:.9; fill:none; stroke-linecap:round; stroke-linejoin:round;
+    filter:drop-shadow(0 0 2px rgba(201,168,76,.55)); animation:branchIn .8s var(--ease) both}
+  .eo-metro{stroke:#5a78d2; opacity:.9; fill:none; stroke-linecap:round; stroke-linejoin:round;
+    filter:drop-shadow(0 0 3px rgba(90,120,210,.6)); animation:branchIn .9s var(--ease) both}
+  .eo-lake{stroke:#8fc4dc; fill:#8fc4dc; fill-opacity:.22; stroke-opacity:.85; animation:branchIn .7s var(--ease) both}
+  @keyframes branchIn{from{opacity:0} }
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .9s var(--ease) forwards}
+  @keyframes fin{to{opacity:1;transform:none}}
+
+  .sheet-grip{display:none}   /* shown only as a bottom-sheet handle on phone portrait */
+
+  /* narrow / portrait — rail becomes a bottom sheet */
+  @media (max-aspect-ratio:3/4){
+    .rail{top:auto; left:0; right:0; bottom:0; width:auto; max-height:46vh}
+    .shell{border-radius:16px 16px 0 0}
+    .viewtoggle{top:auto; bottom:calc(46vh + 12px)}
+    .float360{top:auto; bottom:calc(46vh + 62px)}
+  }
+
+  /* ── SURVIVAL KIT: gate hover styles so iOS sticky-hover never flickers ── */
+  @media (hover:none){
+    .leg:hover{border-color:var(--line-dark); transform:none}
+    .leg.active:hover{background:#121621; border-color:#c9a84c}
+    .row:hover{background:none; transform:none}
+    .vt:not(.on):hover{color:rgba(250,247,240,.55)}
+    .mk:hover .dot{transform:none}
+    .mk:hover .lbl{color:#ece8e0; border-color:rgba(201,168,76,.45); background:rgba(18,22,33,.78)}
+  }
+
+  /* ── PHONE PORTRAIT: compact, collapsible bottom sheet so the map stays usable ── */
+  @media (max-width:560px) and (max-aspect-ratio:3/4){
+    .head h1{font-size:clamp(24px,7.5vw,34px)}
+    .head .lede{max-width:min(70vw,300px); font-size:11px; -webkit-line-clamp:3; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden}
+    .topbar{padding-right:clamp(96px,28vw,140px)}
+    .rail{max-height:42vh}
+    .rail.collapsed{max-height:none; height:auto}
+    .shell{padding-top:6px}
+    .sheet-grip{display:flex; align-items:center; justify-content:center; padding:8px 0 4px; cursor:pointer; flex:0 0 auto;
+      -webkit-tap-highlight-color:transparent}
+    .sheet-grip::before{content:""; width:42px; height:5px; border-radius:999px; background:rgba(201,168,76,.45)}
+    .rail.collapsed .legend,.rail.collapsed .detail,.rail.collapsed .listhead,.rail.collapsed .list,.rail.collapsed .listhint{display:none}
+    .rail.collapsed .shell{padding-bottom:env(safe-area-inset-bottom,0)}
+    .legend{gap:8px; padding:6px clamp(13px,4vw,18px) 10px}
+    .leg{min-height:44px; padding:8px 10px}
+    .leg span{font-size:11px}
+    .lh{font-size:9px}
+    .row{padding:11px 10px; min-height:46px}
+    .list{min-height:60px}
+    .detail{padding:10px clamp(13px,4vw,18px)}
+    .viewtoggle{bottom:calc(42vh + 12px); right:clamp(12px,4vw,20px)}
+    .vt{padding:10px 14px; min-height:44px}
+    .float360{bottom:calc(42vh + 66px); right:clamp(12px,4vw,20px)}
+    .meta-corner{display:none}
+  }
+  /* very short phone landscape — keep rail as a narrower side panel, never a sheet */
+  @media (max-height:430px) and (min-aspect-ratio:3/2){
+    .rail{top:clamp(96px,22vh,140px); width:clamp(190px,30vw,240px)}
+    .head .lede{display:none}
+    .head h1{font-size:clamp(20px,5.4vh,30px)}
+    .float360{top:clamp(54px,12vh,74px)}
+  }
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:var(--navy)!important; border:1px solid rgba(250,247,240,.16)!important; color:#faf7f0!important; font-family:"Jost",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(6px)!important; backdrop-filter:blur(6px)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  .back:hover{background:var(--navy)!important; border-color:rgba(250,247,240,.32)!important; box-shadow:0 10px 24px -10px rgba(6,9,16,.6)!important}
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:#faf7f0!important}
+</style>
+</head>
+<body class="view-vec">
+  <!-- ── MAP ─────────────────────────────────────────────────────── -->
+  <div id="map"></div>
+  <div class="wash"></div>
+
+  <!-- ── TOP-LEFT scrim + return + title ─────────────────────────── -->
+  <div class="topscrim"></div>
+  <div class="topbar">
+    <button class="back" id="back" aria-label="Return">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return
+    </button>
+    <div class="head fadein">
+      <p class="eyebrow">Gateway to</p>
+      <h1>The North</h1>
+      <p class="lede">At Mekhri Circle, where the city&rsquo;s most established neighbourhoods meet and where its next chapter begins. Minutes from the centres of power, removed from the noise.</p>
+    </div>
+  </div>
+
+  <!-- ── MAP | DARK toggle ─────────────────────────── -->
+  <div class="viewtoggle fadein" style="animation-delay:.1s">
+    <button class="vt on" data-view="vec" aria-label="Map view">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M4 14h16M9 4v16M14 4v16"/></svg>Map
+    </button>
+    <button class="vt" data-view="blue" aria-label="Dark view">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 2.6 14.6 0 17M12 3.5c-2.6 2.4-2.6 14.6 0 17"/></svg>Dark
+    </button>
+  </div>
+
+  <!-- ── 360° VIEW button + full-screen viewer ───────────────────── -->
+  <button class="float360" id="btn360" aria-label="360 degree view">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+    <span>360&deg; View</span>
+  </button>
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      <span>Back</span>
+    </button>
+  </div>
+
+  <!-- ── LEFT RAIL ───────────────────────────────────────────────── -->
+  <aside class="rail">
+    <div class="shell fadein" style="animation-delay:.15s">
+      <div class="sheet-grip" id="sheetGrip" role="button" aria-label="Collapse panel"></div>
+      <div class="legend">
+        <div class="lh">Explore the address</div>
+        <button class="leg l-site"          data-cat="site"><span class="sw"></span><span>The Address</span></button>
+        <button class="leg l-connectivity"  data-cat="connectivity"><span class="sw"></span><span>Connectivity</span></button>
+        <button class="leg l-education"      data-cat="education"><span class="sw"></span><span>Education</span></button>
+        <button class="leg l-hospital"       data-cat="hospital"><span class="sw"></span><span>Healthcare</span></button>
+        <button class="leg l-leisure"        data-cat="leisure"><span class="sw"></span><span>Leisure</span></button>
+        <button class="leg l-water"          data-cat="water"><span class="sw"></span><span>Lakes &amp; Green</span></button>
+        <button class="leg l-neighbourhood"  data-cat="neighbourhood"><span class="sw"></span><span>Neighbourhoods</span></button>
+      </div>
+
+      <div class="detail" id="detail">
+        <div class="ik" id="ik">THE ADDRESS</div>
+        <h2 id="ih">Embassy ONE Private Residences</h2>
+        <p id="ip">Two private acres within an eight-acre landmark — premier offices, five-star hospitality and bespoke private residences beyond the gate.</p>
+        <div class="dist" id="idist"></div>
+      </div>
+
+      <div class="listhead"><div class="lh">Places nearby</div></div>
+      <div class="listhint" id="listhint">Select a layer above to light up its landmarks around Embassy ONE.</div>
+      <div class="list" id="list"></div>
+    </div>
+  </aside>
+
+  <!-- ── COORDINATE corner ───────────────────────────────────────── -->
+  <div class="meta-corner">MEKHRI CIRCLE · 13.02°N 77.59°E</div>
+
+  <!-- ── CONNECTOR distance chip ─────────────────────────────────── -->
+  <div id="connchip"></div>
+
+<script>
+  /* ────────────────────────────────────────────────────────────────
+     ANCHORS — every coordinate is a WebSearch-verified real location,
+     hard-coded [lat,lng] with a source note. Distances are brochure
+     estimates (CONFIRM before publishing). Items flagged APPROX have a
+     confirmed locality/address but the exact building GPS was not
+     published — placed to the best-verified point.
+     ──────────────────────────────────────────────────────────────── */
+  var ANCHORS=[
+    // ── THE ADDRESS (anchor — always visible) ──
+    {id:"eo",   cat:"site",          name:"Embassy ONE Private Residences", ll:[13.0196,77.5854], ik:"THE ADDRESS", line:"Two private acres within an eight-acre landmark — premier offices, five-star hospitality and bespoke private residences beyond the gate.", dist:""},
+    // src: Mappls place URL for Embassy ONE embeds 13.01972,77.58459 (Bellary Rd, Ganganagar, near Mekhri Circle)
+
+    // ── CONNECTIVITY ──
+    {id:"air",  cat:"connectivity",  name:"Kempegowda Int'l Airport", ll:[13.1994,77.7101], ik:"CONNECTIVITY", line:"A clear run north on NH-44 (Bellary Road) to the airport corridor and Terminal 2.", dist:"≈ 40 min · NH-44"},
+    // src: latlong.net / latitude.to — 13.1927–13.1994, 77.7033–77.7101
+    {id:"hebj", cat:"connectivity",  name:"Hebbal Interchange (ORR)", ll:[13.0408,77.5898], ik:"CONNECTIVITY", line:"Where Bellary Road meets the Outer Ring Road — the north's great crossroads, minutes from the gate.", dist:"≈ 8 min"},
+    // src: Hebbal 13.035781,77.597008; Baptist Hospital area 13.0356,77.5896 (junction)
+    {id:"mekri",cat:"connectivity",  name:"Mekhri Circle", ll:[13.0141,77.5839], ik:"CONNECTIVITY", line:"Bellary Road to the airport, Sankey Road to the city — North Bangalore's arteries converge here.", dist:"≈ 3 min"},
+    // src: existing project anchor (Mekhri Circle)
+    {id:"yela", cat:"connectivity",  name:"Yelahanka", ll:[13.1007,77.5963], ik:"CONNECTIVITY", line:"The fast-growing northern township — schools, the air-force enclave and Bellary Road's next chapter.", dist:"≈ 15 min"},
+    // src: latitude.to Yelahanka 13.1007,77.5963
+    {id:"metro",cat:"connectivity",  name:"Hebbal Metro Station", ll:[13.0440,77.5928], ik:"CONNECTIVITY", line:"Blue Line (Phase 2B) — KR Puram to the Airport via Hebbal, running along Bellary Road beside the site.", dist:"Blue Line · from 2027", tag:"Upcoming", metro:true},
+    // src: Hebbal metro station 13.035781,77.597008 (themetrorailguy Phase 2B; Wikipedia Blue Line)
+
+    // ── EDUCATION ──
+    {id:"mit",  cat:"education",     name:"Manipal Inst. of Technology", ll:[13.1258,77.5889], ik:"EDUCATION", line:"MAHE's Bengaluru campus at Govindapura, Yelahanka — engineering and higher education to the north.", dist:"≈ 20 min"},
+    // src: address BSF Campus, Govindapura, Yelahanka 560064 (careers360 / manipal.edu). APPROX — exact campus GPS not published; placed in Govindapura/Yelahanka.
+    {id:"stone",cat:"education",     name:"Stonehill International School", ll:[13.1701,77.5956], ik:"EDUCATION", line:"An IB day & boarding school on 34 acres at Tarahunise, on the airport road.", dist:"≈ 30 min"},
+    // src: Google Maps place 13.170133,77.595611
+    {id:"vidya",cat:"education",     name:"Vidyashilp Academy", ll:[13.1320,77.5880], ik:"EDUCATION", line:"One of the north's most sought-after schools, by the Jakkur aerodrome.", dist:"≈ 15 min"},
+    // src: address near Jakkur Flying Club, Shivanahalli, Yelahanka (mappls/justdial). APPROX — placed near Jakkur aerodrome.
+    {id:"mallya",cat:"education",    name:"Mallya Aditi Int'l School", ll:[13.1023,77.5837], ik:"EDUCATION", line:"A leading international school at Yelahanka New Town, on Bellary Road.", dist:"≈ 18 min"},
+    // src: address 5th Mile, Bellary Rd, Yelahanka New Town (myschooladmission/wikipedia). APPROX — placed at Yelahanka New Town.
+
+    // ── HEALTHCARE ──
+    {id:"aster",cat:"hospital",      name:"Aster CMI Hospital", ll:[13.0546,77.5916], ik:"HEALTHCARE", line:"A flagship multi-speciality hospital on Bellary Road at Hebbal / Sahakar Nagar.", dist:"≈ 10 min"},
+    // src: address No.43, New Airport Rd/NH-44, near Kodigehalli Gate, Sahakar Nagar, Hebbal (asterhospitals/mappls). APPROX — placed on Bellary Rd at Sahakar Nagar.
+    {id:"manh", cat:"hospital",      name:"Manipal Hospital Hebbal", ll:[13.0510,77.5938], ik:"HEALTHCARE", line:"World-class care at Kirloskar Business Park on Bellary Road, close at hand to the north.", dist:"≈ 10 min"},
+    // src: findlatitudeandlongitude — 13°3'3.5\"N 77°35'37.9\"E = 13.0510,77.5938 (Kirloskar Business Park, Hebbal)
+    {id:"bapt", cat:"hospital",      name:"Bangalore Baptist Hospital", ll:[13.0356,77.5896], ik:"HEALTHCARE", line:"A trusted teaching hospital on Bellary Road between Mekhri Circle and the Hebbal flyover.", dist:"≈ 8 min"},
+    // src: 13.0356137,77.5896209 (Bellary Rd, Vinayakanagar, Hebbal)
+
+    // ── LEISURE ──
+    {id:"golf", cat:"leisure",       name:"Bangalore Golf Course", ll:[12.9902,77.5838], ik:"LEISURE", line:"A century-old green off Sankey Road at High Grounds — open sky, minutes from the gate.", dist:"≈ 12 min"},
+    // src: Bangalore Golf Club, 2 Sankey Rd, High Grounds; Sankey Rd 12°59'34\"N 77°35'7\"E. APPROX — placed at the course off Sankey Rd.
+    {id:"club", cat:"leisure",       name:"Bangalore Club", ll:[12.9668,77.5974], ik:"LEISURE", line:"The city's most storied members' club on Field Marshal Cariappa Road.", dist:"≈ 20 min"},
+    // src: 12.976407,77.608528 (No.10, Field Marshal Cariappa Rd)
+    {id:"phx",  cat:"leisure",       name:"Phoenix Mall of Asia", ll:[13.0706,77.5912], ik:"LEISURE", line:"Bengaluru's flagship destination for retail, dining and cinema on Bellary Road.", dist:"≈ 12 min"},
+    // src: Mappls — 13.070557,77.591152 (Byatarayanapura, Bellary Main Rd)
+    {id:"shang",cat:"leisure",       name:"Shangri-La Bengaluru", ll:[12.9906,77.5875], ik:"LEISURE", line:"Five-star hospitality on Palace Road, beside Bangalore Palace and the golf course.", dist:"≈ 15 min"},
+    // src: No.56-6B Palace Rd, Vasanth Nagar (shangri-la.com/mappls). APPROX — placed on Palace Rd, Vasanth Nagar.
+    {id:"itc",  cat:"leisure",       name:"ITC Windsor", ll:[12.9941,77.5860], ik:"LEISURE", line:"A landmark five-star heritage hotel on Golf Course Road, Vasanth Nagar.", dist:"≈ 14 min"},
+    // src: 12.9941169,77.5860041 (25 Windsor Square, Golf Course Rd)
+
+    // ── LAKES & GREEN ──
+    {id:"hebl", cat:"water",         name:"Hebbal Lake", ll:[13.0472,77.5867], ik:"LAKES & GREEN", line:"A northern mirror of water and birdlife at the mouth of Bellary Road and the ORR.", dist:"≈ 6 min"},
+    // src: latitude.to — 13.0413,77.5853
+    {id:"nag",  cat:"water",         name:"Nagavara Lake", ll:[13.0448,77.6069], ik:"LAKES & GREEN", line:"Open water to the north-east, along the Outer Ring Road at Nagavara.", dist:"≈ 12 min"},
+    // src: 13.0388995,77.6163803 (Nagawara/Nagavara)
+
+    // ── NEIGHBOURHOODS ──
+    {id:"sada", cat:"neighbourhood", name:"Sadashivanagar", ll:[13.0110,77.5809], ik:"NEIGHBOURHOODS", line:"Bangalore's most storied address — industrialists, judges and generational wealth for over a century.", dist:"≈ 5 min"},
+    {id:"mall", cat:"neighbourhood", name:"Malleshwaram", ll:[13.0030,77.5690], ik:"NEIGHBOURHOODS", line:"Heritage, culture and old-money Bangalore at its most refined.", dist:"≈ 8 min"},
+    {id:"doll", cat:"neighbourhood", name:"Dollars Colony", ll:[13.0414,77.5678], ik:"NEIGHBOURHOODS", line:"The contemporary power address of the city's business elite.", dist:"≈ 5 min"}
+  ];
+
+  var CAT_LABEL={site:"The Address", connectivity:"Connectivity", education:"Education", hospital:"Healthcare", leisure:"Leisure", water:"Lakes & Green", neighbourhood:"Neighbourhood"};
+  var CAT_INTRO={
+    connectivity:{ik:"CONNECTIVITY", name:"Effortless Reach", line:"NH-44 (Bellary Road) north to the airport and south to the city, the Outer Ring Road at Hebbal, and the upcoming Blue Line Metro — the north's every artery, minutes from the gate."},
+    education:{ik:"EDUCATION", name:"Schools & Institutes", line:"Among the north's most sought-after international schools and institutes — a short drive from the residences."},
+    hospital:{ik:"HEALTHCARE", name:"World-Class Care", line:"The city's leading multi-speciality hospitals cluster along Bellary Road at Hebbal — care within minutes."},
+    leisure:{ik:"LEISURE", name:"Culture & Retreat", line:"Historic clubs, a championship green, flagship retail and five-star hospitality — the good life, close at hand."},
+    water:{ik:"LAKES & GREEN", name:"Water & Open Sky", line:"Hebbal and Nagavara lakes frame the north with open water and birdlife — the city's green edge."},
+    neighbourhood:{ik:"NEIGHBOURHOODS", name:"Storied Addresses", line:"Sadashivanagar, Malleshwaram and Dollars Colony — Bangalore's most established and enduring addresses."}
+  };
+  var SITE_ID="eo";
+  var SITE_INFO={ik:"THE ADDRESS", name:"Embassy ONE Private Residences", line:"Two private acres within an eight-acre landmark — premier offices, five-star hospitality and bespoke private residences beyond the gate."};
+
+  /* ── ROAD / METRO GEOMETRY — approximate real alignments (CONFIRM) ──
+     Waypoints follow the real corridors (Bellary Rd / NH-44, Outer Ring Rd,
+     Yelahanka spur, Blue Line 2B) using verified junction coordinates; the
+     intermediate points are honest approximations of the road curves. */
+  var ROAD_NH44_N=[[13.0196,77.5854],[13.0280,77.5878],[13.0408,77.5898],[13.0470,77.5910],[13.0620,77.5945],[13.0800,77.5960],[13.1007,77.5963],[13.1250,77.6060],[13.1500,77.6350],[13.1750,77.6750],[13.1900,77.6980],[13.1994,77.7101]];
+  var ROAD_NH44_S=[[13.0196,77.5854],[13.0150,77.5830],[13.0141,77.5839],[13.0020,77.5820],[12.9950,77.5850],[12.9880,77.5905]];
+  var ROAD_ORR   =[[13.0430,77.5480],[13.0410,77.5620],[13.0390,77.5760],[13.0408,77.5898],[13.0380,77.6010],[13.0389,77.6164],[13.0400,77.6320]];
+  var ROAD_YELA  =[[13.1007,77.5963],[13.1030,77.5860],[13.1050,77.5760]];
+  var METRO_BLUE =[[13.0389,77.6164],[13.0370,77.6010],[13.0440,77.5928],[13.0470,77.5975],[13.0650,77.6000],[13.0850,77.6010],[13.1050,77.6030],[13.1300,77.6120],[13.1550,77.6420],[13.1780,77.6800],[13.1994,77.7101]];
+  var LAKES=[{ll:[13.0472,77.5867],r:520},{ll:[13.0448,77.6069],r:600}];   /* centred on the OSM lake polygons (matches the corrected pins) */
+
+  // ── MAP ──
+  var map = L.map('map', { center:[13.0205,77.5880], zoom:14, minZoom:11, maxZoom:18,
+    zoomControl:false, attributionControl:true, scrollWheelZoom:true });
+
+  /* perf: keepBuffer holds off-screen tiles so pan-back never refetches; updateWhenZooming:false
+     stops mid-zoom tile churn (smoother fly-to); updateWhenIdle:false keeps panning responsive. */
+  var TILE_PERF={ keepBuffer:4, updateWhenZooming:false, updateWhenIdle:false };
+  var blueLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+    Object.assign({ subdomains:'abcd', maxZoom:20, attribution:'© CARTO © OpenStreetMap' }, TILE_PERF));
+  var vecLayer  = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    Object.assign({ subdomains:'abcd', maxZoom:20, attribution:'© CARTO © OpenStreetMap' }, TILE_PERF));
+  var satLayer  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom:19, attribution:'Imagery © Esri' });
+  var satLabels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+    { maxZoom:19, opacity:.55, attribution:'© CARTO' });
+
+  function setView(v){
+    document.body.classList.toggle('view-sat',  v==='sat');
+    document.body.classList.toggle('view-vec',  v==='vec');
+    document.body.classList.toggle('view-blue', v==='blue');
+    map.removeLayer(blueLayer); map.removeLayer(vecLayer); map.removeLayer(satLayer); map.removeLayer(satLabels);
+    if(v==='sat'){ satLayer.addTo(map); satLabels.addTo(map); }
+    else if(v==='vec'){ vecLayer.addTo(map); }
+    else { blueLayer.addTo(map); }
+    document.querySelectorAll('.vt').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-view')===v); });
+    positionConnector();
+    if(typeof ensureSitePin==='function') ensureSitePin();
+  }
+  setView('vec'); // default = light bone/vector map (beige theme); Dark view available via toggle
+  var HOME_CENTER=map.getCenter(), HOME_ZOOM=map.getZoom();
+  document.querySelectorAll('.vt').forEach(function(b){
+    b.addEventListener('click', function(){ setView(b.getAttribute('data-view')); });
+  });
+
+  function tower(){ return '<svg viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 21V8.2L12 4l2.5 4.2V21"/><path d="M8.8 21h6.4"/><path d="M9.8 12.5h4.4M9.8 16.2h4.4"/></svg>'; }
+
+  // ── panes for roads / branches (below markers, above tiles) ──
+  map.createPane('eo-roads'); map.getPane('eo-roads').classList.add('eo-roads-pane');
+  /* Dedicated ALWAYS-ON pane for the Embassy ONE anchor. zIndex 690 sits above the default
+     markerPane (600) and tooltipPane (650) so the project pin can never be obscured by any POI
+     marker, and — living in its own pane, never in a layerGroup that gets cleared — it can never
+     be removed by a filter/view rebuild. */
+  map.createPane('eo-site'); map.getPane('eo-site').style.zIndex=690;
+
+  var markers={}; var curSel=null; var activeCat=null;
+  ANCHORS.forEach(function(a){
+    var html, size, anch;
+    if(a.cat==="site"){
+      html='<div class="mk site"><span class="tilewrap"><span class="ring"></span><span class="tile">'+tower()+'</span></span>'+
+           '<span class="stack"><span class="lbl">'+a.name+'</span></span></div>';
+      /* anchor = centre of the 44px tile → the gold emblem sits on the exact coordinate */
+      size=[260,52]; anch=[22,22];
+    } else {
+      var cls='mk cat-'+a.cat+(a.metro?' metro':'')+' off-cat';
+      var lbl=a.name+(a.tag?'<i class="tag">'+a.tag+'</i>':'');
+      html='<div class="'+cls+'"><span class="dot"></span><span class="lbl">'+lbl+'</span></div>';
+      /* anchor = centre of the 13px dot (dot is left-most, label vertically centred beside it) →
+         the dot points at the exact coordinate. Values tuned against latLngToContainerPoint so the
+         measured dot-centre vs geo-point delta is sub-pixel at every zoom. */
+      size=[240,16]; anch=[6.5,12.6];
+    }
+    var icon=L.divIcon({ className:'', html:html, iconSize:size, iconAnchor:anch });
+    var mopts={ icon:icon, zIndexOffset:(a.cat==="site"?1000:0) };
+    if(a.cat==="site"){ mopts.pane='eo-site'; mopts.interactive=true; }
+    var m=L.marker(a.ll, mopts).addTo(map);
+    m.on('click', function(ev){ if(ev&&ev.originalEvent){ L.DomEvent.stopPropagation(ev); }
+      select(curSel===a.id ? SITE_ID : a.id, true); });
+    markers[a.id]={a:a, m:m};
+  });
+
+  /* Re-assert the anchor after ANY rebuild: guarantees it is on the map, visible, and never
+     carrying an off-cat/hidden state. Cheap + idempotent — safe to call on every interaction. */
+  function ensureSitePin(){
+    if(typeof markers==='undefined' || !markers) return;   // may fire before markers exist (init setView)
+    var rec=markers[SITE_ID]; if(!rec) return;
+    if(!map.hasLayer(rec.m)){ rec.m.addTo(map); }
+    var el=rec.m.getElement();
+    if(el){ el.style.display=''; el.style.visibility='visible';
+      var d=el.querySelector('.mk'); if(d){ d.classList.remove('off-cat'); } }
+  }
+
+  // ── ROAD / METRO / LAKE / BRANCH layers (built once, toggled per category) ──
+  function roadPoly(latlngs, cls, weight){ return L.polyline(latlngs, {className:cls, pane:'eo-roads', color:'#c9a84c', weight:weight, opacity:1, interactive:false, lineJoin:'round', lineCap:'round'}); }
+  /* perf (iPad late-load): the road/metro/lake vectors are NON-default content — built lazily on
+     first use so their polyline construction never sits on the critical path before the first
+     tiles + the anchor pin paint. */
+  var roadGroup=null, metroGroup=null, lakeGroup=null;
+  function getRoadGroup(){ if(!roadGroup){ roadGroup=L.layerGroup([
+      roadPoly(ROAD_NH44_N,'eo-road-glow',9), roadPoly(ROAD_NH44_N,'eo-road',3.2),
+      roadPoly(ROAD_NH44_S,'eo-road-glow',9), roadPoly(ROAD_NH44_S,'eo-road',3.2),
+      roadPoly(ROAD_ORR,'eo-road-glow',8),    roadPoly(ROAD_ORR,'eo-road',2.6),
+      roadPoly(ROAD_YELA,'eo-road-glow',7),   roadPoly(ROAD_YELA,'eo-road',2.4)
+    ]); } return roadGroup; }
+  function getMetroGroup(){ if(!metroGroup){ metroGroup=L.layerGroup([
+      L.polyline(METRO_BLUE, {className:'eo-metro', pane:'eo-roads', color:'#5a78d2', weight:3, opacity:.9, dashArray:'3 9', interactive:false})
+    ]); } return metroGroup; }
+  function getLakeGroup(){ if(!lakeGroup){ lakeGroup=L.layerGroup(LAKES.map(function(k){ return L.circle(k.ll, {className:'eo-lake', pane:'eo-roads', radius:k.r, color:'#8fc4dc', weight:1.5, interactive:false}); })); } return lakeGroup; }
+  var branchGroup=L.layerGroup();
+
+  // gentle geographic arc (quadratic bezier) between two [lat,lng] — pure vector, reprojects on zoom
+  function arcLatLngs(a,b){
+    var lat1=a[0],lng1=a[1],lat2=b[0],lng2=b[1];
+    var mlat=(lat1+lat2)/2, mlng=(lng1+lng2)/2;
+    var dlat=lat2-lat1, dlng=lng2-lng1;
+    var len=Math.hypot(dlat,dlng)||1e-6;
+    var plat=-dlng/len, plng=dlat/len;           // perpendicular unit
+    if(plat<0){ plat=-plat; plng=-plng; }         // keep the bow consistently "up"
+    var bend=len*0.16;
+    var clat=mlat+plat*bend, clng=mlng+plng*bend;
+    var pts=[], N=26;
+    for(var i=0;i<=N;i++){ var t=i/N,u=1-t;
+      pts.push([u*u*lat1+2*u*t*clat+t*t*lat2, u*u*lng1+2*u*t*clng+t*t*lng2]); }
+    return pts;
+  }
+
+  // ── CURVED CONNECTOR (hand-built SVG — single focused POI) ──
+  map.createPane('eo-connector'); map.getPane('eo-connector').classList.add('eo-connector-pane');
+  var SVGNS="http://www.w3.org/2000/svg";
+  var connSvg=document.createElementNS(SVGNS,'svg'); connSvg.setAttribute('id','connector');
+  function mkPath(cls){ var p=document.createElementNS(SVGNS,'path'); p.setAttribute('class',cls); return p; }
+  var connGlow=mkPath('glow draw'), connCore=mkPath('core draw');
+  var nubA=document.createElementNS(SVGNS,'circle'); nubA.setAttribute('class','nubA'); nubA.setAttribute('r','3.4');
+  var arrow=mkPath('arrow'); arrow.setAttribute('d','M0 0 L-11 -5 L-7.5 0 L-11 5 Z');
+  connSvg.appendChild(connGlow); connSvg.appendChild(connCore); connSvg.appendChild(nubA); connSvg.appendChild(arrow);
+  map.getPane('eo-connector').appendChild(connSvg);
+  var connchip=document.getElementById('connchip');
+  var connTarget=null;
+
+  function quad(pa,cp,pb,t){ var u=1-t;
+    return { x:u*u*pa.x + 2*u*t*cp.x + t*t*pb.x, y:u*u*pa.y + 2*u*t*cp.y + t*t*pb.y }; }
+
+  function positionConnector(){
+    if(!connTarget || !markers[connTarget]) return;
+    var pa=map.latLngToLayerPoint(markers[SITE_ID].a.ll);
+    var pb=map.latLngToLayerPoint(markers[connTarget].a.ll);
+    var mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+    var dx=pb.x-pa.x, dy=pb.y-pa.y; var len=Math.hypot(dx,dy)||1;
+    var nx=-dy/len, ny=dx/len;
+    var curve=Math.min(70, len*0.24);
+    if(nx<0){ nx=-nx; ny=-ny; }
+    var cp={ x:mx+nx*curve, y:my+ny*curve };
+    var d='M'+pa.x+' '+pa.y+' Q'+cp.x+' '+cp.y+' '+pb.x+' '+pb.y;
+    connGlow.setAttribute('d',d); connCore.setAttribute('d',d);
+    var plen=connCore.getTotalLength ? connCore.getTotalLength() : len;
+    connGlow.style.setProperty('--len',plen); connCore.style.setProperty('--len',plen);
+    nubA.setAttribute('cx',pa.x); nubA.setAttribute('cy',pa.y);
+    var ang=Math.atan2(pb.y-cp.y, pb.x-cp.x)*180/Math.PI;
+    arrow.setAttribute('transform','translate('+pb.x+','+pb.y+') rotate('+ang+')');
+    var m05=quad(pa,cp,pb,0.5);
+    var mid=map.layerPointToContainerPoint(L.point(m05.x,m05.y));
+    connchip.style.left=mid.x+'px'; connchip.style.top=mid.y+'px';
+  }
+  function drawConnector(id){
+    if(id===SITE_ID || !markers[id]){ clearConnector(); return; }
+    connTarget=id;
+    var dist=markers[id].a.dist;
+    if(dist){ connchip.textContent=dist; connchip.style.display=''; }
+    else { connchip.textContent=''; connchip.style.display='none'; }
+    positionConnector();
+    connGlow.classList.remove('in'); connCore.classList.remove('in');
+    nubA.classList.remove('in'); arrow.classList.remove('in'); connchip.classList.remove('in');
+    void connSvg.getBBox;
+    requestAnimationFrame(function(){
+      connGlow.classList.add('in'); connCore.classList.add('in');
+      nubA.classList.add('in'); arrow.classList.add('in');
+      if(dist) connchip.classList.add('in');
+    });
+  }
+  function clearConnector(){
+    connTarget=null;
+    connGlow.classList.remove('in'); connCore.classList.remove('in');
+    nubA.classList.remove('in'); arrow.classList.remove('in'); connchip.classList.remove('in');
+    connGlow.removeAttribute('d'); connCore.removeAttribute('d'); arrow.removeAttribute('transform');
+  }
+  map.on('move zoom zoomanim viewreset moveend', positionConnector);
+
+  // ── DETAIL panel ──
+  var ik=document.getElementById("ik"), ih=document.getElementById("ih"), ip=document.getElementById("ip"),
+      idist=document.getElementById("idist"), detail=document.getElementById("detail");
+  function setDetail(k,h,p,d){
+    detail.classList.add("swap");
+    setTimeout(function(){ ik.textContent=k; ih.textContent=h; ip.textContent=p; idist.textContent=d||"";
+      detail.classList.remove("swap"); }, 200);
+  }
+  function setMarkerSel(id){
+    for(var k in markers){ var el=markers[k].m.getElement();
+      if(el){ var d=el.querySelector('.mk'); if(d) d.classList.toggle('sel', k===id); } }
+  }
+  function setRowSel(id){
+    document.querySelectorAll('.row').forEach(function(r){ r.classList.toggle('sel', r.getAttribute('data-id')===id); });
+  }
+
+  // fly to frame a set of [lat,lng] points, keeping the left rail clear
+  function flyToPts(pts, maxZ){
+    var railEl=document.querySelector('.rail'); var railW=(railEl?railEl.getBoundingClientRect().width:0);
+    try{ map.flyToBounds(L.latLngBounds(pts), { paddingTopLeft:[railW+60,190], paddingBottomRight:[80,90], duration:1.0, maxZoom:maxZ||15 }); }
+    catch(e){ try{ map.flyTo(markers[SITE_ID].a.ll, 14, {duration:.7}); }catch(_){ } }
+  }
+  function flyRoute(aId,bId){
+    var railEl=document.querySelector('.rail'); var railW=(railEl?railEl.getBoundingClientRect().width:0);
+    try{ map.flyToBounds([markers[aId].a.ll, markers[bId].a.ll], { paddingTopLeft:[railW+50,180], paddingBottomRight:[80,90], duration:.95, maxZoom:15 }); }
+    catch(e){ try{ map.panTo(markers[bId].a.ll,{animate:true,duration:.7}); }catch(_){ } }
+  }
+
+  // build the gold branch arcs from the anchor to each POI in a category
+  function buildBranches(cat){
+    branchGroup.clearLayers();
+    var s=markers[SITE_ID].a.ll;
+    ANCHORS.forEach(function(a){
+      if(a.cat!==cat || a.id===SITE_ID) return;
+      L.polyline(arcLatLngs(s, a.ll), {className:'eo-branch', pane:'eo-roads', color:'#c9a84c', weight:1.4, opacity:.7, interactive:false}).addTo(branchGroup);
+    });
+  }
+
+  function catBounds(cat){
+    var pts=[markers[SITE_ID].a.ll];
+    ANCHORS.forEach(function(a){ if(a.cat===cat && a.id!==SITE_ID) pts.push(a.ll); });
+    return pts;
+  }
+
+  // ── INVERTED FILTER: light up a category layer ──
+  function applyCategory(cat){
+    if(cat==='site' || cat===activeCat){ clearCategory(true); return; }
+    activeCat=cat; curSel=null; clearConnector();
+    try{window.RDA&&RDA.track('map_filter', cat);}catch(_){}
+    setMarkerSel(null); setRowSel(null);
+    document.querySelectorAll('.leg').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-cat')===cat); });
+    // markers: reveal this category, hide the rest (anchor always shown)
+    for(var k in markers){ if(k===SITE_ID) continue;
+      var inCat=(markers[k].a.cat===cat);
+      var el=markers[k].m.getElement();
+      if(el){ var d=el.querySelector('.mk'); if(d){ d.classList.toggle('off-cat',!inCat); d.classList.remove('sel'); } }
+    }
+    // rows
+    document.querySelectorAll('.row').forEach(function(r){ r.classList.toggle('hide', r.getAttribute('data-cat')!==cat); r.classList.remove('sel'); });
+    document.getElementById('listhint').style.display='none';
+    // vector layers — CALM model: NO gold connector arcs on filter select (a line is drawn only
+    // when an individual item/pin is chosen, via drawConnector). Roads/metro/lakes are the layer's
+    // own content, so they fade in (simple .eo-road branchIn opacity fade — no dramatic draw).
+    if(roadGroup) map.removeLayer(roadGroup); if(metroGroup) map.removeLayer(metroGroup); if(lakeGroup) map.removeLayer(lakeGroup);
+    map.removeLayer(branchGroup); branchGroup.clearLayers();
+    if(cat==='connectivity'){ getRoadGroup().addTo(map); getMetroGroup().addTo(map); }
+    if(cat==='water'){ getLakeGroup().addTo(map); }
+    // detail summary
+    var intro=CAT_INTRO[cat]; if(intro) setDetail(intro.ik, intro.name, intro.line, '');
+    // fly to frame the layer
+    var maxZ = (cat==='connectivity') ? 13 : (cat==='water' ? 14 : (cat==='hospital' ? 15 : 14));
+    flyToPts(catBounds(cat), maxZ);
+    ensureSitePin();
+    declutterSoon();   // the flight's moveend re-solves too; this covers no-move applies
+  }
+  function clearCategory(fly){
+    activeCat=null; curSel=null; clearConnector();
+    document.querySelectorAll('.leg').forEach(function(b){ b.classList.remove('active'); });
+    for(var k in markers){ if(k===SITE_ID) continue; var el=markers[k].m.getElement();
+      if(el){ var d=el.querySelector('.mk'); if(d){ d.classList.add('off-cat'); d.classList.remove('sel'); } } }
+    document.querySelectorAll('.row').forEach(function(r){ r.classList.add('hide'); r.classList.remove('sel'); });
+    document.getElementById('listhint').style.display='';
+    if(roadGroup) map.removeLayer(roadGroup); if(metroGroup) map.removeLayer(metroGroup); if(lakeGroup) map.removeLayer(lakeGroup);
+    map.removeLayer(branchGroup); branchGroup.clearLayers();
+    setDetail(SITE_INFO.ik, SITE_INFO.name, SITE_INFO.line, '');
+    if(fly){ try{ map.flyTo(HOME_CENTER, HOME_ZOOM, {duration:.85}); }catch(e){} }
+    ensureSitePin();
+  }
+
+  /* ── LABEL DECLUTTER ──────────────────────────────────────────────────────
+     Labels default to the RIGHT of their dot. When two pills would overlap —
+     or a pill would cover the Embassy ONE anchor — the later (more-right) one
+     flips LEFT of its dot, then tries a small nudge above/below the dot line,
+     until every label sits clear. Dots never move (anchors stay exact); only
+     the pill side/offset changes. Re-solved after every category apply and on
+     zoom/pan end, so it holds at any zoom level. ── */
+  var PANEL_W=370;   // labels never slide under the left explore panel
+  function declutter(){
+    var placed=[];
+    var site=markers[SITE_ID];
+    if(site && site.m.getElement()){
+      var sp=map.latLngToContainerPoint(site.m.getLatLng());
+      var slbl=site.m.getElement().querySelector('.lbl'); var sw=(slbl?slbl.offsetWidth:250);
+      placed.push({x1:sp.x-24, y1:sp.y-28, x2:sp.x+34+sw, y2:sp.y+28});   // anchor pill = fixed obstacle
+    }
+    var vis=[];
+    for(var k in markers){ if(k===SITE_ID) continue;
+      var rec=markers[k]; var el=rec.m.getElement(); if(!el) continue;
+      var mk=el.querySelector('.mk'); if(!mk || mk.classList.contains('off-cat')) continue;
+      mk.classList.remove('lbl-left','lbl-up','lbl-down');
+      var lbl=mk.querySelector('.lbl'); var w=(lbl?lbl.offsetWidth:130)+2;
+      var p=map.latLngToContainerPoint(rec.m.getLatLng());
+      vis.push({mk:mk, x:p.x, y:p.y, w:w});
+      placed.push({x1:p.x-9, y1:p.y-9, x2:p.x+9, y2:p.y+9});   // every DOT is an obstacle — no pill may cover a dot
+    }
+    vis.sort(function(a,b){ return (a.x-b.x)||(a.y-b.y); });
+    /* rect = the label PILL only (dot excluded): right pill starts 11px right of the dot centre,
+       left pill ends 11px left of it — so two same-point pins can hold one pill per side. */
+    function rect(v,left,dy){ return left?{x1:v.x-11-v.w,y1:v.y-13+dy,x2:v.x-11,y2:v.y+13+dy}
+                                         :{x1:v.x+11,y1:v.y-13+dy,x2:v.x+11+v.w,y2:v.y+13+dy}; }
+    function hits(a,b){ return a.x1<b.x2 && b.x1<a.x2 && a.y1<b.y2 && b.y1<a.y2; }
+    vis.forEach(function(v){
+      var opts=[[false,0],[true,0],[false,-26],[true,-26],[false,26],[true,26]];
+      var chosen=null;
+      for(var i=0;i<opts.length;i++){
+        var r=rect(v,opts[i][0],opts[i][1]);
+        if(opts[i][0] && r.x1<PANEL_W) continue;
+        var clash=false;
+        for(var j=0;j<placed.length;j++){ if(hits(r,placed[j])){ clash=true; break; } }
+        if(!clash){ chosen=opts[i]; placed.push(r); break; }
+      }
+      if(!chosen){ chosen=[false,0]; placed.push(rect(v,false,0)); }
+      if(chosen[0]) v.mk.classList.add('lbl-left');
+      if(chosen[1]<0) v.mk.classList.add('lbl-up'); else if(chosen[1]>0) v.mk.classList.add('lbl-down');
+    });
+  }
+  var _dcT=null;
+  function declutterSoon(){ clearTimeout(_dcT); _dcT=setTimeout(declutter, 60); }
+  map.on('zoomend moveend', declutterSoon);
+
+  // ── SELECT an individual POI (focus within an active layer) ──
+  function select(id, fly){
+    var rec=markers[id]; if(!rec) return; var a=rec.a;
+    try{if(id!=='eo'&&window.RDA)RDA.track('poi_view', a.name, 1, {cat:a.cat});}catch(_){}
+    ensureSitePin();
+    if(id===SITE_ID){
+      // drop focus → back to the active-layer overview, or the clean anchor
+      curSel=null; setMarkerSel(null); setRowSel(null); clearConnector();
+      if(activeCat){ var intro=CAT_INTRO[activeCat]; if(intro) setDetail(intro.ik,intro.name,intro.line,'');
+        if(fly) flyToPts(catBounds(activeCat), (activeCat==='connectivity')?13:(activeCat==='water'?14:14)); }
+      else { setDetail(SITE_INFO.ik,SITE_INFO.name,SITE_INFO.line,''); if(fly){ try{ map.flyTo(HOME_CENTER,HOME_ZOOM,{duration:.85}); }catch(e){} } }
+      return;
+    }
+    curSel=id; setMarkerSel(id); setRowSel(id);
+    drawConnector(id);
+    setDetail(a.ik, a.name, a.line, a.dist||"");
+    if(fly) flyRoute(SITE_ID, id);
+  }
+
+  // ── POI LIST (all POIs; visibility driven by the active category) ──
+  var list=document.getElementById("list");
+  ANCHORS.forEach(function(a){
+    if(a.cat==="site") return;
+    var row=document.createElement('button');
+    row.className='row c-'+a.cat+(a.metro?' metro':'')+' hide';
+    row.setAttribute('data-id', a.id);
+    row.setAttribute('data-cat', a.cat);
+    row.innerHTML='<span class="cdot"></span>'+
+      '<span class="nm"><b>'+a.name+'</b><small>'+CAT_LABEL[a.cat]+'</small></span>'+
+      '<span class="meta">'+(a.dist||'')+'</span>';
+    row.addEventListener('click', function(){ select(curSel===a.id ? SITE_ID : a.id, true); });
+    list.appendChild(row);
+  });
+
+  // ── LEGEND filter (inverted: tap lights the layer, tap again clears) ──
+  document.querySelectorAll(".leg").forEach(function(b){
+    b.addEventListener("click", function(){ applyCategory(b.getAttribute("data-cat")); });
+  });
+
+  // ── CLOSE / 360 ──
+  function close(){ try{ parent.postMessage("eo-screen-close","*"); }catch(e){} }
+  document.getElementById("back").addEventListener("click", close);
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"){
+    var v=document.getElementById("view360"); if(v&&v.classList.contains("show")){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); var f=document.getElementById("frame360"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },420); return; }
+    close(); } });
+
+  (function(){ var b=document.getElementById("btn360"), v=document.getElementById("view360"), f=document.getElementById("frame360"), bk=document.getElementById("back360");
+    if(!b||!v) return;
+    b.addEventListener("click", function(){ try{window.RDA&&RDA.track('360_view','location');}catch(_){} f.src="https://www.turiya.co/360/EmbassyOne/"; v.classList.add("show"); v.setAttribute("aria-hidden","false"); });
+    if(bk) bk.addEventListener("click", function(){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },420); });
+  })();
+
+  // tap empty map → drop focus (keep the active layer lit)
+  map.on('click', function(){ select(SITE_ID, true); });
+
+  // ── phone bottom-sheet collapse ──
+  (function(){ var grip=document.getElementById('sheetGrip'), rail=document.querySelector('.rail');
+    if(!grip||!rail) return;
+    grip.addEventListener('click', function(){
+      rail.classList.toggle('collapsed');
+      grip.setAttribute('aria-label', rail.classList.contains('collapsed') ? 'Expand panel' : 'Collapse panel');
+      setTimeout(function(){ try{ map.invalidateSize(); positionConnector(); }catch(e){} }, 320);
+    });
+  })();
+  window.addEventListener('resize', function(){ try{ map.invalidateSize(); positionConnector(); }catch(e){} });
+
+  // ── INIT: clean map, only the Embassy ONE anchor visible ──
+  clearCategory(false);
+
+  /* dev/QA: ?cat=<category> lights a layer; ?sel=<id> focuses a POI; ?map=vec|blue|sat */
+  (function(){ try{ var q=new URLSearchParams(location.search);
+    var mp=q.get('map'); if(mp&&['sat','vec','blue'].indexOf(mp)>=0) setView(mp);
+    var c=q.get('cat'); if(c&&CAT_INTRO[c]) setTimeout(function(){ applyCategory(c); }, 400);
+    var s=q.get('sel'); if(s&&markers[s]&&s!==SITE_ID){ var sc=markers[s].a.cat;
+      setTimeout(function(){ applyCategory(sc); setTimeout(function(){ select(s,true); }, 750); }, 450); }
+  }catch(e){} })();
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

@@ -1,0 +1,1231 @@
+<!doctype html>
+<!--
+  EMBASSY ONE · THE RESIDENCES — Sales Suite · HOME  (v11 · "The Cards")
+  bg  = assets/plate-2560.webp (parchment + tower + gold leaf filigree, no UI baked)
+  nav = assets/cards/*.png (rendered dark/gold leather cards cropped from buttons.png)
+  Live text overlaid (wordmark, sub-copy, location pills). Dev: ?view=home skips intro.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Embassy ONE Private Residences</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#efe8da">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Embassy ONE">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<script>/* DEV MODE: service worker DISABLED — actively unregister any existing SW and wipe its caches so the
+   browser always loads the latest from the server (no more stale/blank). Re-enable the registration
+   block below for the final offline kiosk deployment. */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }).catch(function(){});
+  if(window.caches&&caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }).catch(function(){}); }
+}
+/* PWA (re-enable for kiosk):
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+*/</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- perf: warm the map screen + its libs + tile host so "The Address" opens instantly on iPad -->
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://basemaps.cartocdn.com" crossorigin>
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
+<link rel="prefetch" href="screens/place-location.html">
+<link rel="prefetch" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" as="script" crossorigin>
+<link rel="prefetch" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* v3 · Embassy ONE deck palette — ink-navy + warm bone, no gold */
+    --ink:#121621;          /* signature dark navy-charcoal (statement bg) */
+    --ink-2:#1a2030;         /* raised panel on dark */
+    --ink-3:#222a3a;
+    --bone:#efe8da;          /* warm light bg */
+    --bone-2:#e6dcc8;        /* lighter bone panel */
+    --paper:#faf7f0;         /* near-white */
+    --taupe:#6e5c58;         /* mauve-taupe accent block (use sparingly) */
+    --champ:#c9a84c;         /* pale champagne — hairline/text accent ONLY, never a button border */
+    --on-dark:#ece8e0;       /* text on ink */
+    --on-dark-dim:#9aa1ad;
+    --on-light:#121621;      /* text on bone */
+    --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14);   /* hairline on ink */
+    --line-light:rgba(18,22,33,.12);      /* hairline on bone */
+    /* motion */
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette (no gold anywhere) */
+    --gold:var(--on-light); --gold-d:var(--on-light); --gold-lt:var(--champ);
+    --parch:var(--bone); --muted:var(--on-light-dim);
+    --navy:var(--ink); --navy-2:var(--ink-2); --navy-3:var(--ink-3);
+    --on-navy:var(--on-dark); --on-navy-dim:var(--on-dark-dim); --brass:var(--champ);
+    --ease-expo:cubic-bezier(.16,1,.3,1); --ease-inout:cubic-bezier(.83,0,.17,1);
+  }
+  /* ---- glass buttons (deck) — no gold borders, rounded, :active scale ---- */
+  .glass{ background:rgba(236,232,224,.06); -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1);
+    border:1px solid rgba(236,232,224,.16); border-radius:14px; color:var(--on-dark);
+    transition:transform .16s var(--ease-out), background .2s, border-color .2s; }
+  .glass:active{ transform:scale(.97); }
+  @media(hover:hover){ .glass:hover{ background:rgba(236,232,224,.12); } }
+  .glass-light{ background:rgba(255,255,255,.5); -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1);
+    border:1px solid var(--line-light); color:var(--on-light);
+    transition:transform .16s var(--ease-out), background .2s, border-color .2s; }
+  .glass-light:active{ transform:scale(.97); }
+  @media(hover:hover){ .glass-light:hover{ background:rgba(255,255,255,.66); } }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{background:var(--bone)}
+  /* iPad standalone PWA (installed): drop the top chrome below the status bar and let the
+     backdrop bleed under the bottom home-indicator band, so the app reads truly full-screen.
+     Inert in a normal browser tab (display-mode is not standalone there). */
+  @media (display-mode:standalone){
+    :where(.top,.topbar,.dtop,.loc>.bar){margin-top:env(safe-area-inset-top,0px)}
+    :where(body,#home,.wrap,.stage,main)>:where(.back,.float360,.nav360,.views,.corner-logo,.hour-dial){margin-top:env(safe-area-inset-top,0px)}
+    body,.bg,#map{min-height:100lvh}
+  }
+                                  /* BEIGE base — fills the iOS safe-area / toolbar gap so no white strip shows (no dvh → no reflow flicker) */
+  html,body{height:100%}
+  .buildver{position:fixed; right:5px; bottom:4px; z-index:19; pointer-events:none; user-select:none;
+    font-family:"Jost",sans-serif; font-size:8px; letter-spacing:.06em; color:var(--on-light-dim); opacity:.45}   /* tiny build tag, bottom-right */
+  body{font-family:"Jost",sans-serif; color:var(--ink); background:var(--parch);
+    overflow:hidden; -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent; user-select:none}
+  button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+
+  #stage{position:fixed; inset:0; overflow:hidden;
+    background:linear-gradient(180deg,#efe8da 0%,#e7ddca 48%,#e0d5c0 100%)}   /* BEIGE atmosphere wash — the photographic blue plate is hidden; a line-art tower lands here via a separate workstream */
+  /* object-position must match the SVG overlays' xMid (50%) crop, or the tower outline drifts off
+     the building at non-16:9 ratios (e.g. Tab S7 16:10). Plate is 16:9, so 50% = no change at 16:9. */
+  /* photographic blue plate hidden for the beige theme (line-art tower lands via a separate workstream); element kept in the DOM so the swap drops in cleanly */
+  /* SINGLE full-bleed background for intro + home: the cohesive ink-and-wash painting
+     (warm parchment + watercolor clouds + gold corner leaves + filled sepia tower on the RIGHT).
+     16:9 art, iPads are 4:3 → object-fit:cover with a RIGHT-biased object-position so the empty
+     left field crops away and the tower stays fully in frame at every aspect ratio.
+     Keeps the intro→home 1.06→1.0 slow scale-settle choreography. */
+  .bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:94% 50%;
+    opacity:.8;                                     /* client: 20% lighter than before */
+    transform-origin:86% 0%;                        /* origin-Y 0 pins the TOP EDGE — zooming never clips the crown */
+    transform:scale(1.32); transition:transform 18s var(--ease-expo);
+    filter:saturate(1.03)}   /* neutral, style-agnostic — no dark-ink-specific tint (art may be swapped to a warm golden-etching version, same filename) */
+  /* client-requested motion: slow cinematic Ken-Burns drift on the painting (GPU transform only) */
+  /* the drift STARTS at the intro's resting scale (1.32) so the intro→home handoff
+     is perfectly continuous — no snap when the animation takes over the transform */
+  body.home-in .bg{animation:bgKen 52s ease-in-out .4s infinite alternate}
+  @keyframes bgKen{
+    0%{transform:scale(1.32)}
+    100%{transform:scale(1.26) translateX(-1.2%)}}
+  @media (prefers-reduced-motion:reduce){ body.home-in .bg{animation:none} }
+  /* ink-navy wash + vignette laid ABOVE the plate, BELOW the UI — turns the warm plate into a cohesive
+     dark deck backdrop (tower stays visible via the lighter radial centred on the tower at ~72%) */
+  /* darken the LEFT (hero text) only; keep the tower on the right bright + natural */
+  /* blue-blended wash — tints the whole home toward the dark-blue theme (like the inside screens), darker on the left hero, lighter over the tower on the right */
+  /* dark-blue veil removed for the beige theme — kept as an empty layer so the DOM/ids stay intact */
+  .bg-veil{position:absolute; inset:0; pointer-events:none; z-index:1; background:none}
+  .bg-veil::before{content:none}
+  /* old faint outline whisper removed — replaced by the hand-drawn line-art tower centrepiece below */
+  .bg-veil::after{content:none}
+  /* ---------- LINE-ART TOWER — hand-drawn navy ink on beige paper; the centrepiece ----------
+     multiply melts the paper background into the beige stage so only the ink lines read.
+     Sized by HEIGHT (contain) so the crown is NEVER cropped at any iPad aspect ratio.
+     Grounded to the bottom edge, held to the right so it clears the hero + cards column. */
+  /* new art = 1536×2752 navy-ink tower on beige paper, tower right-of-centre, its own treeline
+     base fading into the paper. Grounded bottom-right, sized by HEIGHT so the crown reaches near
+     the top and the drawn treeline melts into the beige via multiply. Visible (soft) during the
+     intro AND home so the sketch is "painted into the page", persisting across the transition. */
+  /* line-art tower is now BAKED INTO the full-bleed painting → the separate overlay is redundant, hidden */
+  .tower-art{display:none !important; position:absolute; z-index:1; right:0; bottom:0; height:97%; width:auto; max-width:52%;
+    object-fit:contain; object-position:bottom center; pointer-events:none;
+    user-select:none; -webkit-user-drag:none;
+    mix-blend-mode:multiply; opacity:0; transition:opacity 1.3s var(--ease-expo);
+    /* generous solid band so NOTHING clips the drawn tower/foliage — only the empty paper margins
+       and the sketchy treeline tips feather out into the beige. Bottom stays fully solid (the art's
+       own treeline already dissolves into the paper). */
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 6%,#000 95%,transparent 100%),linear-gradient(180deg,transparent 0,#000 4%,#000 100%);
+    -webkit-mask-composite:source-in;
+    mask-image:linear-gradient(90deg,transparent 0,#000 6%,#000 95%,transparent 100%),linear-gradient(180deg,transparent 0,#000 4%,#000 100%);
+    mask-composite:intersect}
+  body.art-in .tower-art{opacity:.6}          /* softly present behind the intro cluster */
+  body.home-in .tower-art{opacity:1}          /* full strength once home is up (persists across the fade) */
+  @media (prefers-reduced-motion:reduce){ .tower-art{transition:none} }
+
+  /* LEAF OVERLAY REMOVED at client request (2026-07-08) — the painted artwork carries its own leaf edge */
+  /* the schematic tower-outline traces drew the OLD plate's tower — the new render already has a real tower */
+  #towerLines, #outerLine{display:none !important}
+
+  /* ---------- PREMIUM SHIMMER — DISABLED: the moving specular sweep now lives INSIDE each hub button (see .card::after) ---------- */
+  .shimmer{display:none !important}
+  /* SHIMMER REMOVED for the beige theme (shimmerSweep, shimmerBreathe, specular sweeps) */
+  @media (prefers-reduced-motion:reduce){ .skylife{display:none} }
+
+  /* ---------- SKY LIFE — drifting haze-clouds + distant birds (blended, subtle) ---------- */
+  /* soft drifting CSS haze-clouds restored (client request); the gray photographic .scloud PNGs stay
+     hidden (below) as they read as dirty blobs over the warm painted sky */
+  .skylife{position:fixed; top:0; left:0; right:0; height:50%; z-index:15; pointer-events:none; overflow:hidden}
+  /* screen-blend was invisible on the light painted sky — multiply warm haze reads on beige */
+  .cloud{display:none; position:absolute; border-radius:50%; filter:blur(11px); mix-blend-mode:multiply;
+    background:radial-gradient(closest-side, rgba(163,146,118,.34), rgba(163,146,118,0) 72%)}
+  .cloud.c1{width:42vw; height:18vh; top:6%;  left:-46%; opacity:.5;  animation:drift 84s linear infinite}
+  .cloud.c2{width:30vw; height:13vh; top:22%; left:-40%; opacity:.38; animation:drift 112s linear infinite -34s}
+  .cloud.c3{width:52vw; height:21vh; top:-3%; left:-56%; opacity:.42; animation:drift 98s linear infinite -64s}
+  @keyframes drift{to{transform:translateX(172vw)}}
+  /* real clouds (individual puffs from clouds.svg) drifting continuously across the top —
+     bigger toward the top, all looping back-to-back, softly transparent */
+  .scloud{position:absolute; left:-34vw; height:auto; pointer-events:none; will-change:transform;
+    filter:sepia(.38) saturate(.92) brightness(1.03) contrast(1.03);
+    user-select:none; -webkit-user-drag:none; filter:saturate(.45) brightness(.78) drop-shadow(0 4px 7px rgba(0,0,0,.2))}
+      .scloud.sc1{top:-1%;  width:clamp(300px,34vw,680px); opacity:.72; animation:cloudDrift 88s  linear infinite}
+      .scloud.sc2{top:8%;   width:clamp(190px,22vw,440px); opacity:.58;  animation:cloudDrift 116s linear infinite -34s}
+      .scloud.sc3{top:-4%;  width:clamp(260px,30vw,600px); opacity:.5; animation:cloudDrift 74s  linear infinite -55s}
+      .scloud.sc4{top:14%;  width:clamp(150px,17vw,340px); opacity:.46; animation:cloudDrift 128s linear infinite -18s}
+      .scloud.sc5{top:4%;   width:clamp(180px,21vw,420px); opacity:.42;  animation:cloudDrift 100s linear infinite -72s}
+  @keyframes cloudDrift{from{transform:translateX(0)} to{transform:translateX(252vw)}}
+  /* BIRDS REMOVED for the beige theme (clouds kept). FIREFLIES REMOVED for the beige theme. */
+
+  /* ---------- TOWER LIGHTS — windows flicker on/off (building comes to life) ---------- */
+  /* white window-glints were positioned for the OLD photo tower → DISABLED over the painted sketch tower */
+  .tower-lights{display:none !important; position:fixed; top:7%; left:74.5%; width:13.5%; height:50%; z-index:2;
+    pointer-events:none; transform:rotate(.6deg)}
+  .win{position:absolute; width:13%; height:2%; border-radius:1px; opacity:0; mix-blend-mode:screen;
+    background:radial-gradient(ellipse at center, rgba(236,238,242,.9), rgba(201,168,76,0) 78%);
+    animation:winFlick var(--wd,6s) ease-in-out infinite var(--wdl,0s)}
+  @keyframes winFlick{0%,100%{opacity:0} 6%{opacity:var(--o,.6)} 33%{opacity:var(--o,.6)} 41%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){ .tower-lights{display:none} }
+
+  /* ---------- SEASONAL BLOSSOM PETALS — fall + sway + tumble (Five Lanterns) ---------- */
+  .petals{position:fixed; inset:0; z-index:2; pointer-events:none; overflow:hidden}
+  .petal{position:absolute; top:-9vh; left:var(--x); will-change:transform;
+    animation:petalFall var(--dur,13s) linear var(--delay,0s) infinite}
+  .petal .sway{display:block; animation:petalSway var(--swd,4s) ease-in-out var(--delay,0s) infinite}
+  .petal .tum{display:block; width:var(--size,16px); height:auto; opacity:var(--op,.7);
+    filter:blur(var(--bl,0px)); animation:petalTumble var(--tud,6s) ease-in-out var(--delay,0s) infinite}
+  .petal .tum svg{display:block; width:100%; height:auto}
+  @keyframes petalFall{from{transform:translate(0,-9vh)} to{transform:translate(var(--drift,8vw),116vh)}}
+  @keyframes petalSway{0%,100%{transform:translateX(calc(var(--sway,2vw) * -1))} 50%{transform:translateX(var(--sway,2vw))}}
+  @keyframes petalTumble{0%{transform:rotate(0deg) scaleX(1)} 50%{transform:rotate(180deg) scaleX(.26)} 100%{transform:rotate(360deg) scaleX(1)}}
+  @media (prefers-reduced-motion:reduce){ .petals{display:none} }
+
+  /* ---------- TOWER LINES — soft shine travelling along the building's lines ---------- */
+  /* track the bg's scale (1.06 during intro → 1.0 on home) so the lines stay aligned to the tower */
+  #towerLines{position:fixed; inset:0; z-index:2; pointer-events:none; width:100%; height:100%;
+    transform:scale(1.06); transition:transform 18s var(--ease-expo)}
+  body.home-in #towerLines{transform:scale(1.0)}
+
+  /* ---------- OUTER LINE — the building's outline traced every 10s on the HOME screen ---------- */
+  #outerLine{position:fixed; inset:0; z-index:2; pointer-events:none; width:100%; height:100%;
+    transform:scale(1.06); transition:transform 18s var(--ease-expo); opacity:1}
+  body.home-in #outerLine{transform:scale(1.0); opacity:1}
+  /* thin black outline, traced continuously — now visible during the intro too so the building isn't plain */
+  #outerLine .ol{fill:none; vector-effect:non-scaling-stroke; stroke:rgba(236,232,224,.6); stroke-width:1.4;
+    stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:1000 1000; stroke-dashoffset:1000;
+    opacity:0; filter:drop-shadow(0 1px 3px rgba(0,0,0,.5)); animation:outerDraw 10s ease-in-out 1s infinite}
+  @keyframes outerDraw{
+    0%{stroke-dashoffset:1000; opacity:0}
+    3%{opacity:1}
+    38%{stroke-dashoffset:0; opacity:1}   /* line has drawn all the way around the building (~3.5s) */
+    50%{stroke-dashoffset:0; opacity:1}    /* hold the full outline */
+    62%{stroke-dashoffset:0; opacity:0}    /* reaches the end and disappears */
+    100%{stroke-dashoffset:0; opacity:0}}  /* rest until the next 10s cycle */
+  @media (prefers-reduced-motion:reduce){ #outerLine{display:none} }
+  #towerLines .ln{fill:none; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-linejoin:round}
+  #towerLines .tl-base .ln{stroke:rgba(201,168,76,.22); stroke-width:1.1}
+  /* group squiggly lines: soft warm shine travels along them (restored) — plays in the intro + on home */
+  #towerLines .tl-shine .ln{stroke:#f4efe6; stroke-width:3.6; stroke-dasharray:17 83; stroke-dashoffset:100;
+    pathLength:100; opacity:0; animation:tlShine var(--sd,5s) linear var(--sdl,0s) infinite}
+  @keyframes tlShine{
+    0%{stroke-dashoffset:100; opacity:0}
+    12%{opacity:1}
+    80%{opacity:1}
+    100%{stroke-dashoffset:0; opacity:0}}
+  @media (prefers-reduced-motion:reduce){ #towerLines .tl-shine{display:none} }
+
+  #home{position:fixed; inset:0; z-index:3}
+  /* hide ALL home content while the intro is up — nothing bleeds through the transparent intro */
+  body:not(.home-in) #home{opacity:0; pointer-events:none}
+  .hour-dial{position:absolute; top:clamp(20px,3vh,58px); right:clamp(24px,3.4vw,92px); z-index:6;
+    width:clamp(40px,4.4vh,82px); height:clamp(40px,4.4vh,82px); border-radius:50%; color:var(--on-light);
+    border:1px solid var(--line-light); display:grid; place-items:center;
+    background:rgba(255,255,255,.5); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); transition:transform .7s var(--ease-expo), box-shadow .6s}
+  .hour-dial:active{transform:scale(.97)}
+  @media(hover:hover){ .hour-dial:hover{box-shadow:0 8px 24px -10px rgba(18,22,33,.4); transform:rotate(20deg)} }
+  .hour-dial svg{width:56%; height:56%}
+
+  .hero{position:absolute; left:clamp(24px,4vw,86px); top:54%; transform:translateY(-50%);
+    width:min(60%,1080px); display:flex; flex-direction:column}
+
+  /* original Embassy ONE logo — quiet corner mark, top-left of the home */
+  .corner-logo{position:absolute; top:clamp(20px,3.2vh,48px); left:clamp(20px,3vw,54px); z-index:7; cursor:pointer;
+    width:clamp(92px,9vw,156px); height:auto; opacity:0;
+    filter:brightness(0) opacity(.82) drop-shadow(0 1px 6px rgba(255,255,255,.35));   /* render the logo as dark ink on the beige wash (asset untouched) */
+    transition:opacity 1s var(--ease-expo) .55s, transform .5s var(--ease-expo)}
+  body.home-in .corner-logo{opacity:.9}
+  body.home-in .corner-logo:hover{opacity:1; transform:scale(1.04)}
+
+  /* mini launcher buttons (Overview · Gallery) — clean deck glass pills, no plaque art */
+  .minirow{display:flex; justify-content:center; gap:clamp(12px,1.4vw,26px); margin-top:clamp(8px,1.4vh,18px)}
+  .minibtn{display:inline-flex; align-items:center; gap:clamp(7px,.8vw,12px); cursor:pointer;
+    padding:clamp(9px,1.2vh,14px) clamp(16px,1.7vw,28px); border-radius:999px; color:#faf7f0;
+    /* solid navy (the hover state), chosen by client as the resting look */
+    background:#1b2338;
+    border:1px solid rgba(201,168,76,.55);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14), 0 14px 32px -20px rgba(0,0,0,.6);
+    font-family:"Jost",sans-serif; font-weight:400; text-transform:uppercase; font-size:clamp(9px,1.15vh,13px); letter-spacing:.2em;
+    white-space:nowrap;
+    transition:transform .16s var(--ease-out), background .25s, border-color .25s}
+  .minibtn .mi{width:clamp(14px,1.7vh,18px); height:clamp(14px,1.7vh,18px); stroke:#faf7f0; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; flex:0 0 auto}
+  .minibtn:active{transform:scale(.97)}
+  @media(hover:hover){ .minibtn:hover{background:rgba(18,22,33,.72); border-color:rgba(201,168,76,.55); transform:translateY(-2px)} }
+
+  /* The Lanterns — the real jali lantern, floated right after the card row (next to the buttons) */
+  .lantern-btn{position:absolute; left:100%; top:50%; transform:translateY(-50%); z-index:6;
+    margin-left:clamp(10px,1.4vw,26px);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+    border:0; background:none; padding:0; cursor:pointer; line-height:1;
+    opacity:0; transition:opacity .6s var(--ease-expo) .92s}
+  body.home-in .lantern-btn{opacity:1}
+  .lantern-vis{position:relative; display:block; height:clamp(170px,26vh,320px); width:auto}
+  /* backdrop tint removed — it lit the image rectangle and exposed the cutout (client) */
+  .lantern-tint{display:none}
+  /* the glow now sits ON TOP of the lamp itself — a small screen-blended lume at the bulb,
+     so the lantern appears to emit light instead of the image rectangle lighting up (client) */
+  .lantern-glow{position:absolute; z-index:3; left:50%; top:74%; transform:translate(-50%,-50%);
+    width:74%; height:26%; pointer-events:none; border-radius:50%; mix-blend-mode:screen;
+    background:radial-gradient(ellipse at center, rgba(255,224,160,.95) 0%, rgba(255,196,110,.5) 38%, rgba(255,180,90,0) 72%);
+    filter:blur(7px); animation:lanternGlow 3.2s ease-in-out infinite}
+  .lantern-vis img{position:relative; z-index:2; height:100%; width:auto; display:block;
+    animation:lanternFlame 3.2s ease-in-out infinite}
+  .lantern-cap{position:relative; z-index:3; margin-top:clamp(8px,1.4vh,16px); text-align:center;
+    font-family:"Jost",sans-serif; font-weight:500; font-size:clamp(9px,1.05vh,13px); line-height:1.4;
+    letter-spacing:.24em; text-transform:uppercase; color:var(--ink);
+    text-shadow:0 1px 9px rgba(255,255,255,.5); opacity:.95; transition:opacity .4s, transform .4s}
+  @media(hover:hover){ .lantern-btn:hover .lantern-cap{opacity:1; transform:translateY(-2px)} }
+  .lantern-btn:active .lantern-vis img{transform:scale(.99)}
+  @keyframes lanternGlow{
+    0%{opacity:.82} 6%{opacity:1} 12%{opacity:.7} 19%{opacity:.97} 25%{opacity:.78}
+    33%{opacity:1} 40%{opacity:.66} 48%{opacity:.9} 55%{opacity:.74} 63%{opacity:1}
+    70%{opacity:.8} 78%{opacity:.62} 85%{opacity:.95} 92%{opacity:.76} 100%{opacity:.84}}
+  @keyframes lanternFlame{
+    0%{filter:drop-shadow(0 18px 30px rgba(30,20,8,.4)) brightness(1.03) saturate(1.06)}
+    12%{filter:drop-shadow(0 20px 40px rgba(255,184,92,.45)) brightness(1.13) saturate(1.16)}
+    24%{filter:drop-shadow(0 16px 28px rgba(30,20,8,.4)) brightness(.99) saturate(1.04)}
+    40%{filter:drop-shadow(0 20px 38px rgba(255,184,92,.42)) brightness(1.11) saturate(1.14)}
+    55%{filter:drop-shadow(0 16px 28px rgba(30,20,8,.4)) brightness(.98) saturate(1.03)}
+    70%{filter:drop-shadow(0 20px 40px rgba(255,184,92,.4)) brightness(1.1) saturate(1.12)}
+    85%{filter:drop-shadow(0 17px 30px rgba(255,180,90,.34)) brightness(1.04) saturate(1.07)}
+    100%{filter:drop-shadow(0 18px 30px rgba(30,20,8,.4)) brightness(1.03) saturate(1.06)}}
+
+  /* project metadata — focused stat line */
+  .metaline{text-align:center; font-family:"Jost",sans-serif; font-weight:400; font-size:clamp(12px,1.7vh,21px);
+    letter-spacing:.2em; color:var(--on-light-dim); text-transform:uppercase; margin-top:clamp(12px,2vh,26px);
+    text-shadow:0 1px 10px rgba(255,255,255,.4)}
+  .metaline b{font-weight:500; color:var(--ink)}
+  .metaline .sep{color:var(--champ); margin:0 .55em; font-weight:400}
+
+  .bb-mono{width:clamp(34px,4.8vh,86px); height:clamp(40px,5.6vh,104px); color:var(--on-light); margin:0 auto clamp(2px,.6vh,12px)}
+  .bb-word{font-family:"Cormorant Garamond",serif; font-weight:500; text-align:center; line-height:1;
+    font-size:clamp(34px,7vh,126px); letter-spacing:.26em; text-indent:.26em; text-transform:uppercase; color:var(--on-light)}
+  .bb-script{font-family:"Cormorant Garamond",serif; font-weight:500; text-align:center; line-height:1.04;
+    font-size:clamp(30px,7vh,112px); letter-spacing:.1em; text-indent:.1em; margin:0; text-transform:uppercase;
+    /* light bone wordmark on the dark plate, with a quiet champagne sheen sweep (no gold) */
+    background:
+      linear-gradient(100deg, transparent 32%, rgba(201,168,76,.5) 47%, rgba(255,255,255,.96) 50%, rgba(201,168,76,.5) 53%, transparent 68%),
+      linear-gradient(180deg, #f6f1e8 0%, #efe8da 56%, #cdbfa6 100%);
+    background-size:260% 100%, 100% 100%; background-position:175% 0, 0 0; background-repeat:no-repeat;
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+    -webkit-text-stroke:0; text-stroke:0;
+    filter:drop-shadow(0 2px 16px rgba(0,0,0,.5));
+    animation:bbSheen 5.6s ease-in-out 1.4s infinite}
+  @keyframes bbSheen{0%{background-position:175% 0, 0 0} 46%{background-position:-75% 0, 0 0} 100%{background-position:-75% 0, 0 0}}
+  /* home hero brand — the original client lockup (replaces the serif wordmark) */
+  .hero-logo{display:block; width:min(74%,528px); height:auto; margin:0 auto;
+    filter:brightness(0) opacity(.88) drop-shadow(0 1px 10px rgba(255,255,255,.4))}   /* bone lockup rendered as dark ink on beige */
+  /* gold diamond divider flanked by gold hairlines (◆ between rules) — per client reference */
+  .bb-dia{display:flex; align-items:center; justify-content:center; gap:clamp(9px,1vw,16px); margin:clamp(8px,1.8vh,26px) auto}
+  .bb-dia::before,.bb-dia::after{content:""; width:clamp(26px,4vw,70px); height:1px}
+  .bb-dia::before{background:linear-gradient(90deg,transparent,rgba(201,168,76,.65))}
+  .bb-dia::after{background:linear-gradient(90deg,rgba(201,168,76,.65),transparent)}
+  .bb-dia i{width:7px; height:7px; background:var(--champ); transform:rotate(45deg); flex:0 0 auto; display:block}
+  .bb-copy{text-align:center; font-weight:300; color:var(--ink); line-height:1.85; letter-spacing:.02em;
+    font-size:clamp(12px,1.65vh,30px); max-width:62%; margin:0 auto; text-shadow:0 1px 12px rgba(255,255,255,.4)}
+
+  /* ---- hub nav cards — clean deck glass tiles (no plaque art) ---- */
+  .cardrow{position:relative; display:flex; justify-content:center; align-items:center; gap:clamp(8px,1.1vw,20px);
+    margin-top:clamp(18px,3.2vh,52px); flex-wrap:nowrap; width:fit-content; max-width:100%; margin-left:auto; margin-right:auto}
+  .card{position:relative; flex:0 1 auto; cursor:pointer; overflow:hidden; isolation:isolate;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    width:clamp(108px,9.6vw,150px); height:clamp(196px,30vh,300px);
+    padding:clamp(18px,2.8vh,32px) clamp(10px,1vw,16px); border-radius:18px; color:var(--on-dark);
+    /* solid navy (the hover state), chosen by client as the resting look */
+    background:#1b2338;
+    border:1px solid rgba(236,232,224,.28);
+    box-shadow:0 18px 40px -22px rgba(0,0,0,.6), inset 0 1px 0 rgba(236,232,224,.14), 0 0 22px -3px rgba(255,255,255,.5);
+    transition:transform .5s var(--ease-expo), background .3s, border-color .3s, box-shadow .5s}
+  /* icons ~5% larger than prior rendered size (client request) */
+  .card .ci{width:clamp(27px,3.15vh,38px); height:clamp(27px,3.15vh,38px); stroke:var(--champ); fill:none;
+    stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; opacity:.92; flex:0 0 auto}
+  /* icon + label read as ONE unit at the top; the go-arrow stays pinned at the bottom via the card's space-between */
+  .card .ctop{display:flex; flex-direction:column; align-items:center; gap:clamp(5px,.9vh,10px); flex:0 0 auto}
+  .card .cl{font-family:"Jost",sans-serif; font-weight:400; text-transform:uppercase;
+    font-size:clamp(9px,1.1vh,13px); letter-spacing:.16em; line-height:1.3; color:var(--on-dark);
+    text-shadow:0 1px 6px rgba(0,0,0,.5); flex:0 0 auto}
+  /* icon+label are centred as one group (justify-content:center on .card); the go-arrow is pinned to the
+     bottom independently so it keeps its place */
+  .card .cgo{position:absolute; left:50%; bottom:clamp(18px,2.8vh,32px); transform:translateX(-50%);
+    width:clamp(32px,3.6vh,44px); height:clamp(32px,3.6vh,44px); border-radius:50%;
+    border:1px solid rgba(201,168,76,.7); background:rgba(201,168,76,.14); display:grid; place-items:center; color:var(--champ);
+    transition:background .25s, color .25s, border-color .25s}
+  .card .cgo svg{width:42%; height:42%; stroke:currentColor; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  @media(hover:hover){ .card:hover .cgo{background:rgba(201,168,76,.14); border-color:rgba(201,168,76,.7)} }
+  /* tower tile — quietly emphasised (a touch taller) */
+  .card.tower{height:clamp(210px,32vh,322px); background:#1f2942; border-color:rgba(201,168,76,.45);
+    box-shadow:0 24px 52px -22px rgba(0,0,0,.72), inset 0 1px 0 rgba(236,232,224,.12), 0 0 0 1px rgba(201,168,76,.14), 0 0 24px -3px rgba(255,255,255,.5)}
+  .card.tower .ci{width:clamp(27px,3.15vh,38px); height:clamp(27px,3.15vh,38px); opacity:1}
+  /* entrance: cards rise + fade in, staggered */
+  @keyframes cardRise{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+  body.home-in .card{animation:cardRise .6s var(--ease-expo) both}
+  body.home-in .card:nth-child(1){animation-delay:.46s}
+  body.home-in .card:nth-child(2){animation-delay:.56s}
+  body.home-in .card:nth-child(3){animation-delay:.66s}
+  body.home-in .card:nth-child(4){animation-delay:.76s}
+  body.home-in .card:nth-child(5){animation-delay:.86s}
+  @media (prefers-reduced-motion:reduce){
+    body.home-in .card{animation:none; opacity:1; transform:none} }
+  .card:active{transform:scale(.97)}
+  @media(hover:hover){ .card:hover{background:#1b2338; border-color:rgba(236,232,224,.28); transform:translateY(-3px)} }
+  .card.tower:hover{background:#1f2942}
+  /* ---- clear-glass character (client reference): STATIC diagonal sheen + luminous rim highlights ---- */
+  .card::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none; border-radius:inherit;
+    background:
+      linear-gradient(118deg, transparent 34%, rgba(255,255,255,.13) 46%, rgba(255,255,255,.04) 56%, transparent 66%),
+      radial-gradient(60px 14px at 22% 0%, rgba(255,255,255,.5), transparent 70%),
+      radial-gradient(60px 14px at 72% 100%, rgba(255,255,255,.38), transparent 70%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.18)}
+  /* ---- leather grain: static CSS-only feTurbulence noise over the navy glass (specular shimmer removed) ---- */
+  .card::after{content:""; position:absolute; inset:0; z-index:0; pointer-events:none; border-radius:inherit;
+    opacity:.06; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='lg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23lg)'/%3E%3C/svg%3E");
+    background-size:140px 140px}
+  .card.flare{transform:translateY(-5px) scale(1.03); animation:none;
+    background:#243056; border-color:rgba(201,168,76,.42);
+    box-shadow:0 30px 60px -22px rgba(0,0,0,.72), 0 0 26px rgba(201,168,76,.2)}
+
+  .pills{display:flex; gap:clamp(12px,1.6vw,30px); margin-top:clamp(20px,3.4vh,58px); justify-content:center}
+  /* location meta pills — LIGHT cream-outline style on the beige (NOT solid navy); these are
+     display-only spans, not action buttons, so the navy-button unification is preserved */
+  .pill{display:flex; align-items:center; gap:clamp(8px,1vw,16px); min-height:clamp(40px,4.6vh,84px);
+    padding:0 clamp(16px,1.8vw,38px); border-radius:999px; color:var(--on-light);
+    background:rgba(255,255,255,.5); border:1px solid rgba(201,168,76,.5); -webkit-backdrop-filter:blur(10px) saturate(1.05); backdrop-filter:blur(10px) saturate(1.05);
+    font-size:clamp(10px,1.4vh,26px); letter-spacing:.06em; white-space:nowrap;
+    box-shadow:0 8px 20px -16px rgba(18,22,33,.35)}
+  .pill svg{width:clamp(14px,1.8vh,32px); height:auto; flex:0 0 auto; stroke:var(--champ)}
+
+  #shell{position:fixed; inset:0; z-index:8; display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; background:linear-gradient(165deg,var(--paper),var(--bone-2)); opacity:0; transition:opacity .6s var(--ease-expo)}
+  #shell.show{display:flex} #shell.vis{opacity:1}
+  /* built inner-screen overlay (iframe) */
+  #screenOverlay{position:fixed; inset:0; z-index:20; background:var(--bone,#efe8da); opacity:0; visibility:hidden;
+    transition:opacity .3s ease-out}
+  #screenOverlay.show{opacity:1; visibility:visible; transition:opacity 0s}   /* open INSTANTLY opaque → home never bleeds through while the screen loads */
+  #screenFrame{width:100%; height:100%; border:0; display:block; background:var(--bone,#efe8da)}
+  /* floating 360° view button + full-screen viewer */
+  .float360{position:fixed; top:clamp(14px,4vh,52px); left:58%; z-index:18; display:inline-flex; align-items:center; gap:10px; cursor:pointer;
+    padding:clamp(12px,1.6vh,16px) clamp(18px,1.8vw,26px); border-radius:999px; border:1px solid rgba(201,168,76,.35); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1); font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(11px,1.4vh,14px);
+    box-shadow:0 14px 34px -16px rgba(0,0,0,.35); transition:transform .16s var(--ease-out), box-shadow .3s, background .2s, border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{background:#121621; border-color:rgba(201,168,76,.6); transform:translateY(-2px)} }
+  .float360 svg{width:clamp(18px,2.2vh,22px); height:auto; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  /* gold leader line from the 360 button toward the TOWER CROWN (feels connected) — retuned length so
+     the end dot lands on the rooftop-crown area of the repositioned painted tower */
+  .float360::after{content:""; position:absolute; left:100%; top:50%; transform:translateY(-50%); margin-left:12px; width:clamp(48px,8vw,132px); height:1.5px;
+    background:linear-gradient(90deg, rgba(201,168,76,.85), rgba(201,168,76,0)); pointer-events:none}
+  .float360::before{content:""; position:absolute; left:100%; top:50%; transform:translateY(-50%); margin-left:calc(12px + clamp(48px,8vw,132px) - 3px); width:7px; height:7px; border-radius:50%;
+    background:var(--champ); box-shadow:0 0 8px rgba(201,168,76,.55); pointer-events:none}
+  #view360{position:fixed; inset:0; z-index:40; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s var(--ease-expo)}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:clamp(14px,2.4vh,26px); left:clamp(14px,2.4vw,26px); z-index:41; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:clamp(10px,1.4vh,14px) clamp(16px,1.6vw,22px); border-radius:999px; border:1px solid rgba(201,168,76,.35); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1); font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px); box-shadow:0 10px 26px -12px rgba(0,0,0,.7); transition:transform .16s var(--ease-out), background .2s}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621; border-color:rgba(201,168,76,.55)} }
+  /* first-launch download gate */
+  #dlGate{position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center; text-align:center;
+    overflow-y:auto; -webkit-overflow-scrolling:touch; padding:max(20px,env(safe-area-inset-top)) 16px max(20px,env(safe-area-inset-bottom));
+    background:radial-gradient(120% 90% at 50% 35%, #faf7f0 0%, #efe8da 60%, #e0d5c0 100%); opacity:0; transition:opacity .6s var(--ease-expo)}
+  #dlGate.show{display:flex; opacity:1}
+  .dlg-inner{width:min(560px,88vw); padding:clamp(20px,4vh,40px); display:flex; flex-direction:column; align-items:center}
+  .dlg-eyebrow{font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.4em; text-indent:.4em; font-size:clamp(10px,1.4vh,13px); color:var(--champ); text-transform:uppercase}
+  .dlg-title{font-family:"Cormorant Garamond",serif; font-weight:600; color:var(--ink); font-size:clamp(34px,6.5vh,62px); line-height:1.04; margin:clamp(8px,1.6vh,18px) 0 clamp(10px,1.8vh,20px); text-shadow:0 2px 24px rgba(255,255,255,.4)}
+  .dlg-sub{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--on-light-dim); font-size:clamp(14px,2vh,20px); line-height:1.5; max-width:42ch; margin:0 0 clamp(22px,3.6vh,40px)}
+  .dlg-btn{display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(12px,1.6vh,15px);
+    color:var(--on-navy); padding:clamp(15px,2.2vh,20px) clamp(30px,4vw,56px); border:1px solid rgba(201,168,76,.35); border-radius:999px; background:var(--navy);
+    box-shadow:0 16px 40px -16px rgba(0,0,0,.35), inset 0 1px 0 rgba(236,232,224,.1); transition:transform .16s var(--ease-out), background .3s, opacity .3s}
+  .dlg-btn:active{transform:scale(.97)}
+  @media(hover:hover){ .dlg-btn:hover{background:#121621; border-color:rgba(201,168,76,.55)} }
+  .dlg-btn.busy{opacity:.55; pointer-events:none}
+  .dlg-prog{width:min(420px,80vw); height:3px; border-radius:3px; margin:clamp(20px,3.4vh,34px) 0 12px; background:var(--line-light); overflow:hidden; opacity:0; transition:opacity .35s; height:0; margin-top:0}
+  .dlg-prog.on{opacity:1; height:3px; margin-top:clamp(20px,3.4vh,34px)}
+  .dlg-bar{height:100%; width:0%; border-radius:3px; background:linear-gradient(90deg,var(--champ),var(--navy)); transition:width .25s ease}
+  .dlg-status{font-family:"Jost",sans-serif; color:var(--on-light-dim); font-size:clamp(10px,1.3vh,13px); letter-spacing:.12em; min-height:1.2em}
+  /* live download read-out: current file + count + streaming list */
+  .dlg-now{display:none; margin-top:clamp(10px,1.6vh,16px); font-family:"Jost",sans-serif; font-size:clamp(11px,1.35vh,13.5px); letter-spacing:.06em; color:var(--ink); max-width:min(520px,88vw); width:100%}
+  .dlg-now.on{display:block}
+  .dlg-now .lbl{color:var(--champ); text-transform:uppercase; letter-spacing:.24em; font-size:.82em; margin-right:.5em}
+  .dlg-now .file{font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; max-width:100%; vertical-align:bottom}
+  .dlg-count{display:none; margin-top:6px; font-family:"Jost",sans-serif; color:var(--on-light-dim); font-size:clamp(10px,1.25vh,12.5px); letter-spacing:.16em; text-transform:uppercase}
+  .dlg-count.on{display:block}
+  #dlList{display:none; margin-top:clamp(12px,2vh,20px); width:min(520px,88vw); max-height:30vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    border-top:1px solid var(--line-light); border-bottom:1px solid var(--line-light); text-align:left;
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%);
+    mask-image:linear-gradient(180deg,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%)}
+  #dlList.on{display:block}
+  #dlList::-webkit-scrollbar{width:4px}
+  #dlList::-webkit-scrollbar-thumb{background:rgba(201,168,76,.35); border-radius:4px}
+  .dlrow{display:flex; align-items:center; gap:10px; padding:7px 4px; border-bottom:1px solid rgba(201,168,76,.09);
+    font-family:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace; font-size:clamp(10px,1.2vh,12.5px); color:var(--on-light-dim); line-height:1.3;
+    animation:dlrowIn .3s var(--ease-out) both}
+  .dlrow:last-child{border-bottom:0}
+  .dlrow .dot{flex:0 0 auto; width:5px; height:5px; border-radius:50%; background:var(--champ); box-shadow:0 0 6px rgba(201,168,76,.6)}
+  .dlrow .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0}
+  @keyframes dlrowIn{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+  @media (max-aspect-ratio:1/1),(max-width:820px){ .float360{top:auto; bottom:clamp(16px,3vh,30px); left:50%; transform:translateX(-50%)} .float360:active{transform:translateX(-50%) scale(.97)} .float360::after,.float360::before{display:none} }
+  @media (max-aspect-ratio:1/1) and (hover:hover),(max-width:820px) and (hover:hover){ .float360:hover{transform:translateX(-50%) translateY(-2px)} }
+  #shell .eyebrow{font-size:clamp(10px,1.3vh,26px); letter-spacing:.4em; text-indent:.4em; color:var(--on-light-dim)}
+  #shell .ttl{font-family:"Cormorant Garamond",serif; font-weight:600; letter-spacing:.18em; text-indent:.18em;
+    font-size:clamp(34px,7vh,140px); margin:clamp(12px,1.6vh,30px) 0 clamp(8px,1.2vh,22px); color:var(--on-light)}
+  #shell .hr{width:54px; height:1px; background:var(--champ); margin:0 auto}
+  #shell .note{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--on-light-dim);
+    font-size:clamp(15px,2.4vh,44px); margin-top:clamp(12px,1.6vh,28px); max-width:60%}
+  #shell .back{margin-top:clamp(28px,4vh,72px); display:inline-flex; align-items:center; gap:12px;
+    min-height:clamp(44px,4.6vh,90px); padding:0 clamp(22px,2.6vh,50px); border-radius:999px;
+    border:1px solid rgba(201,168,76,.35); background:#121621; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    font-size:clamp(9px,1.1vh,22px); letter-spacing:.3em; color:#faf7f0;
+    transition:transform .16s var(--ease-out), background .2s}
+  #shell .back:active{transform:scale(.97)}
+  @media(hover:hover){ #shell .back:hover{background:#121621; border-color:rgba(201,168,76,.55)} }
+
+  /* ---------- INTRO — "Glide into ONE" slide-to-enter ---------- */
+  #intro{position:fixed; inset:0; z-index:9; overflow:hidden; transition:opacity 1s var(--ease-expo)}
+  #intro.leave{opacity:0; pointer-events:none}
+  .in-bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:54% 50%;
+    filter:brightness(1.08) contrast(1.02) saturate(.86)}
+  /* dark-blue wash — tints the intro toward the blue theme (darker over the hero/left, lighter over the tower) */
+  .in-veil{position:absolute; inset:0; pointer-events:none;
+    background:
+      linear-gradient(100deg, rgba(12,22,50,.84) 0%, rgba(16,28,60,.48) 32%, rgba(20,34,68,.14) 56%, rgba(22,38,74,.03) 100%),
+      linear-gradient(180deg, rgba(14,26,56,.3) 0%, rgba(10,18,40,.05) 45%, rgba(9,15,34,.4) 100%)}
+  .in-veil::before{content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:color; opacity:.22;
+    background:linear-gradient(120deg, #12203f 0%, #1a2c54 55%, #22345c 100%)}
+
+  /* one centred cluster: brand + coins + swipe */
+  .intro-cluster{position:absolute; left:0; top:50%; transform:translateY(-50%); width:min(76%,1500px); z-index:3;
+    display:flex; flex-direction:column; align-items:center; text-align:center}
+  .intro-cluster .ia{opacity:0; animation:iaIn .5s var(--ease-out) var(--d,0s) both}
+  @keyframes iaIn{from{opacity:0; transform:translateY(18px)} to{opacity:1; transform:none}}
+  .ib-mono{width:clamp(44px,5.4vh,92px); height:clamp(50px,6.2vh,108px); color:var(--on-dark); margin:0 auto clamp(4px,1vh,16px)}
+  .ib-mono svg, .bb-mono svg{width:100%; height:100%; display:block}
+  .ib-word{font-family:"Cormorant Garamond",serif; font-weight:500; line-height:1; font-size:clamp(34px,5.6vh,72px); white-space:nowrap;
+    letter-spacing:.18em; text-indent:.18em; text-transform:uppercase; color:var(--on-dark)}
+  .ib-script{font-family:"Cormorant Garamond",serif; font-weight:500; font-size:clamp(18px,2.9vh,36px);
+    letter-spacing:.22em; text-indent:.22em; text-transform:uppercase; color:var(--on-dark); margin-top:clamp(2px,.7vh,12px); text-shadow:0 1px 12px rgba(0,0,0,.5)}
+  .ib-dia{width:7px; height:7px; background:var(--champ); transform:rotate(45deg); margin:clamp(9px,1.8vh,26px) auto}
+  .ib-copy{font-weight:300; color:var(--ink); line-height:1.85; font-size:clamp(15px,2vh,29px); max-width:44ch; margin:0 auto; text-shadow:0 1px 10px rgba(255,255,255,.4)}
+  .eo-logo{display:block; width:clamp(250px,29vw,500px); height:auto; margin:0 auto; filter:brightness(0) opacity(.86) drop-shadow(0 1px 8px rgba(255,255,255,.35))}
+  /* client lockup (bone asset) rendered as dark ink on the beige intro wash */
+  .eo-logo-img{display:block; width:clamp(300px,40vw,720px); height:auto; margin:0 auto clamp(2px,.8vh,10px);
+    filter:brightness(0) opacity(.88) drop-shadow(0 1px 10px rgba(255,255,255,.4)); -webkit-user-drag:none; user-select:none}
+
+  .coins{position:relative; margin-top:clamp(24px,4.6vh,62px);
+    --coin:clamp(124px,13.2vw,236px); width:clamp(370px,37vw,690px); height:var(--coin)}
+  /* leather belt track behind the coins: spans gold-coin centre -> ghost-coin centre,
+     vertically centred, thinner than the coins (aspect 6.26:1, never distorted) */
+  /* the swipe track — glassmorphism, matching the glass "ONE" coin */
+  .intro-belt{position:absolute; z-index:1; pointer-events:none;
+    left:calc(var(--coin)/2); width:calc(100% - var(--coin));
+    top:50%; transform:translateY(-50%);
+    height:clamp(40px,calc(var(--coin)*.4),96px); border-radius:999px;
+    /* matched to the home buttons (solid navy hover-look) */
+    background:#1b2338; -webkit-backdrop-filter:none; backdrop-filter:none;
+    border:1px solid rgba(236,232,224,.28); box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+  .coin-ghost{position:absolute; z-index:2; top:0; right:0; width:var(--coin); height:var(--coin);
+    opacity:.4; filter:grayscale(.4) brightness(1.16); transition:opacity .4s ease; -webkit-user-drag:none}
+  /* the "ONE" enter button — matte royal-blue coin, no rim, no gloss */
+  .coin-gold{position:absolute; z-index:3; top:calc(var(--coin)*.05); left:0;
+    width:calc(var(--coin)*.9); height:calc(var(--coin)*.9); border-radius:50%; padding:0; overflow:hidden;
+    display:grid; place-items:center; color:#faf7f0;
+    /* matched to the home buttons (solid navy hover-look) */
+    background:#1b2338;
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    border:1px solid rgba(236,232,224,.28);
+    box-shadow:0 18px 38px -18px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.14), 0 0 22px -3px rgba(255,255,255,.5);
+    cursor:grab; touch-action:none; will-change:transform; -webkit-user-drag:none;
+    transition:transform .55s var(--ease-expo), filter .3s, box-shadow .4s}
+  /* same finish as the home buttons: diagonal sheen + rim glints + grain */
+  .coin-gold::before, .intro-belt::before{content:""; position:absolute; inset:0; z-index:1; pointer-events:none; border-radius:inherit;
+    background:
+      linear-gradient(118deg, transparent 34%, rgba(255,255,255,.13) 46%, rgba(255,255,255,.04) 56%, transparent 66%),
+      radial-gradient(46px 12px at 24% 0%, rgba(255,255,255,.5), transparent 70%),
+      radial-gradient(46px 12px at 72% 100%, rgba(255,255,255,.36), transparent 70%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.18)}
+  .coin-gold::after, .intro-belt::after{content:""; position:absolute; inset:0; z-index:1; pointer-events:none; border-radius:inherit;
+    opacity:.06; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='lg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23lg)'/%3E%3C/svg%3E");
+    background-size:140px 140px}
+  .coin-gold .coin-face{display:none}
+  .coin-gold .coin-lbl{display:block; position:relative; z-index:2; font-family:"Cormorant Garamond",serif; font-weight:500; line-height:1;
+    font-size:clamp(20px,2.7vw,44px); letter-spacing:.16em; text-indent:.16em; color:#faf7f0}
+  @media(hover:hover){ .coin-gold:hover{filter:brightness(1.08)} }
+  .coin-gold.drag{cursor:grabbing; transition:none}
+  .coin-gold.arrived{box-shadow:0 18px 38px -18px rgba(0,0,0,.6), 0 0 30px rgba(201,168,76,.32), 0 0 22px -3px rgba(255,255,255,.5); filter:brightness(1.06)}
+  /* idle hint: the ONE coin drifts gently right and settles back — "swipe me right" — until grabbed */
+  .coin-gold.hint{animation:coinHint 2.7s ease-in-out .9s infinite}
+  @keyframes coinHint{0%,56%,100%{transform:translateX(0)} 70%{transform:translateX(16px)} 84%{transform:translateX(0)}}
+  .chev{position:absolute; z-index:2; left:56%; top:50%; transform:translate(-50%,-50%); pointer-events:none;
+    color:var(--on-dark-dim); font-family:"Jost",sans-serif; font-weight:400; font-size:clamp(10px,1.4vh,18px);
+    letter-spacing:.32em; text-indent:.32em; text-transform:uppercase; white-space:nowrap; line-height:1;
+    opacity:.85; transition:opacity .4s}
+  .swipe-cap{font-family:"Cormorant Garamond",serif; color:var(--on-dark); font-size:clamp(17px,2.6vh,35px);
+    letter-spacing:.06em; margin-top:clamp(16px,2.8vh,38px); text-shadow:0 1px 10px rgba(0,0,0,.5)}
+
+  @keyframes fadeup{to{opacity:1; transform:none; filter:none}}
+  @media (max-aspect-ratio:1/1){
+    .intro-cluster{width:auto; left:0; right:0; padding:0 7vw}
+    .ib-word{font-size:clamp(28px,7vw,64px)}
+    .coins{--coin:clamp(88px,22vw,168px); width:clamp(260px,62vw,480px)}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .intro-cluster .ia{animation:none; opacity:1} }
+
+  .rise{opacity:0; transform:translateY(24px)}
+  body.home-in .rise{opacity:1; transform:none; transition:opacity .9s var(--ease-expo), transform .9s var(--ease-expo)}
+  body.home-in .rise.d1{transition-delay:.1s} body.home-in .rise.d2{transition-delay:.2s}
+  body.home-in .rise.d3{transition-delay:.3s} body.home-in .rise.d4{transition-delay:.95s}
+
+  body.dusk .bg{filter:saturate(1.05) sepia(.12) brightness(.94) hue-rotate(-6deg)}
+
+  @media (max-aspect-ratio:29/20) and (orientation:landscape){
+    /* iPad-class 4:3 — anchor the copy left-of-centre so it balances against the tower (no big empty left margin) */
+    .hero{width:min(56%,940px); left:4.5%; transform:translateY(-50%); align-items:center}
+    .bb-copy{max-width:80%}
+    .minirow{margin-top:clamp(6px,1vh,14px)}
+    .cardrow{margin-top:clamp(6px,1vh,18px)}
+    .pills{margin-top:clamp(12px,2vh,34px)}
+  }
+  @media (orientation:portrait){
+    /* portrait reflows the hero to a centred column — drop the tower to a faint, centred, grounded watermark behind it (no card overlap) */
+    .tower-art{height:auto; width:88%; max-width:none; right:auto; left:50%; transform:translateX(-50%); bottom:0}
+    body.art-in .tower-art{opacity:.12}
+    body.home-in .tower-art{opacity:.15}
+    /* portrait: right-anchored cover keeps the tower visible on the right, behind/beside the centred hero */
+    .bg{object-position:90% 50%}
+    /* gentle BEIGE scrim (never a dark veil) behind the centred heading/copy so text stays legible where
+       it overlaps the painted tower; fades out toward the tower + edges so the drawing still reads */
+    .bg-veil{background:radial-gradient(108% 44% at 50% 30%, rgba(239,232,218,.86) 0%, rgba(239,232,218,.55) 45%, rgba(239,232,218,0) 78%)}
+    .hero{position:static; transform:none; width:100%; height:100%; justify-content:center;
+      padding:max(clamp(24px,5vh,80px),env(safe-area-inset-top)) max(clamp(18px,5vw,70px),env(safe-area-inset-right))
+              max(clamp(24px,5vh,80px),env(safe-area-inset-bottom)) max(clamp(18px,5vw,70px),env(safe-area-inset-left))}
+    .bb-script{font-size:clamp(40px,11vw,108px)}
+    .bb-copy{max-width:92%; font-size:clamp(11px,2vw,22px)}
+    .cardrow{gap:clamp(4px,1vw,10px); flex-wrap:nowrap}
+    /* 6 glass tiles must fit the narrow width — shrink tiles, icons and labels in step */
+    .card,.cardrow .lantern-btn{width:clamp(46px,14.5vw,96px); min-height:clamp(62px,17vw,100px);
+      padding:clamp(8px,2vw,14px) clamp(4px,1vw,8px); margin-left:0; touch-action:manipulation}
+    .card .ci,.lantern-btn .ci{width:clamp(18px,5vw,26px); height:clamp(18px,5vw,26px)}
+    .card.tower .ci{width:clamp(20px,5.6vw,30px); height:clamp(20px,5.6vw,30px)}
+    .card .cl,.lantern-btn .cl{font-size:clamp(7px,2vw,10px); letter-spacing:.1em}
+    .minirow{margin-top:clamp(6px,1.4vh,16px)} .cardrow{margin-top:clamp(8px,1.6vh,22px)}
+    .pill{font-size:clamp(9px,1.7vw,18px)}
+    .hour-dial{top:clamp(16px,2.6vh,40px)}
+  }
+  /* ---------- SMALL PHONES (portrait, ≤480px) — tighten everything, even balance, no crowding ---------- */
+  @media (orientation:portrait) and (max-width:480px){
+    /* small phones: keep the tower on the right, calm parchment behind the centred hero */
+    .bg{object-position:90% 50%}
+    .hero{justify-content:center; gap:clamp(4px,1.2vh,12px)}
+    .bb-script{font-size:clamp(38px,12.5vw,72px)}
+    .bb-copy{max-width:94%; font-size:clamp(11px,3.4vw,15px); line-height:1.7}
+    .bb-dia{margin:clamp(6px,1.4vh,14px) auto}
+    .minirow{gap:clamp(10px,4vw,20px); margin-top:clamp(8px,1.6vh,16px)}
+    .minibtn{padding:clamp(8px,2vw,12px) clamp(12px,4vw,20px)}
+    /* card row: small glass tiles, lantern sized to match, all tight + centred */
+    .cardrow{gap:clamp(3px,1.4vw,8px); margin-top:clamp(10px,2vh,20px)}
+    .card,.cardrow .lantern-btn{width:clamp(44px,15vw,72px); min-height:clamp(58px,18vw,84px);
+      padding:clamp(7px,2vw,12px) clamp(3px,1vw,6px)}
+    .card .ci,.lantern-btn .ci{width:clamp(16px,5vw,22px); height:clamp(16px,5vw,22px)}
+    .card .cl,.lantern-btn .cl{font-size:clamp(6.5px,2vw,9px); letter-spacing:.08em}
+    .pills{gap:clamp(8px,3vw,16px); margin-top:clamp(12px,2.4vh,26px); flex-wrap:wrap}
+    .pill{min-height:44px; padding:0 clamp(12px,3.4vw,20px); font-size:clamp(10px,2.8vw,13px)}
+    .metaline{font-size:clamp(11px,3vw,14px); margin-top:clamp(10px,2vh,20px)}
+    /* corner logo + dial: pull in to clear the safe area, keep tappable */
+    .corner-logo{left:max(clamp(16px,4vw,40px),env(safe-area-inset-left)); width:clamp(78px,22vw,110px)}
+    .hour-dial{right:max(clamp(16px,4vw,40px),env(safe-area-inset-right))}
+    /* 360 button already drops to bottom-centre via the max-width:820px rule — lift it above the safe area */
+    .float360{bottom:max(clamp(16px,3vh,30px),calc(env(safe-area-inset-bottom) + 12px))}
+  }
+  /* ---------- SHORT LANDSCAPE (phones turned sideways, height ≤ 480px) ---------- */
+  /* the home is vertically tight here — shrink type/cards so nothing clips off the top/bottom,
+     and re-centre the hero so "the residences" is never cut at the top edge */
+  @media (orientation:landscape) and (max-height:480px){
+    .hero{top:50%; left:0; right:0; width:100%; transform:translateY(-50%);
+      align-items:center; justify-content:center;
+      padding:clamp(8px,2.4vh,18px) max(clamp(16px,3vw,40px),env(safe-area-inset-left)) clamp(8px,2.4vh,18px) max(clamp(16px,3vw,40px),env(safe-area-inset-right))}
+    .bb-script{font-size:clamp(30px,8vh,52px)}
+    .bb-dia{margin:clamp(3px,1vh,8px) auto}
+    .bb-copy{max-width:78%; font-size:clamp(10px,3vh,15px); line-height:1.5}
+    .minirow{margin-top:clamp(4px,1.4vh,12px); gap:clamp(10px,2vw,22px)}
+    .minibtn{padding:clamp(7px,1.4vh,12px) clamp(12px,1.6vw,22px)}
+    .cardrow{margin-top:clamp(6px,1.6vh,16px); gap:clamp(5px,1vw,12px)}
+    .card,.cardrow .lantern-btn{width:clamp(64px,9vw,108px); min-height:clamp(58px,12vh,92px);
+      padding:clamp(8px,1.4vh,14px) clamp(5px,.8vw,10px); margin-left:0}
+    .card .cl,.lantern-btn .cl{font-size:clamp(7px,1.3vh,11px)}
+    .pills{margin-top:clamp(6px,1.4vh,14px)} .pill{min-height:40px}
+    .metaline{margin-top:clamp(5px,1.2vh,12px); font-size:clamp(10px,2.4vh,14px)}
+    /* the 360 button: the centred hero column fills the middle, so pin it bottom-RIGHT (clear of the
+       hero text + metaline) rather than bottom-centre where it would collide. Leader line stays hidden. */
+    .float360{top:auto; left:auto;
+      right:max(clamp(12px,2.4vw,28px),calc(env(safe-area-inset-right) + 8px));
+      bottom:max(clamp(10px,2.4vh,18px),calc(env(safe-area-inset-bottom) + 8px));
+      transform:none}
+    .float360:hover{transform:translateY(-2px)}
+    .float360:active{transform:scale(.97)}
+    .float360::after,.float360::before{display:none}
+    .corner-logo{width:clamp(70px,7vw,110px); left:max(clamp(12px,2vw,40px),env(safe-area-inset-left))}
+    .hour-dial{top:clamp(10px,2.4vh,24px); right:max(clamp(12px,2vw,40px),env(safe-area-inset-right))}
+    /* vertically tight phones: hero re-centres full-width, so keep the tower a faint right-side hint */
+    body.home-in .tower-art{opacity:.5}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s !important; transition-duration:.001s !important}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ── PACKAGE LOADER: downloads the entire suite to the device on first open (then fully offline) ── -->
+  <style>
+    #pkg{position:fixed;inset:0;z-index:99999;background:var(--bone);display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:22px;transition:opacity .6s ease;font-family:"Jost",sans-serif}
+    #pkg.done{opacity:0;pointer-events:none}
+    #pkg img{width:78px;height:78px;opacity:.92}
+    #pkg .ttl{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--on-light);font-size:clamp(20px,3.2vh,30px);letter-spacing:.02em}
+    #pkg .bar{width:min(62vw,360px);height:3px;background:var(--line-light);border-radius:3px;overflow:hidden}
+    #pkg .fill{height:100%;width:0;background:linear-gradient(90deg,var(--on-light),var(--champ));transition:width .25s ease}
+    #pkg .pct{font-size:clamp(9px,1.3vh,12px);letter-spacing:.34em;text-transform:uppercase;color:var(--on-light-dim)}
+  </style>
+  <div id="pkg" style="display:none !important" aria-hidden="true">
+    <img src="icons/icon-512.png" alt="Embassy ONE">
+    <div class="ttl">Preparing Embassy ONE Private Residences</div>
+    <div class="bar"><div class="fill" id="pkgFill"></div></div>
+    <div class="pct" id="pkgPct">Loading 0%</div>
+  </div>
+  <script>
+  (function(){
+    /* NEUTRALISED: superseded by the enhanced #dlGate download gate below — keep exactly one clean gate */
+    var _pkg=document.getElementById('pkg'); if(_pkg){ _pkg.style.display='none'; try{_pkg.remove();}catch(e){} }
+    return;
+    var splash=document.getElementById('pkg'),fill=document.getElementById('pkgFill'),pct=document.getElementById('pkgPct');
+    function done(){ if(!splash)return; splash.classList.add('done'); setTimeout(function(){ try{splash.remove();}catch(e){} },700); }
+    function set(p){ p=Math.max(0,Math.min(100,Math.round(p))); fill.style.width=p+'%'; pct.textContent='Loading '+p+'%'; }
+    if(/[?&]nopkg/.test(location.search) || !('caches' in window)){ done(); return; }
+    fetch('assets-manifest.json',{cache:'no-store'}).then(function(r){return r.json();}).then(function(man){
+      var KEY='eo-pkg-ver', CACHE='eo-offline-v44';
+      if(localStorage.getItem(KEY)===man.version){ set(100); done(); return; }       // already fully on this device
+      try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}
+      caches.open(CACHE).then(function(c){
+        var list=man.assets.slice(), total=list.length||1, n=0, CONC=8;
+        function next(){ var u=list.shift(); if(u===undefined) return Promise.resolve();
+          return c.match(u).then(function(h){ return h?null:c.add(u).catch(function(){}); })
+            .then(function(){ n++; set(n/total*100); return next(); }); }
+        var w=[]; for(var i=0;i<CONC;i++) w.push(next());
+        Promise.all(w).then(function(){ try{localStorage.setItem(KEY,man.version);}catch(e){} set(100); done(); });
+      }).catch(done);
+    }).catch(done);
+  })();
+  </script>
+
+  <div id="stage" aria-hidden="true">
+    <img class="bg" src="assets/home-sketch-bg.webp" alt="">
+    <div class="bg-veil"></div>
+    <svg id="towerLines" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><filter id="tlBlur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5.4"/></filter></defs><g class="tl-base"><path class="ln" d="M1200.48,656.4l1.2-53.76,4.41-7.62.8-42.52,5.22-.4-.4-7.22s-1.2-4.01,4.81-7.22,8.02-3.21,8.02-3.21c0,0-1.6-4.41,4.41-4.81,0-9.63,5.22-184.94,5.22-184.94l-5.22-.8,4.81-14.44-3.21-1.2,2.81-10.03-2.41-3.61,3.21-11.23-3.61-.8,3.21-10.83-3.61-.8,5.22-11.63h-3.61l2.41-12.84-4.01-2.81,4.01-11.23-3.61-1.2,3.61-12.84-2.81-.8,3.21-14.84-3.21-2.81,9.23-40.12.4-58.17"/><line class="ln" x1="1249.82" y1="83.54" x2="1243.8" y2="537.66"/><line class="ln" x1="1264.06" y1="89.13" x2="1256.68" y2="539.13"/><polyline class="ln" points="1321.39 80.83 1321.39 289.44 1320.07 590.18"/><polyline class="ln" points="1323.33 269.01 1328.16 261.76 1359.93 269.19"/><polyline class="ln" points="1322.96 306.54 1326.86 301.52 1360.86 306.73"/><polyline class="ln" points="1322.4 341.29 1326.3 334.23 1361.24 341.29"/><polyline class="ln" points="1322.59 373.24 1325.75 369.16 1360.68 374.55"/><polyline class="ln" points="1322.77 407.06 1327.05 402.23 1360.86 408.18"/><polyline class="ln" points="1322.4 442.55 1326.3 437.91 1361.24 442.18"/><polyline class="ln" points="1322.59 476.37 1325.93 472.84 1361.42 476.37"/><polyline class="ln" points="1322.4 516.13 1325.19 515.02 1361.42 516.5"/><polyline class="ln" points="1323.13 101.94 1327.31 95.25 1357.72 103.34"/><line class="ln" x1="1389.75" y1="122.92" x2="1417.83" y2="122.67"/><line class="ln" x1="1389.5" y1="140.88" x2="1417.58" y2="141.13"/><line class="ln" x1="1389.5" y1="159.34" x2="1417.32" y2="159.6"/><line class="ln" x1="1389.5" y1="176.8" x2="1416.56" y2="177.05"/><line class="ln" x1="1390.01" y1="196.02" x2="1417.32" y2="196.27"/><line class="ln" x1="1389.5" y1="215.75" x2="1417.83" y2="216"/><line class="ln" x1="1389.5" y1="239.02" x2="1416.56" y2="238.77"/><polyline class="ln" points="1359.31 84.7 1424.45 82.37 1429.1 567.4"/><path class="ln" d="M1243.07,595.01l162.19,1.24s-1.67,4.18-3.17,6.53-6,.86-5.36,3.43,4.07,3.64,4.5,5.57,4.5,5.57,4.5,8.78.86,5.78.86,8.57-1.93,8.57-1.93,9.43-11.78,9.21-9.64,19.92,1.93,10.07,1.93,13.71-.21,6-.21,6"/><line class="ln" x1="1371.78" y1="664.43" x2="1512.85" y2="890.34"/><line class="ln" x1="1357.47" y1="668.52" x2="1493.43" y2="922.03"/><line class="ln" x1="1353.38" y1="694.08" x2="1455.61" y2="921.01"/><line class="ln" x1="1217.43" y1="708.39" x2="1119.3" y2="939.41"/><path class="ln" d="M1031.03,847.11l32.7-45.07s-14.14-15.02-4.42-29.16,24.74-9.72,28.28-7.95,73.35-83.95,73.35-83.95"/><line class="ln" x1="1203.34" y1="680.98" x2="1074.33" y2="932.83"/><polyline class="ln" points="1217.36 938.8 1247.16 748.3 1315.85 748.3 1339.82 940.1"/></g><g class="tl-shine" filter="url(#tlBlur)"><path class="ln" d="M1200.48,656.4l1.2-53.76,4.41-7.62.8-42.52,5.22-.4-.4-7.22s-1.2-4.01,4.81-7.22,8.02-3.21,8.02-3.21c0,0-1.6-4.41,4.41-4.81,0-9.63,5.22-184.94,5.22-184.94l-5.22-.8,4.81-14.44-3.21-1.2,2.81-10.03-2.41-3.61,3.21-11.23-3.61-.8,3.21-10.83-3.61-.8,5.22-11.63h-3.61l2.41-12.84-4.01-2.81,4.01-11.23-3.61-1.2,3.61-12.84-2.81-.8,3.21-14.84-3.21-2.81,9.23-40.12.4-58.17"/><line class="ln" x1="1249.82" y1="83.54" x2="1243.8" y2="537.66"/><line class="ln" x1="1264.06" y1="89.13" x2="1256.68" y2="539.13"/><polyline class="ln" points="1321.39 80.83 1321.39 289.44 1320.07 590.18"/><polyline class="ln" points="1323.33 269.01 1328.16 261.76 1359.93 269.19"/><polyline class="ln" points="1322.96 306.54 1326.86 301.52 1360.86 306.73"/><polyline class="ln" points="1322.4 341.29 1326.3 334.23 1361.24 341.29"/><polyline class="ln" points="1322.59 373.24 1325.75 369.16 1360.68 374.55"/><polyline class="ln" points="1322.77 407.06 1327.05 402.23 1360.86 408.18"/><polyline class="ln" points="1322.4 442.55 1326.3 437.91 1361.24 442.18"/><polyline class="ln" points="1322.59 476.37 1325.93 472.84 1361.42 476.37"/><polyline class="ln" points="1322.4 516.13 1325.19 515.02 1361.42 516.5"/><polyline class="ln" points="1323.13 101.94 1327.31 95.25 1357.72 103.34"/><line class="ln" x1="1389.75" y1="122.92" x2="1417.83" y2="122.67"/><line class="ln" x1="1389.5" y1="140.88" x2="1417.58" y2="141.13"/><line class="ln" x1="1389.5" y1="159.34" x2="1417.32" y2="159.6"/><line class="ln" x1="1389.5" y1="176.8" x2="1416.56" y2="177.05"/><line class="ln" x1="1390.01" y1="196.02" x2="1417.32" y2="196.27"/><line class="ln" x1="1389.5" y1="215.75" x2="1417.83" y2="216"/><line class="ln" x1="1389.5" y1="239.02" x2="1416.56" y2="238.77"/><polyline class="ln" points="1359.31 84.7 1424.45 82.37 1429.1 567.4"/><path class="ln" d="M1243.07,595.01l162.19,1.24s-1.67,4.18-3.17,6.53-6,.86-5.36,3.43,4.07,3.64,4.5,5.57,4.5,5.57,4.5,8.78.86,5.78.86,8.57-1.93,8.57-1.93,9.43-11.78,9.21-9.64,19.92,1.93,10.07,1.93,13.71-.21,6-.21,6"/><line class="ln" x1="1371.78" y1="664.43" x2="1512.85" y2="890.34"/><line class="ln" x1="1357.47" y1="668.52" x2="1493.43" y2="922.03"/><line class="ln" x1="1353.38" y1="694.08" x2="1455.61" y2="921.01"/><line class="ln" x1="1217.43" y1="708.39" x2="1119.3" y2="939.41"/><path class="ln" d="M1031.03,847.11l32.7-45.07s-14.14-15.02-4.42-29.16,24.74-9.72,28.28-7.95,73.35-83.95,73.35-83.95"/><line class="ln" x1="1203.34" y1="680.98" x2="1074.33" y2="932.83"/><polyline class="ln" points="1217.36 938.8 1247.16 748.3 1315.85 748.3 1339.82 940.1"/></g></svg>
+    <svg id="outerLine" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path class="ol" pathLength="1000" d="M1428.16,572.17l-2.43-504.15-6.33,13.15-60.62.73v3.16h-34.32v5.11h-2.43v-9.98l-45.04-13.15-6.33-.73-5.36,20.21-14.85-4.26-9.42,39.88-.4,58.17-9.23,40.12,3.21,2.81-3.21,14.84,2.81.8-3.61,12.84,3.61,1.2-4.01,11.23,4.01,2.81-2.41,12.84h3.61l-5.22,11.63,3.61.8-3.21,10.83,3.61.8-3.21,11.23,2.41,3.61-2.81,10.03,3.21,1.2-4.81,14.44,5.22.8s-5.22,175.31-5.22,184.94"/></svg>
+    <div class="shimmer"></div>
+    <div class="skylife" aria-hidden="true">
+      <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+      <img class="scloud sc1" src="assets/clouds/cloud22.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc2" src="assets/clouds/cloud65.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc3" src="assets/clouds/cloud54.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc4" src="assets/clouds/cloud02.webp" alt="" aria-hidden="true" draggable="false">
+      <img class="scloud sc5" src="assets/clouds/cloud44.webp" alt="" aria-hidden="true" draggable="false">
+      <!-- small birds removed for the beige theme (clouds kept) -->
+    </div>
+    <div class="tower-lights" id="towerLights" aria-hidden="true"></div>
+    <!-- hand-drawn line-art tower centrepiece (navy ink on beige paper, multiply-blended into the stage) -->
+    <img class="tower-art" src="assets/renders/exterior/tower-lineart.webp" alt="" aria-hidden="true" draggable="false">
+    <!-- leaf overlay + falling-leaf layer removed at client request -->
+  </div>
+
+  <main id="home" aria-label="Embassy ONE home">
+
+    <div class="hero">
+      <div class="rise d2">
+        <img class="hero-logo" src="assets/brand/one-pr-bone.webp" alt="Embassy ONE Private Residences">
+        <div class="bb-dia"><i></i></div>
+        <p class="bb-copy">An address with nothing to prove.<br>Set within Embassy ONE — Bengaluru&rsquo;s only integrated luxury address of its kind.</p>
+      </div>
+
+      <div class="minirow rise d3" aria-label="More">
+        <button class="minibtn" data-screen="overview" aria-label="Overview">
+          <svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>
+          <span>Overview</span>
+        </button>
+        <button class="minibtn" data-screen="gallery" aria-label="Gallery">
+          <svg class="mi" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="M4 16l5-5 5 5 2-2 4 4"/></svg>
+          <span>Gallery</span>
+        </button>
+      </div>
+
+      <nav class="cardrow" aria-label="Explore the residence">
+        <button class="card" data-screen="place" aria-label="The Address">
+          <span class="ctop">
+            <svg class="ci" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a5 5 0 0 1 5 5c0 3.6-5 8-5 8s-5-4.4-5-8a5 5 0 0 1 5-5Z"/><circle cx="12" cy="8" r="1.7"/><path d="M4 20c2.8-1.5 5.2-1.5 8 0s5.2 1.5 8 0"/></svg>
+            <span class="cl">The Address</span>
+          </span>
+          <span class="cgo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="card" data-screen="grounds" aria-label="The Grounds">
+          <span class="ctop">
+            <svg class="ci" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21v-6"/><path d="M16.6 9.4a4.6 4.6 0 1 0-9.2 0 4.6 4.6 0 0 0 4.6 4.6 4.6 4.6 0 0 0 4.6-4.6Z"/><path d="M12 5v9M12 10.4l2.4-2.4M12 12.6 9.6 10.2"/></svg>
+            <span class="cl">The Grounds</span>
+          </span>
+          <span class="cgo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="card tower" data-screen="tower" aria-label="The Tower">
+          <span class="ctop">
+            <svg class="ci" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21V7l4-3 4 3v14"/><path d="M12 4V2.2"/><path d="M6.4 21h11.2"/><path d="M8 10.2h8M8 13.6h8M8 17h8"/><path d="M8 10.2 6.3 9M16 10.2 17.7 9M8 13.6 6.3 12.4M16 13.6 17.7 12.4"/></svg>
+            <span class="cl">The Tower</span>
+          </span>
+          <span class="cgo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="card" data-screen="residences" aria-label="The Residences">
+          <span class="ctop">
+            <svg class="ci" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.2" y="3" width="11.6" height="18" rx="1.2"/><path d="M9 21v-6.6a3 3 0 0 1 6 0V21"/><circle cx="13.4" cy="14.4" r=".85"/><path d="M4.6 21h14.8"/></svg>
+            <span class="cl">The Residences</span>
+          </span>
+          <span class="cgo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="card" data-screen="service" aria-label="Bespoke Services">
+          <span class="ctop">
+            <svg class="ci" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 18.4h16.8"/><path d="M6 18.4a6 6 0 0 1 12 0"/><path d="M12 6.2V4.5"/><circle cx="12" cy="3.5" r="1"/></svg>
+            <span class="cl">Bespoke Services</span>
+          </span>
+          <span class="cgo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        </button>
+        <button class="lantern-btn" data-screen="lanterns" aria-label="The Lanterns — a symphony of seasons">
+          <span class="lantern-vis">
+            <span class="lantern-tint" aria-hidden="true"></span>
+            <span class="lantern-glow" aria-hidden="true"></span>
+            <img src="assets/lantern-btn-gold.webp" alt="" draggable="false">
+          </span>
+          <span class="lantern-cap">Explore<br>Lanterns</span>
+        </button>
+      </nav>
+
+      <div class="pills rise d4">
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 22s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12Z"/><circle cx="12" cy="10" r="2.4"/></svg>Mekri Circle, Bengaluru</span>
+        <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke-linecap="round"/></svg>12.99&deg; N &nbsp;&middot;&nbsp; 77.59&deg; E</span>
+      </div>
+      <div class="metaline rise d4"><b>59</b> Residences <span class="sep">&middot;</span> <b>2</b> per floor <span class="sep">&middot;</span> <b>4,149&ndash;15,124</b> sq ft</div>
+    </div>
+  </main>
+
+  <div class="buildver" aria-hidden="true">v2.5</div>
+
+  <section id="shell" aria-live="polite">
+    <div class="eyebrow" id="shEyebrow"></div>
+    <h2 class="ttl" id="shTitle">THE TOWER</h2>
+    <div class="hr"></div>
+    <p class="note" id="shNote">This world is being composed.</p>
+    <button class="back" id="shBack">&larr; RETURN</button>
+  </section>
+
+  <div id="screenOverlay" aria-hidden="true"><iframe id="screenFrame" title="Embassy ONE"></iframe></div>
+
+  <!-- floating 360° view button + full-screen viewer -->
+  <button class="float360" id="btn360" aria-label="360 degree view">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+    <span>360° View</span>
+  </button>
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      <span>Back</span>
+    </button>
+  </div>
+
+  <!-- first-launch download gate: pull every asset to the device for a seamless offline experience -->
+  <div id="dlGate" aria-hidden="true">
+    <div class="dlg-inner">
+      <h2 class="dlg-title">Embassy ONE Private Residences</h2>
+      <p class="dlg-sub">Download the full experience to this device — every visual, render and 3D model — so it runs flawlessly, even offline.</p>
+      <button id="dlGo" class="dlg-btn"><span>Download Now</span></button>
+      <div class="dlg-prog" id="dlProg"><div class="dlg-bar" id="dlBar"></div></div>
+      <div class="dlg-status" id="dlStatus">One-time download · about 40&nbsp;MB</div>
+      <div class="dlg-now" id="dlNow"><span class="lbl">Downloading</span><span class="file" id="dlFile">&nbsp;</span></div>
+      <div class="dlg-count" id="dlCount"></div>
+      <div id="dlList" aria-live="polite" aria-label="Downloaded assets"></div>
+    </div>
+  </div>
+
+  <div id="intro" aria-label="Embassy ONE — glide into ONE to enter">
+    <div class="intro-cluster">
+      <div class="eo-logo-wrap ia" style="--d:.2s"><img class="eo-logo-img" src="assets/brand/one-pr-bone.webp" alt="Embassy ONE Private Residences" draggable="false"></div>
+      <div class="ib-dia ia" style="--d:.7s"></div>
+      <p class="ib-copy ia" style="--d:.9s">An address with nothing to prove.<br>Set within Embassy ONE — Bengaluru&rsquo;s only integrated luxury address of its kind.</p>
+      <div class="coins ia" style="--d:1.15s">
+        <div class="intro-belt" aria-hidden="true"></div>
+        <span class="chev" aria-hidden="true">SWIPE TO EXPLORE</span>
+        <button class="coin-gold" id="oneCoin" type="button" aria-label="Glide into ONE to enter"><img class="coin-face" src="assets/brand/one-coin-nb.webp" alt="" aria-hidden="true" draggable="false"><span class="coin-lbl">ONE</span></button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* fade the line-art tower + corner leaves in behind the intro, then let them persist to the home */
+  requestAnimationFrame(function(){ document.body.classList.add("art-in"); });
+
+  (function(){
+    var bars="", H=[8,16,26,38,52];
+    for(var k=-4;k<=4;k++){ var x=40+k*8, top=H[Math.abs(k)];
+      bars+='<rect x="'+(x-1.4)+'" y="'+top+'" width="2.8" height="'+(90-top)+'" rx="1.3"/>'; }
+    var svg='<svg viewBox="0 0 80 100" fill="currentColor" aria-hidden="true">'+bars+
+      '<path d="M40 1.5 43.4 9 36.6 9Z"/><rect x="16" y="92" width="48" height="2.2" rx="1.1"/></svg>';
+    var a=document.getElementById("heroMono"); if(a) a.innerHTML=svg;
+    var b=document.getElementById("introMono"); if(b) b.innerHTML=svg;
+  })();
+
+  var SCREENS = {
+    place:      {t:"THE PLACE",      e:"01 · PROVENANCE & ADDRESS",   n:"A statement of prestige — the confluence of three storied enclaves."},
+    grounds:    {t:"THE GROUNDS",    e:"02 · LANDSCAPE & LIFE",       n:"Rooted in nature — two acres, five lanterns, a life unfolds."},
+    tower:      {t:"THE TOWER",      e:"03 · ARCHITECTURE & VISUALS", n:"Rising with distinction — a vertical manor of thirty floors."},
+    residences: {t:"THE RESIDENCES", e:"04 · THE HOMES",              n:"Crafted for excellence — fifty-nine homes, two to a floor."},
+    service:    {t:"THE SERVICE",    e:"05 · THE STANDARD",           n:"Beyond expectations — a home that takes care of itself."}
+  };
+
+  var intro=document.getElementById("intro");
+  var skip=/[?&]view=home/.test(location.search);
+  var entered=false, resetCoin=null;
+  function enterHome(){ if(entered) return; entered=true; var b=document.body; b.classList.remove("seq"); intro.classList.add("leave"); b.classList.add("home-in"); }
+  /* tapping the home logo returns to the intro */
+  function goIntro(){ entered=false; document.body.classList.remove("home-in"); intro.classList.remove("leave"); if(resetCoin) resetCoin(); }
+  var _hl=document.querySelector(".hero-logo"); if(_hl){ _hl.style.cursor="pointer"; _hl.setAttribute("role","button"); _hl.setAttribute("aria-label","Back to the intro"); _hl.addEventListener("click", function(e){ e.stopPropagation(); goIntro(); }); }
+
+  if(skip){ document.body.classList.remove("seq"); intro.classList.add("leave"); document.body.classList.add("home-in"); entered=true; }
+  else {
+    /* the scene + logo cluster simply fade in (the old leaf-pile reveal animation was removed) */
+    document.body.classList.add("revealed");   /* steady-state: reveal the cluster (no leaf sequence anymore) */
+    var coin=document.getElementById("oneCoin");
+    coin.classList.add("hint");   /* idle "swipe me right" nudge until the user grabs it */
+    var track=intro.querySelector(".coins"), ghost=intro.querySelector(".coin-ghost"), chev=intro.querySelector(".chev");
+    var dragging=false, sx=0, cx=0, x=0, max=0, moved=false;
+    function calcMax(){ max=Math.max(40, track.clientWidth - coin.clientWidth); }
+    function setX(v){ x=Math.max(0,Math.min(max,v)); coin.style.transform="translateX("+x+"px)"; var pr=max?x/max:0; if(ghost) ghost.style.opacity=(0.4+0.5*pr).toFixed(2); if(chev) chev.style.opacity=(1-0.9*pr).toFixed(2); }
+    function snapBack(){ coin.style.transition="transform .5s var(--ease-expo)"; setX(0); if(ghost) ghost.style.opacity=.4; if(chev) chev.style.opacity=1; }
+    /* released near the end: glide the last stretch slowly to the end (~1s, decelerating), lock, then switch */
+    function complete(){ coin.style.transition="transform 1s cubic-bezier(.3,.85,.3,1)"; calcMax(); setX(max);
+      if(chev) chev.style.opacity=0;
+      setTimeout(function(){ coin.classList.add("arrived"); }, 1000);   /* lock at the end */
+      setTimeout(enterHome, 1350); }                                    /* then switch */
+    function autoGlide(){ coin.style.transition="transform 1.05s cubic-bezier(.3,.85,.3,1)"; calcMax(); setX(max);
+      if(chev) chev.style.opacity=0;
+      setTimeout(function(){ coin.classList.add("arrived"); }, 1050);
+      setTimeout(enterHome, 1420); }
+    coin.addEventListener("pointerdown", function(e){ coin.classList.remove("hint"); calcMax(); dragging=true; moved=false; sx=e.clientX; cx=x; coin.classList.add("drag"); try{coin.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); });
+    window.addEventListener("pointermove", function(e){ if(!dragging) return; if(Math.abs(e.clientX-sx)>4) moved=true; coin.style.transition="none"; setX(cx+(e.clientX-sx)); });
+    window.addEventListener("pointerup", function(){ if(!dragging) return; dragging=false; coin.classList.remove("drag");
+      if(!moved){ autoGlide(); return; }
+      if(max && x>max*0.8){ complete(); } else { snapBack(); } });
+    coin.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "||e.key==="ArrowRight"){ e.preventDefault(); coin.classList.remove("hint"); autoGlide(); } });
+    /* reset the coin to its start so the intro can be re-entered after returning via the logo */
+    resetCoin=function(){ coin.classList.remove("arrived","drag"); coin.classList.add("hint"); coin.style.transition="transform .45s var(--ease-expo)"; setX(0); if(ghost) ghost.style.opacity=.4; if(chev) chev.style.opacity=1; };
+  }
+
+  var shell=document.getElementById("shell"), shT=document.getElementById("shTitle"), shE=document.getElementById("shEyebrow"), shN=document.getElementById("shNote");
+  /* built inner screens load as an iframe overlay; others fall back to the ScreenShell placeholder */
+  var BUILT={
+    place:"screens/place-location.html",
+    grounds:"screens/masterplan.html",
+    tower:"screens/tower.html",
+    residences:"screens/floorplans.html",
+    service:"screens/service.html",
+    overview:"screens/overview.html",
+    gallery:"screens/gallery.html",
+    amenities:"screens/amenities.html",
+    lanterns:"screens/lanterns.html"
+  };
+  var sOv=document.getElementById("screenOverlay"), sFr=document.getElementById("screenFrame");
+  var homeEl=document.getElementById("home");
+  function openBuilt(key){ var _u=BUILT[key];
+    if(location.hostname==="localhost"||location.hostname==="127.0.0.1"){ _u+=(_u.indexOf("?")<0?"?":"&")+"v="+Date.now(); }  /* dev only: force the freshest screen, never a stale iframe cache */
+    sFr.src=_u; sOv.classList.add("show"); sOv.setAttribute("aria-hidden","false");
+    if(homeEl) homeEl.style.visibility="hidden";   /* pause home rendering behind the opaque overlay → frees iPad for the heavy screen (map etc.) */
+    try{localStorage.setItem("eo.last",key);}catch(e){} }
+  function closeBuilt(){ sOv.classList.remove("show"); sOv.setAttribute("aria-hidden","true"); sFr.src="about:blank";
+    if(homeEl) homeEl.style.visibility="";   /* restore home */ }
+  window.addEventListener("message", function(e){ if(e&&e.data==="eo-screen-close") closeBuilt(); });
+  /* MAP WARM-UP (client: "location takes time to load"): ~4s after home settles, quietly fetch the
+     map's initial tile grid (carto voyager @ the map's own center/zoom, plain + @2x) so the HTTP
+     cache is hot before The Address is ever opened. Resources only — NO second Leaflet instance
+     (a live background map froze iPads before) and no analytics noise. */
+  (function(){
+    function warmTiles(){
+      try{
+        var lat=13.0205, lng=77.5880, z=14, n=Math.pow(2,z);
+        var xc=Math.floor((lng+180)/360*n);
+        var lr=lat*Math.PI/180, yc=Math.floor((1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n);
+        var subs=['a','b','c'], i=0;
+        for(var dx=-3; dx<=3; dx++) for(var dy=-2; dy<=2; dy++){
+          ['','@2x'].forEach(function(r){
+            var u='https://'+subs[(i++)%3]+'.basemaps.cartocdn.com/rastertiles/voyager/'+z+'/'+(xc+dx)+'/'+(yc+dy)+r+'.png';
+            fetch(u,{mode:'no-cors',cache:'force-cache'}).catch(function(){});
+          });
+        }
+      }catch(_){}
+    }
+    var warmed=false;
+    function arm(){ if(warmed) return; warmed=true; setTimeout(warmTiles, 4000); }
+    if(document.body.classList.contains('home-in')) arm();
+    else new MutationObserver(function(m,o){ if(document.body.classList.contains('home-in')){ o.disconnect(); arm(); } })
+      .observe(document.body,{attributes:true,attributeFilter:['class']});
+  })();
+  /* floating 360° view: open the external tour full-screen, back button closes it */
+  (function(){ var b=document.getElementById("btn360"), v=document.getElementById("view360"), f=document.getElementById("frame360"), bk=document.getElementById("back360");
+    if(!b||!v||!f) return;
+    b.addEventListener("click", function(){ try{window.RDA&&RDA.track('360_view','home');}catch(_){} f.src="https://www.turiya.co/360/EmbassyOne/"; v.classList.add("show"); v.setAttribute("aria-hidden","false"); });
+    if(bk) bk.addEventListener("click", function(){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },420); });
+  })();
+  /* first-launch download gate — pull every asset to the device, then reveal the app (so it runs seamlessly offline) */
+  (function(){ var KEY="eo.ready", gate=document.getElementById("dlGate"); if(!gate) return;
+    var ready=false; try{ ready=localStorage.getItem(KEY)==="1"; }catch(e){}
+    if(ready) return;                                              // already downloaded once → skip
+    var go=document.getElementById("dlGo"), bar=document.getElementById("dlBar"), prog=document.getElementById("dlProg"), status=document.getElementById("dlStatus");
+    var now=document.getElementById("dlNow"), fileEl=document.getElementById("dlFile"), countEl=document.getElementById("dlCount"), listEl=document.getElementById("dlList");
+    /* pretty short name: strip leading "./" and "assets/" and any query/host, keep the meaningful tail */
+    function shortName(u){ var s=String(u).replace(/^\.\//,"");
+      if(/^https?:\/\//i.test(s)){ try{ var p=s.split("?")[0].split("/"); return p[p.length-1]||s; }catch(e){ return s; } }
+      s=s.split("?")[0].replace(/^assets\//,""); return s; }
+    gate.classList.add("show"); gate.setAttribute("aria-hidden","false");
+    go.addEventListener("click", function(){
+      go.classList.add("busy"); prog.classList.add("on"); status.textContent="Preparing…";
+      now.classList.add("on"); countEl.classList.add("on"); listEl.classList.add("on");
+      var EXTRA=["./assets/concierge/key.webp","./assets/concierge/emblem.webp","./assets/concierge/threshold-bg.webp",
+        "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css","https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+        "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Jost:wght@300;400;500&display=swap"];
+      fetch("assets-manifest.json",{cache:"no-store"}).then(function(r){return r.json();}).then(function(m){
+        var list=(m.assets||[]).concat(EXTRA), total=list.length||1, done=0, i=0, CONC=6, MAXROWS=40;
+        function update(){ var pct=Math.round(done/total*92); bar.style.width=pct+"%"; status.textContent="Downloading the experience… "+pct+"%";
+          countEl.textContent=done+" / "+total+" assets · "+pct+"%"; }
+        function logRow(name){ var row=document.createElement("div"); row.className="dlrow";
+          row.innerHTML='<span class="dot"></span><span class="nm"></span>'; row.lastChild.textContent=name;
+          listEl.insertBefore(row, listEl.firstChild);                 // newest at top
+          while(listEl.childNodes.length>MAXROWS) listEl.removeChild(listEl.lastChild); }   // cap the DOM to stay smooth
+        function next(){ if(i>=list.length) return Promise.resolve(); var u=list[i++]; var nm=shortName(u);
+          fileEl.textContent=nm;                                        // live "Downloading: <file>"
+          return fetch(u,{cache:"reload"})["catch"](function(){}).then(function(){ done++; update(); logRow(nm); return next(); }); }
+        var ws=[]; for(var w=0;w<CONC;w++) ws.push(next()); return Promise.all(ws);   // wait for EVERY screen + asset to finish downloading
+      }).then(function(){ status.textContent="Preparing fonts…"; bar.style.width="97%"; fileEl.textContent="fonts";
+        return (document.fonts&&document.fonts.ready)?document.fonts.ready:Promise.resolve();   // and hold until the fonts are actually ready
+      }).then(function(){ bar.style.width="100%"; status.textContent="Ready"; now.classList.remove("on"); try{ localStorage.setItem(KEY,"1"); }catch(e){}
+        setTimeout(function(){ gate.classList.remove("show"); gate.setAttribute("aria-hidden","true"); setTimeout(function(){ gate.style.display="none"; },700); }, 650);   // only NOW does the app start
+      })["catch"](function(){ status.textContent="Connection issue — tap to retry"; go.classList.remove("busy"); });
+    });
+  })();
+  function openScreen(key){ if(BUILT[key]){ openBuilt(key); return; } var s=SCREENS[key]; if(!s) return;
+    shT.textContent=s.t; shE.textContent=s.e; shN.textContent=s.n;
+    shell.classList.add("show"); requestAnimationFrame(function(){ requestAnimationFrame(function(){ shell.classList.add("vis"); }); });
+    try{ localStorage.setItem("eo.last",key); }catch(e){} }
+  function closeScreen(){ shell.classList.remove("vis"); setTimeout(function(){ shell.classList.remove("show"); },620); }
+  document.querySelectorAll(".card").forEach(function(b){
+    b.addEventListener("click", function(){
+      if(b.classList.contains("flare")) return;
+      b.classList.add("flare");
+      setTimeout(function(){ openScreen(b.dataset.screen); }, 560);
+      setTimeout(function(){ b.classList.remove("flare"); }, 1300);
+    });
+  });
+  document.querySelectorAll(".minibtn,.lantern-btn").forEach(function(b){
+    b.addEventListener("click", function(){ openScreen(b.dataset.screen); });
+  });
+  document.getElementById("shBack").addEventListener("click", closeScreen);
+  /* the corner Embassy logo returns to the intro (point 1) */
+  (function(){ var cl=document.querySelector(".corner-logo"); if(cl) cl.addEventListener("click", function(){ location.href = location.pathname; }); })();
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape" && shell.classList.contains("show")) closeScreen(); });
+  // deep-link: ?open=grounds opens that screen directly (dev / kiosk shortcut)
+  (function(){ try{ var k=new URLSearchParams(location.search).get("open"); if(k && BUILT[k]) setTimeout(function(){ openScreen(k); }, 300); }catch(e){} })();
+
+  /* ---------- fireflies: REMOVED for the beige theme ---------- */
+  (function fireflies(){
+    return;   /* fireflies removed — no glow layer spawned on the beige home */
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var N=7, flies=[], W=innerWidth, H=innerHeight;
+    function R(a,b){ return a+Math.random()*(b-a); }
+    addEventListener("resize", function(){ W=innerWidth; H=innerHeight; }, {passive:true});
+    function cards(){ return [].slice.call(document.querySelectorAll(".card")); }
+    for(var i=0;i<N;i++){
+      var el=document.createElement("div"); el.className="firefly";
+      el.innerHTML='<span class="ff-glow"></span>';
+      el.style.setProperty("--s", R(9,16).toFixed(1)+"px");
+      el.style.setProperty("--fl", R(2.4,4.4).toFixed(2)+"s");
+      el.style.setProperty("--fd", (-R(0,4)).toFixed(2)+"s");
+      document.body.appendChild(el);
+      flies.push({el:el,x:R(0,W),y:R(0,H),tx:R(0,W),ty:R(0,H),v:R(.008,.016),ph:R(0,6.28),state:"fly",until:0,cool:0,onCard:false});
+    }
+    function retarget(f,now){
+      var cs=cards();
+      if(cs.length && now>f.cool && Math.random()<0.42){
+        var r=cs[Math.floor(Math.random()*cs.length)].getBoundingClientRect();
+        f.tx=r.left+R(r.width*0.25,r.width*0.75); f.ty=r.top+R(-4,r.height*0.18); f.onCard=true;
+      } else { f.tx=R(W*0.06,W*0.94); f.ty=R(H*0.08,H*0.82); f.onCard=false; }
+    }
+    flies.forEach(function(f){ retarget(f,0); });
+    function loop(now){
+      for(var i=0;i<flies.length;i++){ var f=flies[i];
+        if(f.state==="rest"){ if(now>=f.until){ f.state="fly"; f.cool=now+4000; retarget(f,now); } }
+        else if(f.state==="hover"){
+          f.x+=Math.sin(now*0.002+f.ph)*0.65; f.y+=Math.cos(now*0.0023+f.ph)*0.65;
+          if(now>=f.until){ f.state="fly"; retarget(f,now); } }
+        else { var dx=f.tx-f.x, dy=f.ty-f.y, d=Math.sqrt(dx*dx+dy*dy);
+          f.x+=dx*f.v; f.y+=dy*f.v;
+          f.x+=Math.sin(now*0.0011+f.ph)*0.6 + Math.sin(now*0.0027+f.ph*2)*0.32;
+          f.y+=Math.cos(now*0.0014+f.ph)*0.6 + Math.cos(now*0.0031+f.ph*2)*0.32;
+          if(d<8){ if(f.onCard){ f.state="rest"; f.until=now+R(3000,4000); }
+            else if(Math.random()<0.5){ f.state="hover"; f.until=now+R(500,1700); }
+            else { retarget(f,now); } } }
+        f.el.style.transform="translate3d("+f.x.toFixed(1)+"px,"+f.y.toFixed(1)+"px,0)";
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  /* tower window-lights: sparse warm glints over the facade, flickering on/off */
+  (function towerLights(){
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var c=document.getElementById("towerLights"); if(!c) return;
+    function R(a,b){ return a+Math.random()*(b-a); }
+    var cols=[14,40,66,86];
+    for(var r=8;r<92;r+=5.5){
+      cols.forEach(function(cx){
+        if(Math.random()<0.4){
+          var w=document.createElement("span"); w.className="win";
+          w.style.left=(cx+R(-3,3)).toFixed(1)+"%"; w.style.top=(r+R(-1,1)).toFixed(1)+"%";
+          w.style.setProperty("--o", R(.38,.78).toFixed(2));
+          w.style.setProperty("--wd", R(4,9).toFixed(1)+"s");
+          w.style.setProperty("--wdl", (-R(0,8)).toFixed(1)+"s");
+          c.appendChild(w);
+        }
+      });
+    }
+  })();
+
+  /* falling-leaf / petal layer REMOVED at client request (never wanted back) */
+  (function petals(){
+    return;
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var c=document.getElementById("petals"); if(!c) return;
+    function R(a,b){ return a+Math.random()*(b-a); }
+    function svg(col){
+      return '<svg viewBox="0 0 20 28"><path d="M10 0 C 17 8 17 20 10 28 C 3 20 3 8 10 0 Z" fill="'+col+'"/>'+
+             '<path d="M10 4 L10 24" stroke="rgba(255,255,255,.4)" stroke-width="1" fill="none"/></svg>';
+    }
+    // four muted seasons of the Five Lanterns: winter rose (Tabebuia) / spring ivory
+    // (Alstonia) / summer gold (Cassia) / autumn terracotta (Erythrina, scarlet pulled down).
+    // Pool is weighted toward the soft parchment tones; terracotta is rarest so it stays quiet.
+    var SEASONS=["#efe8da","#e6dcc8","#cdbfa6","#c9a84c","#d8cdba","#efe8da","#e6dcc8","#cdbfa6"], N=12;
+    for(var i=0;i<N;i++){
+      var col = SEASONS[Math.floor(Math.random()*SEASONS.length)];
+      var dur=R(9,19), pe=document.createElement("div"); pe.className="petal";
+      pe.style.setProperty("--x", R(0,100).toFixed(1)+"vw");
+      pe.style.setProperty("--dur", dur.toFixed(1)+"s");
+      pe.style.setProperty("--delay", (-R(0,dur)).toFixed(1)+"s");
+      pe.style.setProperty("--drift", R(3,13).toFixed(1)+"vw");
+      pe.style.setProperty("--sway", R(1,3.5).toFixed(1)+"vw");
+      pe.style.setProperty("--swd", R(3,6).toFixed(1)+"s");
+      pe.style.setProperty("--tud", R(4,9).toFixed(1)+"s");
+      pe.style.setProperty("--size", R(11,22).toFixed(0)+"px");
+      pe.style.setProperty("--op", R(.28,.55).toFixed(2));
+      pe.style.setProperty("--bl", R(0,0.8).toFixed(2)+"px");
+      pe.innerHTML='<span class="sway"><span class="tum">'+svg(col)+'</span></span>';
+      c.appendChild(pe);
+    }
+  })();
+
+  /* tower lines: random shine timing per line (feathered glow travels each line) */
+  (function towerLineShine(){
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var sh=document.querySelectorAll("#towerLines .tl-shine .ln");
+    var base=document.querySelectorAll("#towerLines .ln");
+    base.forEach(function(el){ el.setAttribute("pathLength","100"); });
+    sh.forEach(function(el){
+      el.style.setProperty("--sd",(3.4+Math.random()*4.6).toFixed(2)+"s");
+      el.style.setProperty("--sdl",(-Math.random()*7).toFixed(2)+"s");
+    });
+  })();
+
+  /* hub tiles: specular shine loop REMOVED for the beige theme (leather grain is static) */
+  (function cardShineLoop(){
+    return;   /* shine removed — cards carry a static leather grain instead */
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var cards=[].slice.call(document.querySelectorAll("#home .cardrow .card"));
+    if(!cards.length) return;
+    function fire(el){
+      el.classList.remove("shine"); void el.offsetWidth;   /* reflow so it can replay */
+      el.classList.add("shine");
+      setTimeout(function(){ el.classList.remove("shine"); }, 2500);
+    }
+    function round(){
+      var n=1+Math.floor(Math.random()*3);                 /* 1, 2 or 3 tiles together */
+      var pool=cards.slice();
+      for(var i=0;i<n && pool.length;i++){
+        fire(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+      }
+      setTimeout(round, 2400+Math.random()*2800);           /* random gap 2.4–5.2s */
+    }
+    setTimeout(round, 1400);
+  })();
+
+  window.__recording=false; window.__seek=function(){}; window.__ready=true;
+})();
+</script>
+  <script>
+  /* Centre the TOWER card on the home: shift the 5 cards + lantern (and the mini row above them)
+     right so the middle card sits at the viewport centre. Measured, so it holds across viewports.
+     Skipped in portrait where the layout reflows/centres on its own. */
+  (function(){
+    /* Mini row (Overview/Gallery) stays put. Shift ONLY the 5 cards + lantern so the TOWER card
+       aligns under the mini-row centre (the midpoint between Overview and Gallery). */
+    function alignTower(){
+      var row=document.querySelector('.cardrow'), tower=document.querySelector('.card.tower'), mini=document.querySelector('.minirow');
+      if(!row||!tower||!mini) return;
+      row.style.transform='';                                          // never move the mini row
+      if(window.innerWidth <= window.innerHeight*1.15) return;        // portrait/tall → leave as-is
+      var m=mini.getBoundingClientRect(), t=tower.getBoundingClientRect();
+      var delta=Math.round((m.left+m.width/2)-(t.left+t.width/2));
+      if(Math.abs(delta)<2) return;
+      row.style.transform='translateX('+delta+'px)';
+    }
+    window.addEventListener('load', function(){ alignTower(); setTimeout(alignTower,450); setTimeout(alignTower,1300); });
+    window.addEventListener('resize', alignTower);
+    if(document.readyState!=='loading') setTimeout(alignTower,300);
+  })();
+  </script>
+  <script src="./assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

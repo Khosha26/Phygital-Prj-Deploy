@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Tower · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE TOWER — three-stage flow (single file, animated stage transitions)
+  ──────────────────────────────────────────────────────────────────────
+  STAGE 1  tower : full-bleed building scene (cream keyed to transparent over
+                   parchment) + "A vertical manor." + Four Principles; a glowing
+                   "Floor N" pointer line across the building; a vertical floor
+                   slider (scroll/swipe → line follows centred floor; tap → enter).
+  STAGE 2  floor : the chosen floor's two residences (South/North) as cards → unit.
+  STAGE 3  unit  : the unit's hi-res plan (pan/zoom) + specs + "Book a Private Viewing".
+  Floor→config mapping from the North-Tower Area Statement. No 13th floor.
+  Assets: ../assets/renders/exterior/tower-scene.webp · ../assets/floorplans/hi/*.webp
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  :root{
+    /* deck palette (redesign brief) */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#efe8da; --bone-2:#e6dcc8; --paper:#faf7f0;
+    --taupe:#6e5c58; --champ:#c9a84c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#121621; --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to deck palette (no gold) */
+    --card:#faf7f0; --muted:#7a7264; --faint:#8a8f99; --line:rgba(18,22,33,.12);
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a; --on-navy:#ece8e0; --on-navy-dim:#9aa1ad;
+    --gold:#c9a84c; --gold-d:#8a7a66; --gold-l:#c9a84c; --gold-lt:#c9a84c; --brass:#c9a84c; --parch:#1a2030;
+    --ease:cubic-bezier(.23,1,.32,1); --expo:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; background:#efe8da; color:var(--ink); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  /* faint warm paper-wash (not flat beige) so the elevation sits on a sheet of paper */
+  .bg{position:fixed; inset:0; z-index:0; background:radial-gradient(122% 96% at 50% 8%, #faf7f0 0%, #efe8da 46%, #e5dac4 100%), #efe8da}
+  /* one gold leaf line-art whisper, low corner (clears the lead + keypad) */
+  .leaf-whisper{position:fixed; left:-6vw; bottom:-9vh; z-index:1; width:auto; height:min(34vh,340px);
+    pointer-events:none; mix-blend-mode:multiply; opacity:.08; transform:rotate(-6deg);
+    filter:sepia(.82) saturate(1.5) hue-rotate(-8deg) brightness(1.02); -webkit-user-drag:none; user-select:none}
+  @media (max-aspect-ratio:1/1){ .leaf-whisper{height:min(22vh,220px); opacity:.06} }
+
+  /* top bar */
+  .top{position:fixed; top:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    padding:clamp(16px,2.2vh,28px) clamp(22px,3vw,58px) 0; gap:12px}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:rgba(18,22,33,.5); border:1px solid var(--line-dark); color:var(--on-dark); font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.32em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px; pointer-events:auto;
+    box-shadow:0 8px 18px -8px rgba(0,0,0,.4);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px;display:block; stroke:var(--champ)}
+  .eyebrow{justify-self:center; font-size:clamp(9px,1.3vh,15px); letter-spacing:.42em; text-transform:uppercase; color:var(--champ); white-space:nowrap; transition:opacity .3s}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.1vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--on-light-dim)}
+
+  /* stage host */
+  .stage{position:fixed; inset:0; z-index:10; opacity:0; pointer-events:none; transition:opacity .5s var(--ease), transform .55s var(--expo); transform:translateY(14px)}
+  .stage.active{opacity:1; pointer-events:auto; transform:none}
+  .pad{position:absolute; inset:0; padding:clamp(74px,10vh,112px) clamp(22px,3vw,58px) clamp(18px,2.4vh,32px); display:flex}
+
+  /* ── STAGE 1 ──────────────────────────────────────────────────── */
+  /* full-bleed building scene */
+  /* hand-drawn elevation: navy ink on beige paper, melted into the surface via multiply.
+     Confined to the central band so it never overlaps the lead (left) or the keypad (right). */
+  /* multiply lives on .scene (the img alone is isolated by .scene's stacking context and would not blend) */
+  /* HERO elevation: a wide central band so the tall sketch fills the full height (height-constrained,
+     no letterbox) and reads as the focus of the screen — the lead sits left, the keypad sits right,
+     the drawing between them. */
+  .scene{position:fixed; top:0; bottom:0; left:13%; right:8%; z-index:5; pointer-events:none; overflow:hidden; mix-blend-mode:multiply;
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%);
+            mask-image:linear-gradient(90deg, transparent 0, #000 14%, #000 86%, transparent 100%)}
+  /* wrapper carries the zoom-to-floor transform so the img AND the floor band travel together (stay glued) */
+  .scenewrap{position:absolute; inset:0; transform-origin:50% 50%; will-change:transform; transform:none;
+    transition:transform .9s cubic-bezier(.16,1,.3,1)}
+  .scene img{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; display:block;
+    /* paper is now white at asset level → multiply lets the page's beige gradient show through untouched (seamless);
+       a whisper of contrast/warmth keeps the golden linework crisp */
+    filter:contrast(1.04) saturate(1.06)}
+  .s1{position:relative; width:100%; height:100%; z-index:12}
+
+  /* left text */
+  .s1 .lead{position:absolute; left:clamp(28px,4vw,82px); top:50%; transform:translateY(-50%); width:min(31%,430px); z-index:13}
+  .s1 .lead::before{display:none}   /* navy text on beige — no tint needed (paper card re-enabled on portrait for legibility) */
+  .s1 .lead h1{font-family:"Cormorant Garamond",serif; font-weight:600; line-height:1.04; color:var(--ink); font-size:clamp(30px,5.4vh,62px); text-transform:uppercase; letter-spacing:.1em}
+  .s1 .lead .rule{width:64px; height:2px; background:linear-gradient(90deg,var(--champ),transparent); margin:clamp(12px,2vh,22px) 0}
+  .s1 .lead p{font-weight:300; color:var(--on-light-dim); line-height:1.65; font-size:clamp(12px,1.55vh,16px); max-width:34ch}
+  .principles{margin-top:clamp(16px,2.6vh,32px); display:flex; flex-direction:column; gap:clamp(10px,1.5vh,18px)}
+  .principle{display:flex; gap:13px; align-items:flex-start}
+  .principle .pi{flex:0 0 auto; width:22px; height:22px; margin-top:1px} .principle .pi svg{width:100%;height:100%;stroke:var(--champ);fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+  .principle .pt b{display:block; font-family:"Jost"; font-weight:500; font-size:clamp(10px,1.2vh,13px); letter-spacing:.2em; text-transform:uppercase; color:var(--champ)}
+  .principle .pt span{font-weight:300; color:var(--on-light-dim); font-size:clamp(11px,1.35vh,14px); line-height:1.4}
+
+  /* travelling floor line — lives INSIDE .scenewrap so it rides the zoom transform and stays glued to its floor */
+  .floorline{position:absolute; left:0; right:0; top:40%; z-index:14; pointer-events:none; height:0;
+    transition:top .9s cubic-bezier(.45,.05,.2,1)}
+  /* selected-floor marker — a STATIC dark-navy band across the elevation (no shimmer, per brief) */
+  /* left-inset keeps the band clear of the lead text in BOTH states: un-zoomed it starts at the
+     tower's left flank; zoomed 1.85x (origin 50%) the start maps to ~36% of the scene — right of the copy */
+  .floorline .fl-glow{position:absolute; left:38%; right:0; top:-1.25px; height:2px; border-radius:2px;
+    background:linear-gradient(90deg, rgba(18,22,33,0) 0%, rgba(18,22,33,.62) 20%, rgba(18,22,33,.9) 50%, rgba(18,22,33,.62) 80%, rgba(18,22,33,0) 100%);
+    box-shadow:0 0 5px rgba(18,22,33,.28)}
+  .floorline .fl-tag{display:none}   /* keypad shows the floor */
+
+  /* ── elevator keypad (right) — dark leather + gold ── */
+  .keypad{position:absolute; right:clamp(48px,5vw,120px); top:50%; transform:translateY(-50%); z-index:16; width:clamp(196px,17vw,248px);
+    height:min(72vh,560px); display:flex; flex-direction:column; gap:clamp(6px,.9vh,10px); padding:clamp(11px,1.7vh,18px) clamp(11px,1.2vw,16px) clamp(10px,1.4vh,15px);
+    background:#121621; border:1px solid rgba(201,168,76,.35); border-radius:22px;
+    box-shadow:0 40px 72px -28px rgba(0,0,0,.6), inset 0 1px 0 rgba(236,232,224,.08)}
+  .keypad::before{content:""; position:absolute; inset:0; border-radius:22px; pointer-events:none; opacity:.6;
+    background:radial-gradient(130% 80% at 50% 0%, rgba(236,232,224,.06), transparent 55%)}
+  .kconfig{flex:0 0 auto; text-align:center; font-size:clamp(7.5px,.95vh,10.5px); letter-spacing:.32em; text-transform:uppercase; color:var(--champ);
+    padding-bottom:clamp(6px,1vh,11px); border-bottom:1px solid var(--line-dark); transition:opacity .3s}
+  .kconfig.swap{opacity:0}
+  /* digital floor display (lift indicator) */
+  .kdisplay{position:relative; flex:0 0 auto; aspect-ratio:1.85/1; max-height:19vh; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:#161d31; border:1px solid var(--line-dark);
+    box-shadow:inset 0 2px 16px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.3), 0 4px 14px -6px rgba(0,0,0,.5)}
+  .kdisplay::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:.4; background:repeating-linear-gradient(46deg, rgba(255,255,255,.015) 0 2px, transparent 2px 5px)}
+  .kdisplay::after{content:""; position:absolute; inset:0; background:radial-gradient(80% 60% at 50% 12%, rgba(236,232,224,.08), transparent 60%); pointer-events:none}
+  .knum{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(34px,6.2vh,58px); line-height:.9; letter-spacing:.02em; font-variant-numeric:tabular-nums;
+    background:linear-gradient(180deg,#efe6d6 0%,#cebd9f 55%,#b3a184 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;
+    filter:drop-shadow(0 0 12px rgba(201,168,76,.35)); transition:transform .09s var(--expo), opacity .09s}
+  .knum.tick{transform:translateY(-22%) scale(.94); opacity:.25}
+  .kfloor{font-family:"Jost"; font-weight:400; font-size:clamp(6.5px,.85vh,9px); letter-spacing:.4em; text-transform:uppercase; color:var(--on-dark-dim); margin-top:2px}
+  /* floor grid (scrollable window) */
+  .kgrid{flex:1 1 auto; min-height:0; overflow-y:auto; display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:min-content; gap:clamp(5px,.8vh,8px); padding:2px;
+    scrollbar-width:thin; scrollbar-color:rgba(201,168,76,.4) transparent}
+  .kgrid::-webkit-scrollbar{width:4px}.kgrid::-webkit-scrollbar-thumb{background:rgba(201,168,76,.4);border-radius:3px}
+  .kbtn{aspect-ratio:1.35/1; display:grid; place-items:center; cursor:pointer; border:1px solid rgba(201,168,76,.28); border-radius:12px;
+    background:#121621; color:#faf7f0;
+    font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(12px,1.7vh,17px); font-variant-numeric:tabular-nums;
+    box-shadow:inset 0 1px 0 rgba(236,232,224,.06); transition:transform .16s var(--ease-out), background .2s, box-shadow .25s, color .25s, border-color .25s}
+  @media(hover:hover){ .kbtn:hover{transform:translateY(-2px); border-color:rgba(201,168,76,.45); color:#faf7f0; background:#121621} }
+  .kbtn:active{transform:scale(.97)}
+  .kbtn.sel{border-color:rgba(201,168,76,.6); color:#faf7f0; box-shadow:0 0 0 1px rgba(201,168,76,.4), inset 0 0 14px rgba(201,168,76,.16);
+    background:#121621}
+  .kenter{margin-top:clamp(2px,.5vh,5px); cursor:pointer; border:1px solid rgba(201,168,76,.35); border-radius:14px; padding:clamp(10px,1.5vh,14px);
+    background:#121621; color:#faf7f0; font-family:"Jost"; font-weight:500; font-size:clamp(9.5px,1.2vh,13px);
+    letter-spacing:.34em; text-transform:uppercase; box-shadow:inset 0 1px 0 rgba(236,232,224,.1); transition:transform .16s var(--ease-out), background .2s, box-shadow .3s, border-color .3s}
+  @media(hover:hover){ .kenter:hover{background:#121621; border-color:rgba(201,168,76,.55)} } .kenter:active{transform:scale(.97)}
+  .khint{display:flex; align-items:center; justify-content:center; gap:10px; color:var(--on-dark-dim); font-size:9px; letter-spacing:.2em; text-transform:uppercase; text-align:left; line-height:1.4}
+  .khint .khand svg{width:26px;height:26px;stroke:var(--on-dark-dim);fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── STAGE 2 ──────────────────────────────────────────────────── */
+  .s2{flex-direction:column; width:100%; height:100%; align-items:center; justify-content:center; display:flex; gap:clamp(8px,1.4vh,18px)}
+  .s2 .fhd{text-align:center; flex:0 0 auto}
+  .s2 .fhd .fk{font-size:clamp(9px,1.3vh,14px); letter-spacing:.46em; text-indent:.46em; text-transform:uppercase; color:var(--champ)}
+  .s2 .fhd h2{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(40px,8vh,92px); line-height:.96; color:var(--ink); margin-top:6px}
+  .ldiv{display:flex; align-items:center; justify-content:center; gap:12px}
+  .ldiv i{height:1px; width:clamp(34px,4.4vw,78px); background:linear-gradient(90deg,transparent,var(--champ))}
+  .ldiv i:last-child{background:linear-gradient(90deg,var(--champ),transparent)}
+  .lf{fill:none; stroke:var(--champ); stroke-width:1.2; stroke-linecap:round; stroke-linejoin:round}
+  .ldiv .lf{width:15px;height:15px}
+  .s2 .fhd .ldiv{margin:clamp(7px,1.2vh,13px) 0}
+  .s2 .fhd p{font-weight:300; color:var(--on-light-dim); font-size:clamp(12px,1.55vh,16px); line-height:1.55; margin-top:clamp(6px,1vh,12px)}
+  .units{display:flex; align-items:stretch; gap:0; width:100%; max-width:1520px; justify-content:center; flex:1 1 auto; min-height:0}
+  .unit{min-height:0}
+  .udiv{flex:0 0 auto; width:1px; align-self:stretch; margin:clamp(22px,4.5vh,64px) clamp(16px,2vw,38px); position:relative; background:linear-gradient(180deg,transparent,var(--line-light) 28%,var(--line-light) 72%,transparent)}
+  .udiv .lf{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:26px;height:26px; background:var(--ink); padding:5px; border-radius:50%; box-sizing:border-box}
+  .unit{flex:1 1 0; max-width:700px; display:flex; flex-direction:column; cursor:pointer; position:relative; background:#faf7f0; border:1px solid rgba(18,22,33,.12);
+    border-radius:20px; overflow:hidden; padding:clamp(14px,2vh,24px) clamp(16px,1.6vw,28px) clamp(14px,1.9vh,22px); box-shadow:0 26px 56px -26px rgba(0,0,0,.55);
+    transition:transform .16s var(--ease-out), box-shadow .35s, border-color .3s; animation:cardIn .5s var(--expo) both}
+  @keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @media(hover:hover){ .unit:hover{transform:translateY(-5px); border-color:rgba(201,168,76,.42); box-shadow:0 34px 64px -26px rgba(0,0,0,.6)} }
+  .unit:active{transform:scale(.985)}
+  .unit .uwing{align-self:flex-start; z-index:3; font-size:9px; letter-spacing:.26em; text-transform:uppercase; color:#faf7f0; background:#121621; border:1px solid rgba(201,168,76,.22); border-radius:999px; padding:6px 15px}
+  .unit .compass{margin-top:10px; display:inline-flex; flex-direction:column; align-items:center; gap:3px; color:var(--taupe); z-index:3}
+  .unit .compass b{font-size:8px; letter-spacing:.1em; font-weight:500} .unit .compass span{width:13px;height:13px;border:1px solid var(--taupe);border-radius:50%}
+  .unit .planview{flex:1 1 auto; min-height:0; position:relative; overflow:hidden; cursor:grab; margin:clamp(6px,1.2vh,12px) 0}
+  .unit .planimg{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; transform-origin:center; will-change:transform}
+  .unit .planimg.dragging{cursor:grabbing}
+  .unit .zmini{position:absolute; top:0; right:0; z-index:4; display:flex; flex-direction:column; gap:7px}
+  .unit .zmini button{width:clamp(30px,3.6vh,38px);height:clamp(30px,3.6vh,38px); border-radius:50%; cursor:pointer; border:1px solid rgba(201,168,76,.35); background:#121621; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:#faf7f0; display:grid; place-items:center; box-shadow:0 4px 12px -6px rgba(18,22,33,.28); transition:background .2s,color .2s,border-color .25s,transform .16s var(--ease-out)}
+  @media(hover:hover){ .unit .zmini button:hover{background:#121621;border-color:rgba(201,168,76,.6)} } .unit .zmini button:active{transform:scale(.97)} .unit .zmini button:disabled{opacity:.4}
+  .unit .zmini svg{width:44%;height:44%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .unit .ldiv{margin:clamp(6px,1.2vh,12px) 0 clamp(10px,1.6vh,16px)}
+  .unit .ldiv .lf{stroke:var(--taupe)}
+  .unit .ufoot{display:flex; align-items:flex-end; justify-content:space-between; gap:14px}
+  .unit .un{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(19px,2.7vh,32px); color:var(--ink); line-height:1.05}
+  .unit .un small{display:block; font-family:"Jost"; font-weight:400; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--taupe); margin-top:6px}
+  .unit .usq{text-align:center; font-size:clamp(10px,1.2vh,13px); letter-spacing:.06em; color:var(--taupe); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .unit .usq b{display:block; font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(20px,2.8vh,34px); color:var(--ink)}
+  .unit .ugo{flex:0 0 auto; width:clamp(44px,5.4vh,58px);height:clamp(44px,5.4vh,58px);border-radius:50%; border:1px solid rgba(201,168,76,.35); color:#faf7f0; background:#121621; display:grid; place-items:center; transition:background .25s,color .25s,border-color .25s}
+  @media(hover:hover){ .unit:hover .ugo{background:#121621; border-color:rgba(201,168,76,.6)} } .unit .ugo svg{width:36%;height:36%;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .s2 .botmark{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--on-light-dim); font-size:9px; letter-spacing:.4em; text-transform:uppercase}
+  .s2 .botmark .lf{width:14px;height:14px}
+
+  /* ── STAGE 3 ──────────────────────────────────────────────────── */
+  .s3{width:100%; gap:clamp(20px,2.4vw,44px); display:grid; grid-template-columns:1fr clamp(290px,28vw,420px)}
+  .plancard{position:relative; display:flex; flex-direction:column; background:#faf7f0; border:1px solid rgba(18,22,33,.12); border-radius:20px; overflow:hidden; box-shadow:0 26px 56px -26px rgba(0,0,0,.55)}
+  .planview{flex:1 1 auto; min-height:0; position:relative; overflow:hidden; background:transparent; cursor:grab}
+  .planimg{position:absolute; inset:0; width:100%; height:100%; object-fit:contain; transform-origin:center; will-change:transform; padding:clamp(10px,1.6vh,22px)}
+  .planimg.dragging{cursor:grabbing}
+  .zctrl{position:absolute; top:50%; right:clamp(12px,1.2vw,22px); transform:translateY(-50%); z-index:6; display:flex; flex-direction:column; gap:clamp(8px,1.2vh,14px)}
+  .zb{width:clamp(38px,4.6vh,50px); height:clamp(38px,4.6vh,50px); border-radius:50%; cursor:pointer; border:1px solid rgba(201,168,76,.35); background:#121621; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:#faf7f0; display:grid; place-items:center; box-shadow:0 6px 16px -8px rgba(18,22,33,.28); transition:background .2s,color .2s,border-color .25s,transform .16s var(--ease-out)}
+  @media(hover:hover){ .zb:hover{background:#121621; border-color:rgba(201,168,76,.6)} } .zb:active{transform:scale(.97)} .zb:disabled{opacity:.4} .zb svg{width:44%;height:44%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  /* book button removed (reception/GRE captures leads) — content is centred in the panel */
+  .udetail{display:flex; flex-direction:column; min-height:0; justify-content:center; align-items:center; text-align:center; padding:clamp(6px,1.4vh,16px) 0}
+  .udetail .uk{font-size:clamp(9px,1.2vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--champ)}
+  .udetail h2{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(28px,4.8vh,52px); line-height:1.0; color:var(--ink); margin-top:8px}
+  .udetail .uwhisper{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; color:var(--champ); font-size:clamp(14px,1.95vh,22px); line-height:1.35; margin-top:clamp(10px,1.6vh,18px); max-width:34ch}
+  .udetail .uhome{margin-top:clamp(18px,3vh,34px); display:inline-flex; align-items:center; gap:10px; cursor:pointer;
+    min-height:44px; padding:11px 26px; border-radius:999px;
+    background:#121621; -webkit-backdrop-filter:blur(12px) saturate(1.1); backdrop-filter:blur(12px) saturate(1.1); border:1px solid rgba(201,168,76,.35); color:#faf7f0;
+    font-family:"Jost"; font-weight:500; font-size:clamp(10px,1.2vh,13px); letter-spacing:.22em; text-transform:uppercase;
+    box-shadow:0 12px 26px -12px rgba(0,0,0,.5); transition:transform .16s var(--ease-out), border-color .3s, background .2s, box-shadow .3s}
+  @media(hover:hover){ .udetail .uhome:hover{background:#121621; border-color:rgba(201,168,76,.6); box-shadow:0 16px 32px -12px rgba(0,0,0,.55)} }
+  .udetail .uhome:active{transform:scale(.97)}
+  .udetail .uhome svg{width:15px;height:15px;stroke:#faf7f0}
+  .specs{margin-top:clamp(16px,2.6vh,30px); border-top:1px solid var(--line-light); width:100%; max-width:340px; margin-left:auto; margin-right:auto}
+  .spec{display:flex; justify-content:space-between; align-items:center; gap:14px; padding:clamp(11px,1.8vh,18px) 0; border-bottom:1px solid var(--line-light)}
+  .spec .sl{font-size:clamp(10px,1.25vh,14px); letter-spacing:.16em; text-transform:uppercase; color:var(--on-light-dim)}
+  .spec .sv{font-size:clamp(13px,1.7vh,19px); color:var(--ink); font-weight:500; font-variant-numeric:tabular-nums; text-align:right; font-family:"Cormorant Garamond",serif}
+  .book{margin-top:auto; padding-top:clamp(16px,2.6vh,28px)}
+  .bookbtn{width:100%; display:inline-flex; align-items:center; justify-content:center; gap:12px; cursor:pointer; background:rgba(236,232,224,.08); -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1); color:var(--on-dark); border:1px solid var(--line-dark); border-radius:15px; padding:clamp(15px,2.2vh,22px); font-family:"Jost"; font-weight:500; font-size:clamp(11px,1.4vh,15px); letter-spacing:.26em; text-transform:uppercase; box-shadow:0 16px 32px -12px rgba(0,0,0,.5), inset 0 1px 0 rgba(236,232,224,.1); transition:transform .16s var(--ease-out), box-shadow .3s, background .2s, border-color .2s}
+  @media(hover:hover){ .bookbtn:hover{background:rgba(236,232,224,.14); border-color:rgba(236,232,224,.28); box-shadow:0 22px 40px -12px rgba(0,0,0,.55)} } .bookbtn:active{transform:scale(.97)} .bookbtn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .booknote{text-align:center; font-size:10px; letter-spacing:.2em; color:var(--on-dark-dim); text-transform:uppercase; margin-top:12px}
+
+  .modal{position:fixed; inset:0; z-index:80; background:rgba(10,13,20,.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; opacity:0; transition:opacity .35s}
+  .modal.open{display:flex; opacity:1}
+  .sheet{width:min(440px,92vw); background:radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%), linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52)); -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12); border:1px solid rgba(201,168,76,.22); border-radius:20px; padding:clamp(24px,3.4vh,40px); box-shadow:0 40px 90px -30px rgba(0,0,0,.6); transform:translateY(14px); transition:transform .4s var(--expo)}
+  .modal.open .sheet{transform:none}
+  .sheet .sk{font-size:10px; letter-spacing:.34em; text-transform:uppercase; color:var(--on-dark-dim)}
+  .sheet h3{font-family:"Cormorant Garamond",serif; font-weight:600; font-size:clamp(24px,3.4vh,38px); color:var(--on-dark); line-height:1.04; margin:5px 0 4px}
+  .sheet .ssub{font-weight:300; color:var(--on-dark-dim); font-size:13px; margin-bottom:18px}
+  .field{margin-bottom:13px} .field label{display:block; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--on-dark-dim); margin-bottom:6px}
+  .field input{width:100%; background:rgba(236,232,224,.06); border:1px solid rgba(201,168,76,.22); border-radius:10px; padding:12px 14px; font:inherit; font-size:14px; color:var(--on-dark)}
+  .field input:focus{outline:none; border-color:var(--on-dark-dim)} .frow2{display:flex; gap:12px} .frow2 .field{flex:1}
+  .sheet .acts{display:flex; gap:12px; margin-top:8px}
+  .sheet .acts button{flex:1; cursor:pointer; border-radius:12px; padding:13px; font-family:"Jost"; font-weight:500; font-size:12px; letter-spacing:.18em; text-transform:uppercase; transition:transform .16s var(--ease-out), background .2s, border-color .2s}
+  .sheet .acts button:active{transform:scale(.97)}
+  .sheet .cancel{background:rgba(236,232,224,.07); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border:1px solid rgba(201,168,76,.22); color:var(--on-dark-dim)} .sheet .submit{background:var(--ink); border:1px solid var(--ink); color:var(--on-dark)}
+  .done{text-align:center; padding:8px 0} .done .dchk{width:56px;height:56px;border-radius:50%;border:1.5px solid var(--line-light);display:grid;place-items:center;margin:0 auto 14px}
+  .done .dchk svg{width:40%;height:40%;stroke:var(--champ);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .done h3{font-family:"Cormorant Garamond",serif;font-weight:600;font-size:28px;color:var(--on-dark)} .done p{font-weight:300;color:var(--on-dark-dim);font-size:13px;margin-top:8px;line-height:1.6}
+
+  @media (max-aspect-ratio:1/1){
+    .s1 .lead{position:static; transform:none; width:100%}
+    .scene img{object-position:center 40%}
+    .s3{grid-template-columns:1fr; overflow-y:auto} .units{flex-direction:column; align-items:center}
+  }
+
+  /* ── PORTRAIT / TABLET-PORTRAIT: stack the manor scene + keypad into one column ── */
+  @media (max-aspect-ratio:1/1){
+    /* Stage 1 becomes a vertical, scrollable column: lead (with the scene behind) on top, keypad below */
+    .s1{flex-direction:column; height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch;
+        padding:clamp(70px,11vh,104px) clamp(18px,5vw,40px) clamp(20px,4vh,40px); display:flex; gap:clamp(18px,3vh,30px); justify-content:flex-start; align-items:stretch}
+    .s1 .lead{order:1; flex:0 0 auto; max-width:560px; margin:0 auto; width:100%}
+    /* paper card keeps the navy text legible over the faint elevation watermark */
+    .s1 .lead::before{content:""; display:block; position:absolute; inset:-22px -20px; z-index:-1; background:rgba(250,247,240,.9); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border:1px solid rgba(18,22,33,.08); border-radius:18px; box-shadow:0 24px 56px -34px rgba(0,0,0,.4)}
+    /* elevation drops to a faint full-width architectural watermark on portrait */
+    .scene{left:0; right:0; overflow:visible}
+    .scene img{opacity:.15}
+    .keypad{order:2; flex:0 0 auto; position:static; transform:none; right:auto; top:auto; width:100%; max-width:420px; height:auto; margin:0 auto}
+    .keypad .kgrid{max-height:min(46vh,420px)}
+    .floorline{display:none}                 /* the travelling line maps to the desktop tower crop; hide on portrait */
+    /* Stage 3 detail column gets real breathing room; the plan card keeps a usable height */
+    .s3{gap:clamp(16px,3vh,28px)}
+    .plancard{min-height:min(52vh,440px)}
+  }
+
+  /* ── PHONE: tighten type, ensure tappable controls, keep everything in-frame ── */
+  @media (max-width:560px){
+    .top{padding:clamp(12px,2.2vh,18px) clamp(14px,4vw,22px) 0; gap:8px}
+    .eyebrow{display:none}                    /* avoid 3-col clip; back + corner remain */
+    .corner{font-size:10px; letter-spacing:.22em}
+    .pad{padding:clamp(64px,9vh,84px) clamp(14px,4vw,22px) clamp(16px,2.4vh,24px)}
+    .s1{padding-top:clamp(64px,9vh,84px)}
+    .s1 .lead h1{font-size:clamp(34px,12vw,52px); letter-spacing:.06em}
+    .s1 .lead p{font-size:13px; max-width:none}
+    .principles{margin-top:clamp(12px,2.4vh,20px)}
+    .keypad .kbtn{aspect-ratio:1.3/1; font-size:16px; min-height:44px}    /* tappable ≥44px */
+    .kenter{min-height:48px; font-size:12px}
+    /* Stage 2 units stack (already via aspect query) — give each plan preview a real height */
+    .s2 .fhd h2{font-size:clamp(34px,11vw,56px)}
+    .units{gap:clamp(14px,2.4vh,20px)}
+    .unit{max-width:480px; width:100%}
+    .unit .planview{min-height:clamp(150px,26vh,230px)}
+    /* Stage 3 plan + detail */
+    .plancard{min-height:min(46vh,360px)}
+    .udetail{padding:clamp(10px,2vh,18px) 0}
+    .udetail h2{font-size:clamp(26px,8vw,40px)}
+    .specs{max-width:none}
+  }
+  @media (max-width:380px){
+    .keypad .kgrid{grid-template-columns:repeat(3,1fr)}
+    .s1 .lead h1{font-size:clamp(30px,11.5vw,42px)}
+  }
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+  /* v2-unify: consistent glass back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:#121621!important; border:1px solid rgba(201,168,76,.35)!important; color:#faf7f0!important; font-family:"Jost",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(10px)!important; backdrop-filter:blur(10px)!important; box-shadow:0 8px 20px -10px rgba(0,0,0,.45)!important; transition:background .3s,border-color .3s,transform .16s!important}
+  @media(hover:hover){ .back:hover{background:#121621!important; border-color:rgba(201,168,76,.6)!important; box-shadow:0 10px 24px -10px rgba(0,0,0,.5)!important} }
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:#faf7f0!important}
+
+  /* ── 360° view button (sits in the top bar's right cell) + full-screen viewer ── */
+  .nav360{justify-self:end; align-self:center; display:inline-flex; align-items:center; gap:9px; cursor:pointer; pointer-events:auto;
+    padding:10px 18px 10px 15px; border-radius:999px; border:1px solid rgba(201,168,76,.35); color:#faf7f0;
+    background:#121621; font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(9px,1.15vh,13px);
+    box-shadow:0 8px 20px -10px rgba(0,0,0,.45); transition:transform .16s var(--ease-out), background .2s, border-color .2s}
+  .nav360:active{transform:scale(.97)}
+  @media(hover:hover){ .nav360:hover{background:#121621; border-color:rgba(201,168,76,.6); transform:translateY(-1px)} }
+  .nav360 svg{width:16px; height:16px; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:90; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s var(--ease)}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:max(clamp(14px,2.4vh,26px),env(safe-area-inset-top)); left:max(clamp(14px,2.4vw,26px),env(safe-area-inset-left)); z-index:91; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:clamp(10px,1.4vh,14px) clamp(16px,1.6vw,22px); border-radius:999px; border:1px solid rgba(201,168,76,.35); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1); font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px); box-shadow:0 10px 26px -12px rgba(0,0,0,.7); transition:transform .16s var(--ease-out), background .2s}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621; border-color:rgba(201,168,76,.55)} }
+  @media (max-width:560px){ .nav360{padding:9px 14px 9px 12px; gap:7px} .nav360 svg{width:14px;height:14px} }
+
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <img class="leaf-whisper" src="../assets/leaf-motif.webp" alt="" aria-hidden="true" draggable="false">
+  <div class="scene" id="scene"><div class="scenewrap" id="scenewrap"><img src="../assets/renders/exterior/tower-etch.webp" alt="Golden etched elevation of the tower"><div class="floorline" id="floorline"><span class="fl-glow"></span><span class="fl-tag" id="flTag">16</span></div></div></div>
+
+  <div class="top">
+    <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="backlbl">Return</span></button>
+    <div class="eyebrow" id="eyebrow">The Tower · Architecture</div>
+    <button class="nav360" id="btn360" aria-label="360 degree view">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+      <span>360°</span>
+    </button>
+  </div>
+
+  <!-- STAGE 1 -->
+  <section class="stage" id="stage1">
+    <div class="s1">
+      <div class="lead">
+        <h1>A vertical<br>manor</h1>
+        <div class="rule"></div>
+        <p>Thirty floors that carry the quiet authority of a great estate transposed into the sky. The lower floors open into the gardens; the higher ones hold the city at a distance.</p>
+        <div class="principles">
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></span><div class="pt"><b>Light</b><span>North–south orientation. Deep-set windows. Sky courts that bring the outdoors in.</span></div></div>
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.2"/></svg></span><div class="pt"><b>Privacy</b><span>Two to three residences per floor. No shared corridors. A lift lobby for each home.</span></div></div>
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 5.6L20 9l-4.4 4 1.4 6L12 16l-5 3 1.4-6L4 9l5.8-.4z"/></svg></span><div class="pt"><b>Materiality</b><span>Natural stone, aged brass, timber. Truly timeless materials.</span></div></div>
+          <div class="principle"><span class="pi"><svg viewBox="0 0 24 24"><path d="M6 20h12M7 20V9M17 20V9M5.5 9h13M8.5 9v11M11 9v11M13 9v11M15.5 9v11M8.5 6.5h7M9 6.5L12 4l3 2.5"/></svg></span><div class="pt"><b>Proportion</b><span>Double-height entry volumes. Ceilings from 10 ft, rising to 14 ft at the penthouse level.</span></div></div>
+        </div>
+      </div>
+
+      <div class="keypad">
+        <div class="kconfig" id="kconfig">3-Bed · 3-Bed</div>
+        <div class="kdisplay"><span class="knum" id="knum">16</span><span class="kfloor">Floor</span></div>
+        <div class="kgrid" id="kgrid"></div>
+        <button class="kenter" id="kenter">Enter</button>
+        <div class="khint"><span class="khand"><svg viewBox="0 0 24 24"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11M12 11V4.5a1.5 1.5 0 0 1 3 0V11M15 11V6.5a1.5 1.5 0 0 1 3 0V13c0 4-2 7-6 7h-1.5c-1.6 0-2.4-.6-3.4-1.8l-3-3.8a1.6 1.6 0 0 1 2.4-2.1L9 14V8.5a1.5 1.5 0 0 1 3 0"/></svg></span><span>Tap a floor<br>to explore</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STAGE 2 -->
+  <section class="stage" id="stage2">
+    <div class="pad"><div class="s2">
+      <div class="fhd">
+        <div class="fk" id="s2k">The Tower</div><h2 id="s2h">Floor</h2>
+        <div class="ldiv"><i></i><svg class="lf" viewBox="0 0 24 24"><path d="M12 21V11"/><path d="M12 14c-3 0-5-2-5-5 3 0 5 2 5 5ZM12 12.5c3 0 5-2 5-5-3 0-5 2-5 5Z"/></svg><i></i></div>
+        <p id="s2sub">Two private residences — one to the south, one to the north. Select a home to explore.</p>
+      </div>
+      <div class="units" id="units"></div>
+    </div></div>
+  </section>
+
+  <!-- STAGE 3 -->
+  <section class="stage" id="stage3">
+    <div class="pad"><div class="s3">
+      <div class="plancard">
+        <div class="planview"><img class="planimg" id="uPlan" src="" alt="" draggable="false"></div>
+        <div class="zctrl">
+          <button class="zb" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg></button>
+          <button class="zb" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg></button>
+          <button class="zb" id="zrst" aria-label="Reset"><svg viewBox="0 0 24 24"><path d="M3 11a8 8 0 1 1 2.3 5.6M3 21v-5h5"/></svg></button>
+        </div>
+      </div>
+      <aside class="udetail">
+        <div class="uk" id="uK">The Residence</div>
+        <h2 id="uName">Residence</h2>
+        <div class="uwhisper" id="uWhisper"></div>
+        <div class="specs" id="uSpecs"></div>
+        <button class="uhome" id="uHome" aria-label="Go to home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg>Go to Home</button>
+      </aside>
+    </div></div>
+  </section>
+
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="sheet">
+      <div id="bookForm">
+        <div class="sk">A Private Invitation</div><h3>Book a Viewing</h3><div class="ssub" id="bookSub"></div>
+        <div class="field"><label>Full name</label><input id="bkName" type="text" placeholder="Your name"></div>
+        <div class="frow2"><div class="field"><label>Phone</label><input id="bkPhone" type="tel" placeholder="+91"></div><div class="field"><label>Preferred date</label><input id="bkDate" type="date"></div></div>
+        <div class="acts"><button class="cancel" id="bkCancel">Cancel</button><button class="submit" id="bkSubmit">Request Viewing</button></div>
+      </div>
+      <div class="done" id="bookDone" style="display:none"><div class="dchk"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div><h3>Thank you.</h3><p>Our residence team will be in touch to arrange your private viewing.</p><div class="acts" style="margin-top:18px"><button class="submit" id="bkClose" style="flex:1">Close</button></div></div>
+    </div>
+  </div>
+
+  <!-- floating 360° view viewer -->
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      <span>Back</span>
+    </button>
+  </div>
+
+<script>
+  /* ── TYPE TABLE (shared, non-varying attributes: label/name/beds/ceil/tag/whisper) ──
+     Per-floor sq ft, plan image and unit code now live on each FLOORMAP wing entry,
+     because the same residence TYPE renders a different plan / area / unit per floor. */
+  var CFG={
+    '3br':       {name:'Three Bedroom',                   beds:'3 Bedrooms',                  ceil:'10 ft', tag:'3 Bed',                whisper:'A corner home, holding the morning on one side and the city on the other.'},
+    '3br-study': {name:'Three Bedroom + Study',           beds:'3 Bedrooms + Study',          ceil:'10 ft', tag:'3 Bed + Study',        whisper:'A quiet room set apart, for the work that asks for silence.'},
+    '3br-sm':    {name:'Three Bedroom + Study + Media',   beds:'3 Beds + Study + Media',      ceil:'10 ft', tag:'3 Bed + Media',        whisper:'Room to gather and room to retreat, upon a single floor.'},
+    '4br':       {name:'Four Bedroom',                    beds:'4 Bedrooms',                  ceil:'10 ft', tag:'4 Bed',                whisper:'Rooms that keep their distance, the way a great house should.'},
+    '4br-study': {name:'Four Bedroom + Study',            beds:'4 Bedrooms + Study',          ceil:'10 ft', tag:'4 Bed + Study',        whisper:'A study to the south, the city held at arm’s length.'},
+    '4br-rec':   {name:'Four Bedroom · Recessed',         beds:'4 Bedrooms',                  ceil:'12 ft', tag:'4 Bed · Recessed',     whisper:'Set back from the line of the tower, it keeps its own sky.'},
+    '2br-duplex':{name:'Two Bedroom · Duplex',            beds:'2 Bedrooms · Duplex',         ceil:'10 ft', tag:'2 Bed · Duplex',       whisper:'Two floors of one home, joined by a private stair.'},
+    '3br-gdx':   {name:'Three Bedroom · Garden Duplex',   beds:'3 Bedrooms · Garden Duplex',  ceil:'10 ft', tag:'3 Bed · Garden Duplex',whisper:'A home that opens onto the gardens, its two levels bound by a private stair.'},
+    '5br-gdx':   {name:'Five Bedroom · South Garden Duplex',beds:'5 Bedrooms · Garden Duplex',ceil:'10 ft', tag:'5 Bed · Garden Duplex',whisper:'A grand duplex at the foot of the tower, the south gardens for its own.'},
+    '5br-ph':    {name:'Five Bedroom · Penthouse Duplex', beds:'5 Bedrooms · Duplex',         ceil:'14 ft', tag:'Penthouse',            whisper:'The crown of the manor, where the ceiling lifts and the city falls away.'}
+  };
+  /* Per-floor mapping — each wing entry: {t:typeKey, p:booklet plan file, s:sq ft (number), u:unit code}
+     Verified against the authoritative floor-plan booklet. No 13th floor. */
+  var FLOORMAP={
+    1:{ N:{t:'3br-gdx',p:'p04.webp',s:5067,u:'01N'},  S:{t:'5br-gdx',p:'p21.webp',s:11190,u:'01S'} },
+    2:{ N:{t:'3br',    p:'p05.webp',s:5423,u:'02N'},  S:{t:'5br-gdx',p:'p22.webp',s:11190,u:'01S'} },
+    3:{ N:{t:'4br',    p:'p15.webp',s:6280,u:'03N'},  S:{t:'4br',    p:'p15.webp',s:6280, u:'03S'} },
+    4:{ N:{t:'4br',    p:'p15.webp',s:6280,u:'04N'},  S:{t:'4br',    p:'p15.webp',s:6280, u:'04S'} },
+    5:{ N:{t:'4br',    p:'p15.webp',s:6280,u:'05N'},  S:{t:'4br',    p:'p15.webp',s:6280, u:'05S'} },
+    6:{ N:{t:'4br',    p:'p15.webp',s:6280,u:'06N'},  S:{t:'4br',    p:'p15.webp',s:6280, u:'06S'} },
+    7:{ N:{t:'4br-rec',p:'p14.webp',s:6280,u:'07N'},  S:{t:'3br-sm', p:'p11.webp',s:7454, u:'07S'} },
+    8:{ N:{t:'3br',    p:'p06.webp',s:5449,u:'08N'},  S:{t:'3br-study',p:'p08.webp',s:5857,u:'08S'}, W:{t:'2br-duplex',p:'p03.webp',s:4149,u:'08D'} },
+    9:{ N:{t:'3br',    p:'p07.webp',s:5478,u:'09N'},  S:{t:'3br-study',p:'p09.webp',s:5859,u:'09S'}, W:{t:'2br-duplex',p:'p03.webp',s:4149,u:'09D'} },
+    10:{N:{t:'3br',    p:'p06.webp',s:5449,u:'10N'},  S:{t:'3br-study',p:'p08.webp',s:5857,u:'10S'}, W:{t:'2br-duplex',p:'p03.webp',s:4149,u:'10D'} },
+    11:{N:{t:'3br',    p:'p07.webp',s:5478,u:'11N'},  S:{t:'3br-study',p:'p09.webp',s:5859,u:'11S'}, W:{t:'2br-duplex',p:'p03.webp',s:4149,u:'11D'} },
+    12:{N:{t:'3br',    p:'p06.webp',s:5449,u:'12N'},  S:{t:'3br-study',p:'p08.webp',s:5857,u:'12S'}, W:{t:'2br-duplex',p:'p03.webp',s:4149,u:'12D'} },
+    14:{N:{t:'3br',    p:'p07.webp',s:5478,u:'14N'},  S:{t:'3br-study',p:'p09.webp',s:5859,u:'14S'}, W:{t:'2br-duplex',p:'p03.webp',s:4149,u:'14D'} },
+    15:{N:{t:'4br-rec',p:'p16.webp',s:6335,u:'15N'},  S:{t:'3br-sm', p:'p10.webp',s:7443, u:'15S'} },
+    16:{N:{t:'3br',    p:'p06.webp',s:5449,u:'16N'},  S:{t:'3br-study',p:'p08.webp',s:5857,u:'16S'} },
+    17:{N:{t:'3br',    p:'p07.webp',s:5478,u:'17N'},  S:{t:'3br-study',p:'p09.webp',s:5859,u:'17S'} },
+    18:{N:{t:'4br',    p:'p18.webp',s:6392,u:'18N'},  S:{t:'4br-study',p:'p20.webp',s:7571,u:'18S'} },
+    19:{N:{t:'4br',    p:'p18.webp',s:6392,u:'19N'},  S:{t:'4br-study',p:'p20.webp',s:7571,u:'19S'} },
+    20:{N:{t:'4br',    p:'p18.webp',s:6392,u:'20N'},  S:{t:'4br-study',p:'p20.webp',s:7571,u:'20S'} },
+    21:{N:{t:'4br',    p:'p18.webp',s:6392,u:'21N'},  S:{t:'4br-study',p:'p20.webp',s:7571,u:'21S'} },
+    22:{N:{t:'4br-rec',p:'p17.webp',s:6335,u:'22N'},  S:{t:'3br-sm', p:'p12.webp',s:7550, u:'22S'} },
+    23:{N:{t:'4br',    p:'p13.webp',s:6272,u:'23N'},  S:{t:'4br-study',p:'p19.webp',s:7537,u:'23S'} },
+    24:{N:{t:'4br',    p:'p13.webp',s:6272,u:'24N'},  S:{t:'4br-study',p:'p19.webp',s:7537,u:'24S'} },
+    25:{N:{t:'4br',    p:'p13.webp',s:6272,u:'25N'},  S:{t:'4br-study',p:'p19.webp',s:7537,u:'25S'} },
+    26:{N:{t:'4br',    p:'p13.webp',s:6272,u:'26N'},  S:{t:'4br-study',p:'p19.webp',s:7537,u:'26S'} },
+    27:{N:{t:'4br',    p:'p13.webp',s:6272,u:'27N'},  S:{t:'4br-study',p:'p19.webp',s:7537,u:'27S'} },
+    28:{N:{t:'4br',    p:'p13.webp',s:6272,u:'28N'},  S:{t:'4br-study',p:'p19.webp',s:7537,u:'28S'} },
+    29:{N:{t:'5br-ph', p:'p23.webp',s:12977,u:'29N'}, S:{t:'5br-ph', p:'p25.webp',s:15124,u:'29S'} },
+    30:{N:{t:'5br-ph', p:'p24.webp',s:12977,u:'30N'}, S:{t:'5br-ph', p:'p26.webp',s:15124,u:'30S'} }
+  };
+  /* wing metadata: display name, compass initial, aspect label. S=south, N=north, W=mid duplex */
+  var WINGS={ S:{name:'South Wing', c:'S', aspect:'South'}, N:{name:'North Wing', c:'N', aspect:'North'}, W:{name:'Duplex Residence', c:'·', aspect:'Central'} };
+  var WING_ORDER=['S','N','W'];
+  function fmt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,','); }             // 5449 → "5,449"
+  function floorTag(f){ if(f>=29) return 'Penthouse'; if(f<=1) return 'Duplex Collection'; return CFG[FLOORMAP[f].S.t].tag; }
+  var FLOORS=[]; for(var f=1; f<=30; f++){ if(f!==13) FLOORS.push(f); }
+  var PLANBASE='../assets/floorplans/booklet/';
+  // preload + decode every distinct booklet plan up front so selecting a floor is instant (no fetch/decode delay)
+  (function preloadPlans(){ var seen={};
+    Object.keys(FLOORMAP).forEach(function(fl){ var m=FLOORMAP[fl]; WING_ORDER.forEach(function(w){ var e=m[w]; if(e&&e.p&&!seen[e.p]){ seen[e.p]=1; var im=new Image(); im.decoding='async'; im.src=PLANBASE+e.p; if(im.decode) im.decode()['catch'](function(){}); } }); });
+  })();
+  var state={ floor:16, wing:null };
+
+  /* stage nav */
+  var stages={1:document.getElementById('stage1'),2:document.getElementById('stage2'),3:document.getElementById('stage3')};
+  var current=1;
+  function goStage(n){
+    for(var k in stages){ stages[k].classList.toggle('active', +k===n); }
+    document.getElementById('scene').style.opacity = (n===1?'1':'0');
+    document.getElementById('scene').style.transition='opacity .5s ease';
+    current=n;
+    var eb=document.getElementById('eyebrow'), bl=document.getElementById('backlbl');
+    /* label sweep: no top strip duplicating the on-screen heading (stage 2 shows "Floor N" large; stage 3 shows the residence name + unit in the specs) */
+    if(n===1){ eb.textContent='The Tower · Architecture'; bl.textContent='Return'; camActive=false; if(typeof cameraToFloor==='function') cameraToFloor(state.floor); }
+    else if(n===2){ eb.textContent=''; bl.textContent='The Tower'; }
+    else { eb.textContent=''; bl.textContent='Floor '+state.floor; }
+  }
+  function unitCode(){ var m=FLOORMAP[state.floor]; return (m&&state.wing&&m[state.wing])?m[state.wing].u:''; }
+
+  /* STAGE 1 — elevator keypad */
+  var kgrid=document.getElementById('kgrid'), knum=document.getElementById('knum'), kconfig=document.getElementById('kconfig');
+  var floorline=document.getElementById('floorline'), flTag=document.getElementById('flTag');
+  var BTOP=10, BBOT=94; // floor span on the WIDE golden-etch elevation (outpainted canvas): floor30 (below crown) → floor1 (lowest window band, just above the double-height entrance)
+  function lineTop(f){ return BTOP + (30-f)/29*(BBOT-BTOP); }
+  /* CAMERA CHOREOGRAPHY — tapping a floor smoothly zooms the tower so THAT floor lands centred in the scene.
+     The whole .scenewrap (elevation img + floor band) is transformed together, so the navy band stays glued to
+     its floor during AND after the move. GPU transform only; CSS transitions make rapid taps retarget cleanly. */
+  var sceneWrap=document.getElementById('scenewrap'), camActive=false;
+  var ZOOM=1.85;   // zoom factor when a floor is selected
+  var mqPortrait=window.matchMedia('(max-aspect-ratio:1/1)');
+  function cameraToFloor(f){
+    var oy=lineTop(f);
+    floorline.style.top=oy+'%';        // the navy band points at the focused floor (inside the transformed wrap)
+    if(!sceneWrap) return;
+    if(camActive && !mqPortrait.matches){
+      // origin 50% 50%; translateY so the floor's height (oy%) is carried to the scene centre (50%)
+      var ty=-(oy-50)*ZOOM;            // % of wrap height (translate is applied after scale about centre)
+      sceneWrap.style.transform='translateY('+ty+'%) scale('+ZOOM+')';
+    } else {                           // full-tower hero view (crown to treeline)
+      sceneWrap.style.transform='none';
+    }
+  }
+  function shortTag(key){ return ({'2br-duplex':'2-Bed Dx','3br':'3-Bed','3br-study':'3-Bed+S','3br-sm':'3-Bed+M','4br':'4-Bed','4br-study':'4-Bed+S','4br-rec':'4-Bed R','3br-gdx':'3-Bed Dx','5br-gdx':'5-Bed Dx','5br-ph':'Penthouse'})[key]||''; }
+  function floorConfig(f){ if(f>=29) return 'Penthouse Duplex'; var m=FLOORMAP[f]; return shortTag(m.N.t)+' · '+shortTag(m.S.t); }
+
+  var btnEls={};
+  // render high→low so 30 is at the top-left, descending — like a lift panel
+  FLOORS.slice().reverse().forEach(function(f){
+    var b=document.createElement('button'); b.className='kbtn'; b.setAttribute('data-floor',f); b.textContent=f;
+    b.addEventListener('click', function(){ camActive=true; setActive(f); });
+    kgrid.appendChild(b); btnEls[f]=b;
+  });
+
+  /* digital lift display — ticks through floors to the target, like an ascending/descending car */
+  var displayed=16, rolling=null;
+  function showNum(n){ knum.classList.add('tick'); setTimeout(function(){ knum.textContent=n; knum.classList.remove('tick'); }, 90); }
+  function rollTo(target){
+    if(rolling){ clearInterval(rolling); rolling=null; }
+    if(displayed===target){ showNum(target); return; }
+    var dir = target>displayed ? 1 : -1;
+    rolling=setInterval(function(){
+      var next=displayed+dir; if(next===13) next+=dir;     // no 13th floor
+      displayed=next; showNum(displayed);
+      if(displayed===target){ clearInterval(rolling); rolling=null; }
+    }, 55);
+  }
+  function setActive(f){
+    state.floor=f;
+    for(var k in btnEls){ btnEls[k].classList.toggle('sel', +k===f); }
+    kconfig.classList.add('swap');
+    setTimeout(function(){ kconfig.textContent=floorConfig(f); kconfig.classList.remove('swap'); }, 150);
+    flTag.textContent='Floor '+f;
+    cameraToFloor(f);                  // zoom + travel the tower to this floor
+    rollTo(f);
+  }
+  document.getElementById('kenter').addEventListener('click', function(){ buildFloor(state.floor); goStage(2); });
+
+  /* STAGE 2 */
+  var unitsEl=document.getElementById('units');
+  /* compact per-card pan & zoom; moved() reports if the last gesture was a drag (suppresses card-select) */
+  function makeMiniZoom(view, img, zin, zout){
+    var MIN=1, MAX=4.5, scale=1, tx=0, ty=0, drag=false, sx=0, sy=0, stx=0, sty=0, didDrag=false, pd=0, ps=1;
+    function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+    function clampPan(){ var w=view.clientWidth,h=view.clientHeight; var ex=Math.max(0,(w*scale-w)/2),ey=Math.max(0,(h*scale-h)/2); tx=clamp(tx,-ex,ex); ty=clamp(ty,-ey,ey); }
+    function apply(an){ img.style.transition=an?'transform .25s var(--ease)':'none'; img.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; view.classList.toggle('zoomed',scale>1.001); zout.disabled=scale<=MIN+.001; zin.disabled=scale>=MAX-.001; }
+    function focal(e){ var r=img.getBoundingClientRect(); return {x:e.clientX-(r.left+r.width/2), y:e.clientY-(r.top+r.height/2)}; }
+    function zoomTo(n,cx,cy,an){ n=clamp(n,MIN,MAX); if(n===scale) return; var k=n/scale; tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=n; clampPan(); apply(an); }
+    view.addEventListener('wheel', function(e){ e.preventDefault(); var f=focal(e); zoomTo(scale*(e.deltaY<0?1.12:1/1.12), f.x, f.y, false); }, {passive:false});
+    img.addEventListener('mousedown', function(e){ if(scale<=1.001) return; e.preventDefault(); drag=true; didDrag=false; img.classList.add('dragging'); sx=e.clientX; sy=e.clientY; stx=tx; sty=ty; });
+    window.addEventListener('mousemove', function(e){ if(!drag) return; if(Math.abs(e.clientX-sx)>3||Math.abs(e.clientY-sy)>3) didDrag=true; tx=stx+(e.clientX-sx); ty=sty+(e.clientY-sy); clampPan(); apply(false); });
+    window.addEventListener('mouseup', function(){ if(drag){ drag=false; img.classList.remove('dragging'); } });
+    view.addEventListener('touchstart', function(e){ if(e.touches.length===2){ pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); ps=scale; } else if(e.touches.length===1&&scale>1.001){ drag=true; didDrag=false; sx=e.touches[0].clientX; sy=e.touches[0].clientY; stx=tx; sty=ty; } }, {passive:false});
+    view.addEventListener('touchmove', function(e){ if(e.touches.length===2){ e.preventDefault(); didDrag=true; var r=img.getBoundingClientRect(); var fx=(e.touches[0].clientX+e.touches[1].clientX)/2-(r.left+r.width/2), fy=(e.touches[0].clientY+e.touches[1].clientY)/2-(r.top+r.height/2); zoomTo(ps*(Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)/pd), fx, fy, false); } else if(drag&&e.touches.length===1){ e.preventDefault(); didDrag=true; tx=stx+(e.touches[0].clientX-sx); ty=sty+(e.touches[0].clientY-sy); clampPan(); apply(false); } }, {passive:false});
+    view.addEventListener('touchend', function(e){ if(e.touches.length<2) pd=0; if(e.touches.length===0) drag=false; });
+    zin.addEventListener('click', function(e){ e.stopPropagation(); zoomTo(scale+0.6,0,0,true); });
+    zout.addEventListener('click', function(e){ e.stopPropagation(); zoomTo(scale-0.6,0,0,true); });
+    apply(false);
+    return { moved:function(){ var d=didDrag; didDrag=false; return d; } };
+  }
+  var NUMWORD={1:'One',2:'Two',3:'Three'};
+  function buildFloor(f){
+    try{window.RDA&&RDA.track('floor_view', 'Floor '+f);}catch(_){}
+    document.getElementById('s2k').textContent = f>=29?'The Penthouse':(f<=1?'The Duplexes':'The Tower');
+    document.getElementById('s2h').textContent='Floor '+f;
+    var m=FLOORMAP[f]; unitsEl.innerHTML='';
+    var present=WING_ORDER.filter(function(w){ return m[w]; });
+    // subtitle reflects the actual residence count on this floor (2 on most, 3 on duplex-mid floors)
+    var sub=document.getElementById('s2sub');
+    if(sub){
+      if(present.length===3) sub.textContent='Three private residences — one south, one north, and a duplex between. Select a home to explore.';
+      else sub.textContent='Two private residences — one to the south, one to the north. Select a home to explore.';
+    }
+    var LEAF='<svg class="lf" viewBox="0 0 24 24"><path d="M12 21V11"/><path d="M12 14c-3 0-5-2-5-5 3 0 5 2 5 5ZM12 12.5c3 0 5-2 5-5-3 0-5 2-5 5Z"/></svg>';
+    var ZIN='<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg>';
+    var ZOUT='<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg>';
+    present.forEach(function(wing, idx){
+      var e=m[wing]; var c=CFG[e.t]; var wm=WINGS[wing];
+      var u=document.createElement('div'); u.className='unit'; u.setAttribute('role','button'); u.tabIndex=0;
+      u.innerHTML='<span class="uwing">'+wm.name+'</span>'+
+        '<span class="compass"><b>'+wm.c+'</b><span></span></span>'+
+        '<div class="planview"><img class="planimg" src="'+PLANBASE+e.p+'" alt="'+c.name+' plan · Unit '+e.u+'" draggable="false">'+
+          '<div class="zmini"><button class="zi" aria-label="Zoom in">'+ZIN+'</button><button class="zo" aria-label="Zoom out">'+ZOUT+'</button></div></div>'+
+        '<div class="ldiv"><i></i>'+LEAF+'<i></i></div>'+
+        '<div class="ufoot"><span class="un">'+c.name+'<small>Unit '+e.u+'</small></span>'+
+        '<span class="usq"><b>'+fmt(e.s)+'</b>sq ft</span><span class="ugo"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span></div>';
+      unitsEl.appendChild(u);
+      var z=makeMiniZoom(u.querySelector('.planview'), u.querySelector('.planimg'), u.querySelector('.zi'), u.querySelector('.zo'));
+      u.querySelector('.ugo').addEventListener('click', function(ev){ ev.stopPropagation(); selectUnit(wing); });
+      u.addEventListener('click', function(){ if(!z.moved()) selectUnit(wing); });
+      u.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ selectUnit(wing); } });
+      if(idx < present.length-1){ var d=document.createElement('div'); d.className='udiv'; d.innerHTML=LEAF; unitsEl.appendChild(d); }
+    });
+  }
+
+  /* STAGE 3 */
+  var uPlan=document.getElementById('uPlan'), uName=document.getElementById('uName'), uK=document.getElementById('uK'),
+      uWhisper=document.getElementById('uWhisper'), uSpecs=document.getElementById('uSpecs'), uUnit=document.getElementById('uUnit'), uFootSq=document.getElementById('uFootSq');
+  function selectUnit(wing){
+    state.wing=wing; var e=FLOORMAP[state.floor][wing]; var c=CFG[e.t]; var wm=WINGS[wing];
+    try{window.RDA&&RDA.track('residence_view', c.name+' · Unit '+e.u, 1, {floor:state.floor, wing:wing});}catch(_){}
+    resetZoom();
+    uPlan.src=PLANBASE+e.p; uPlan.alt=c.name+' floor plan · Unit '+e.u;
+    uK.textContent=wm.name+' · Floor '+state.floor; uName.textContent=c.name; uWhisper.textContent=c.whisper;
+    uSpecs.innerHTML=spec('Configuration',c.beds)+spec('Unit',e.u)+spec('Total area',fmt(e.s)+' sq ft')+spec('Floor','Level '+state.floor+' of 30')+spec('Aspect',wm.aspect)+spec('Ceiling height',c.ceil);
+    goStage(3);
+  }
+  function spec(l,v){ return '<div class="spec"><span class="sl">'+l+'</span><span class="sv">'+v+'</span></div>'; }
+
+  document.getElementById('back').addEventListener('click', function(){ if(current===3){ goStage(2); } else if(current===2){ goStage(1); } else { try{ parent.postMessage('eo-screen-close','*'); }catch(e){} } });
+  document.getElementById('uHome').addEventListener('click', function(){ try{ parent.postMessage('eo-screen-close','*'); }catch(e){} });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ if(current>1){ goStage(current-1); } else { try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } } } });
+
+  /* zoom (stage 3) */
+  var view=document.querySelector('.planview'), zpct=document.getElementById('zpct');
+  var MIN=1, MAXZ=5, scale=1, tx=0, ty=0, drag=false, sx=0, sy=0, stx=0, sty=0, pd=0, ps=1;
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+  function clampPan(){ var w=view.clientWidth,h=view.clientHeight; var ex=Math.max(0,(w*scale-w)/2),ey=Math.max(0,(h*scale-h)/2); tx=clamp(tx,-ex,ex); ty=clamp(ty,-ey,ey); }
+  function applyZ(an){ uPlan.style.transition=an?'transform .3s var(--ease)':'none'; uPlan.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; view.classList.toggle('zoomed',scale>1.001); if(zpct) zpct.textContent=Math.round(scale*100)+'%'; document.getElementById('zout').disabled=scale<=MIN+.001; document.getElementById('zin').disabled=scale>=MAXZ-.001; }
+  function resetZoom(){ scale=1; tx=0; ty=0; drag=false; uPlan.classList.remove('dragging'); applyZ(false); }
+  function zoomTo(n,cx,cy,an){ n=clamp(n,MIN,MAXZ); if(n===scale) return; var k=n/scale; tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=n; clampPan(); applyZ(an); }
+  function focal(e){ var r=uPlan.getBoundingClientRect(); return {x:e.clientX-(r.left+r.width/2), y:e.clientY-(r.top+r.height/2)}; }
+  view.addEventListener('wheel', function(e){ e.preventDefault(); var f=focal(e); zoomTo(scale*(e.deltaY<0?1.12:1/1.12), f.x, f.y, false); }, {passive:false});
+  uPlan.addEventListener('dblclick', function(e){ e.preventDefault(); if(scale>1.001) resetZoom(); else { var f=focal(e); zoomTo(2.4,f.x,f.y,true); } });
+  uPlan.addEventListener('mousedown', function(e){ if(scale<=1.001) return; e.preventDefault(); drag=true; uPlan.classList.add('dragging'); sx=e.clientX; sy=e.clientY; stx=tx; sty=ty; });
+  window.addEventListener('mousemove', function(e){ if(!drag) return; tx=stx+(e.clientX-sx); ty=sty+(e.clientY-sy); clampPan(); applyZ(false); });
+  window.addEventListener('mouseup', function(){ if(drag){ drag=false; uPlan.classList.remove('dragging'); } });
+  view.addEventListener('touchstart', function(e){ if(e.touches.length===2){ pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); ps=scale; } else if(e.touches.length===1&&scale>1.001){ drag=true; sx=e.touches[0].clientX; sy=e.touches[0].clientY; stx=tx; sty=ty; } }, {passive:false});
+  view.addEventListener('touchmove', function(e){ if(e.touches.length===2){ e.preventDefault(); var r=uPlan.getBoundingClientRect(); var fx=(e.touches[0].clientX+e.touches[1].clientX)/2-(r.left+r.width/2), fy=(e.touches[0].clientY+e.touches[1].clientY)/2-(r.top+r.height/2); zoomTo(ps*(Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)/pd), fx, fy, false); } else if(drag&&e.touches.length===1){ e.preventDefault(); tx=stx+(e.touches[0].clientX-sx); ty=sty+(e.touches[0].clientY-sy); clampPan(); applyZ(false); } }, {passive:false});
+  view.addEventListener('touchend', function(e){ if(e.touches.length<2) pd=0; if(e.touches.length===0){ drag=false; uPlan.classList.remove('dragging'); } });
+  document.getElementById('zin').addEventListener('click', function(){ zoomTo(scale+0.6,0,0,true); });
+  document.getElementById('zout').addEventListener('click', function(){ zoomTo(scale-0.6,0,0,true); });
+  document.getElementById('zrst').addEventListener('click', resetZoom);
+
+  /* booking */
+  /* booking modal removed from the unit screen (leads are captured at reception/GRE) */
+  var modal=document.getElementById('modal');
+  function closeModal(){ if(!modal) return; modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); }
+
+  /* ── 360° view: open the external tour full-screen, back button closes it (src set only on tap) ── */
+  (function(){ var b=document.getElementById('btn360'), v=document.getElementById('view360'), f=document.getElementById('frame360'), bk=document.getElementById('back360');
+    if(!b||!v||!f) return;
+    b.addEventListener('click', function(){ try{window.RDA&&RDA.track('360_view','tower');}catch(_){} f.src='https://www.turiya.co/360/EmbassyOne/'; v.classList.add('show'); v.setAttribute('aria-hidden','false'); });
+    if(bk) bk.addEventListener('click', function(){ v.classList.remove('show'); v.setAttribute('aria-hidden','true'); setTimeout(function(){ if(!v.classList.contains('show')) f.src='about:blank'; },420); });
+  })();
+
+  /* init */
+  goStage(1); knum.textContent='16'; setActive(16);
+  (function(){ try{ var q=new URLSearchParams(location.search); var f=parseInt(q.get('f'),10);
+    if(f && FLOORMAP[f]){ setActive(f); buildFloor(f); goStage(2); var u=q.get('u'); if((u==='S'||u==='N'||u==='W') && FLOORMAP[f][u]){ selectUnit(u); } } }catch(e){} })();
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bespoke Services · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  BESPOKE SERVICES — the managed-living / concierge experience.
+  Opened from the Service button. Self-contained screen with internal
+  view states (no iframe-in-iframe):
+      THRESHOLD → HUB → ┌ SERVICE DETAIL (master-detail, faded nav inert)
+                        └ CARE TIERS (Curated · Considered · Complete,
+                                      sidebar toggles in place)
+  Register = ink-navy + bone, pale-champagne hairline/text accent only.
+  Glass buttons, no gold borders. All prior motion mechanics preserved
+  (staggered reveals, champagne scale+tint pop, group zoom).
+  The "Fifth Key" / key / crest concept has been removed entirely.
+  ──────────────────────────────────────────────────────────────────────
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="../icons/favicon.png">
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  :root{
+    /* deck palette — ink-navy primary + warm bone */
+    --ink:#121621;          /* signature dark navy-charcoal (statement bg) */
+    --ink-2:#1a2030;         /* raised panel on dark */
+    --ink-3:#222a3a;
+    --bone:#efe8da;          /* warm light bg */
+    --bone-2:#e6dcc8;
+    --paper:#faf7f0;
+    --taupe:#6e5c58;
+    --champ:#c9a84c;         /* pale champagne — hairline/text accent ONLY, never a button border */
+    --champ-dim:#a99e8c;
+    --on-dark:#ece8e0;
+    --on-dark-dim:#9aa1ad;
+    --on-light:#121621;
+    --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14);
+    --line-light:rgba(18,22,33,.12);
+    /* motion */
+    --ease-out:cubic-bezier(.23,1,.32,1);
+    --ease-io:cubic-bezier(.77,0,.175,1);
+    --over:cubic-bezier(.34,1.3,.5,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Jost",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; background:#efe8da;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+
+  /* ── layered parchment ground used across ALL service screens ── */
+  /* warm parchment watercolour base (bg-inner.webp) + warm radial wash — legibility first */
+  .sky{position:fixed; inset:0; z-index:0; background-color:#efe8da;
+    background-image:
+      radial-gradient(120% 90% at 18% 20%, rgba(201,168,76,.10), transparent 58%),
+      radial-gradient(130% 100% at 50% 0%, rgba(243,237,225,.62), rgba(224,213,192,.72) 64%),
+      url(../assets/bg-inner.webp);
+    background-repeat:no-repeat, no-repeat, no-repeat;
+    background-position:center, center, center;
+    background-size:cover, cover, cover}
+  /* whispered golden-etch of the real ONE tower — echoes the home painting's tower-right composition.
+     Anchored bottom-right, sized by HEIGHT so the crown & treeline stay in frame; multiply-blended into
+     the parchment so it reads as a warm art layer, subtle but PRESENT. Feathered at the left edge so it
+     dissolves toward the content and never fights the copy. Shared across every Bespoke Services view. */
+  .sky::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-etch.webp) no-repeat right -3% bottom -2%;
+    background-size:auto 104%; opacity:.17; mix-blend-mode:multiply; filter:saturate(.92);
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 30%,#000 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 30%,#000 100%)}
+  .grain{position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.5; mix-blend-mode:soft-light;
+    background-image:radial-gradient(rgba(18,22,33,.05) .5px, transparent .6px); background-size:3px 3px}
+
+  /* ── glass primitive (brief spec) ── */
+  .glass{background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,168,76,.20); border-radius:14px; color:var(--on-dark);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:transform .16s var(--ease-out), background .2s, border-color .2s}
+  .glass:active{transform:scale(.97)}
+  @media(hover:hover){ .glass:hover{border-color:rgba(201,168,76,.34)} }
+
+  /* ── shared chrome ── */
+  .back{position:fixed; top:clamp(16px,2.4vh,30px); left:clamp(20px,2.6vw,48px); z-index:60;
+    display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:9px 20px 9px 15px; border-radius:999px; cursor:pointer;
+    background:#121621;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(18,22,33,.25); color:var(--on-dark);
+    font-family:"Jost",sans-serif; font-size:clamp(10px,1.15vh,13px); font-weight:500; letter-spacing:.22em; text-transform:uppercase;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:background .2s, border-color .2s, transform .16s var(--ease-out), opacity .4s}
+  @media(hover:hover){ .back:hover{border-color:rgba(201,168,76,.36)} }
+  .back:active{transform:scale(.97)}
+  .back svg{width:15px; height:15px; display:block; stroke:#faf7f0}
+  .corner{position:fixed; top:clamp(16px,2.4vh,30px); right:clamp(20px,2.6vw,48px); z-index:60;
+    font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--champ-dim)}
+
+  /* ── view stack ── */
+  .exp{position:fixed; inset:0; z-index:5}
+  .view{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:clamp(64px,9vh,104px) clamp(26px,4vw,72px) clamp(28px,5vh,56px);
+    opacity:0; visibility:hidden; transform:scale(.985); transition:opacity .5s var(--ease-out), transform .55s var(--ease-out), visibility .5s}
+  .view.is-on{opacity:1; visibility:visible; transform:none}
+
+  /* base eyebrow */
+  .eyebrow{font-family:"Jost"; font-weight:500; text-transform:uppercase; color:var(--champ);
+    font-size:clamp(10px,1.2vh,13px); letter-spacing:.34em; margin-bottom:clamp(12px,2vh,20px)}
+
+  /* shared diamond divider */
+  .orn{display:flex; align-items:center; justify-content:center; gap:9px; width:clamp(108px,12vw,150px); color:var(--champ); margin:clamp(5px,.9vh,10px) auto}
+  .orn i{height:1px; flex:1; background:linear-gradient(90deg,transparent,currentColor); opacity:.5}
+  .orn i+i{background:linear-gradient(90deg,currentColor,transparent)}
+  .orn b{width:5px; height:5px; background:currentColor; transform:rotate(45deg); flex:0 0 auto; opacity:.85}
+
+  /* ════ THRESHOLD — clean ink antechamber (no key / no crest) ════ */
+  .v-threshold{text-align:center}
+  .thr-wrap{position:relative; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    width:100%; height:100%; padding:clamp(38px,7vh,88px) clamp(24px,4vw,64px)}
+  .bs-title{font-family:"Cormorant Garamond",serif; font-weight:300; text-transform:uppercase; color:var(--ink); line-height:1.02;
+    font-size:clamp(40px,9.5vh,108px); letter-spacing:.12em; text-shadow:0 3px 30px rgba(8,10,16,.6)}
+  .bs-sub{font-family:"Cormorant Garamond",serif; font-style:italic; font-weight:500; color:#121621;
+    font-size:clamp(15px,2.2vh,25px); line-height:1.55; max-width:56ch; margin:clamp(14px,2.4vh,26px) auto clamp(28px,4.4vh,50px)}
+  .enter-btn{display:grid; place-items:center; cursor:pointer; margin:0 auto;
+    width:clamp(56px,7vh,84px); height:clamp(56px,7vh,84px); border-radius:50%;
+    background:#1b2338;
+    border:1px solid rgba(201,168,76,.7); color:var(--champ);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(255,255,255,.14);
+    font-size:clamp(22px,2.8vh,32px); line-height:1;
+    transition:transform .16s var(--ease-out), background .2s, border-color .2s}
+  .enter-cap{font-family:"Jost"; font-weight:500; font-size:clamp(10px,1.25vh,14px); letter-spacing:.3em; text-transform:uppercase;
+    color:#121621; margin-top:clamp(10px,1.6vh,18px)}
+  @media(hover:hover){ .enter-btn:hover{border-color:rgba(201,168,76,.36)} .enter-btn:hover .arr{transform:translateX(4px)} }
+  .enter-btn:active{transform:scale(.97)}
+  .enter-btn .arr{transition:transform .3s var(--ease-out)}
+
+  /* ════ HUB — four service cards + two secondary service links (previous/round6 layout) ════ */
+  .v-hub{justify-content:center; align-items:center;
+    padding:clamp(46px,7vh,88px) clamp(26px,4vw,72px) clamp(20px,3.5vh,44px)}
+  .v-hub>*{position:relative; z-index:1}
+  .hubhead{text-align:center; margin-bottom:clamp(12px,2.2vh,24px); max-width:min(960px,94vw)}
+  .hubhead h2{font-family:"Cormorant Garamond",serif; font-weight:400; text-transform:uppercase; color:var(--ink);
+    font-size:clamp(26px,4.6vh,52px); line-height:1.04; letter-spacing:.07em; text-shadow:0 2px 22px rgba(8,10,16,.35)}
+  .hubhead h2 em{font-style:italic; color:var(--champ); font-weight:400; text-transform:none}
+  /* centered lede — Jost sans, high-contrast dark navy ink (client #1 fix) */
+  .hubline{text-align:center; font-family:"Jost",sans-serif; font-weight:400;
+    color:#121621; font-size:clamp(13px,1.8vh,18px); line-height:1.55; max-width:min(640px,90vw);
+    margin:clamp(8px,1.4vh,16px) auto clamp(16px,2.6vh,30px)}
+  .hubline b{color:#121621; font-weight:600; font-style:normal}
+
+  /* four service cards — solid deep-navy, gold accents, static diagonal sheen (beige-theme card standard) */
+  .keys4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:clamp(14px,1.6vw,26px); width:min(1240px,95vw); align-items:stretch}
+  .kcard{position:relative; cursor:pointer; text-align:left; appearance:none; isolation:isolate; overflow:hidden;
+    border:1px solid rgba(236,232,224,.28); border-radius:18px; padding:clamp(18px,2.6vh,28px) clamp(16px,1.5vw,24px) clamp(15px,2.1vh,22px);
+    background:#1b2338; color:var(--on-dark);
+    box-shadow:0 26px 58px -28px rgba(0,0,0,.64), inset 0 1px 0 rgba(236,232,224,.14), 0 0 20px -4px rgba(255,255,255,.4);
+    min-height:clamp(300px,52vh,500px); display:flex; flex-direction:column;
+    transition:transform .32s var(--ease-out), box-shadow .4s, border-color .4s, background .3s}
+  /* static diagonal light sheen overlay (home .card language — NOT animated) */
+  .kcard::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none; border-radius:inherit;
+    background:
+      linear-gradient(118deg, transparent 34%, rgba(255,255,255,.12) 46%, rgba(255,255,255,.04) 56%, transparent 66%),
+      radial-gradient(60px 14px at 20% 0%, rgba(255,255,255,.4), transparent 70%),
+      radial-gradient(60px 14px at 78% 100%, rgba(255,255,255,.3), transparent 70%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 -1px 0 rgba(255,255,255,.14)}
+  .kcard>*{position:relative; z-index:1}
+  /* JS appends a .kshine span to each card — kept inert (no shimmer per brief) */
+  .kshine{display:none}
+  .kcard.tilt{transition:transform .12s ease-out, box-shadow .4s, border-color .4s}
+  /* dim siblings + champagne pop while one is selected (preserved flow) */
+  .keys4.dim .kcard:not(.pop){opacity:.24; filter:blur(1.2px); transform:scale(.96); transition:opacity .45s, filter .45s, transform .45s}
+  .kcard.pop{animation:cardPop .5s var(--ease-out) forwards; z-index:6}
+  @keyframes cardPop{0%{transform:scale(1)} 45%{transform:scale(1.03)} 100%{transform:scale(1)}}
+  .kcard::after{content:""; position:absolute; inset:0; z-index:3; opacity:0; border-radius:inherit; pointer-events:none;
+    background:radial-gradient(90% 70% at 50% 0%, rgba(201,168,76,.2), transparent 70%); transition:opacity .4s var(--ease-out)}
+  .kcard.pop::after{opacity:1; transition:opacity .2s}
+  @media (hover:hover){ .kcard:hover{transform:translateY(-6px); border-color:rgba(201,168,76,.4); background:#212b44;
+      box-shadow:0 40px 84px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(236,232,224,.14), 0 0 24px -4px rgba(255,255,255,.46)} .kcard:hover::after{opacity:.5} }
+  .kcard:active{transform:translateY(-3px) scale(.993)}
+  .kc-no{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(18px,2.4vh,28px); line-height:1}
+  .kc-rule{display:flex; align-items:center; gap:7px; width:clamp(40px,4vw,58px); color:var(--champ); margin:clamp(8px,1.4vh,14px) 0 clamp(10px,1.6vh,16px)}
+  .kc-rule b{width:5px; height:5px; background:currentColor; transform:rotate(45deg); flex:0 0 auto; opacity:.85}
+  .kc-rule i{height:1px; flex:1; background:linear-gradient(90deg,currentColor,transparent); opacity:.6}
+  .kcard h3{font-family:"Cormorant Garamond",serif; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--on-dark); font-size:clamp(20px,2.9vh,31px); line-height:1.08}
+  .kc-ess{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(12.5px,1.6vh,17px); line-height:1.4; margin-top:6px}
+  .kc-list{list-style:none; margin-top:clamp(12px,1.9vh,20px); display:flex; flex-direction:column; gap:clamp(8px,1.2vh,13px); flex:1 1 auto}
+  .kc-list li{position:relative; padding-left:17px; color:var(--on-dark-dim); font-weight:300; font-size:clamp(11px,1.4vh,14px); line-height:1.4}
+  .kc-list li::before{content:""; position:absolute; left:0; top:.5em; width:5px; height:5px; border-radius:50%; background:var(--champ)}
+  /* card CTA — subtle outlined pill */
+  .kc-cta{display:flex; align-items:center; justify-content:center; gap:9px; margin-top:clamp(12px,1.8vh,18px);
+    padding:clamp(10px,1.5vh,14px) 16px; border:1px solid rgba(201,168,76,.28); border-radius:12px;
+    color:var(--on-dark); font-family:"Jost"; font-weight:500; font-size:clamp(9px,1.05vh,12px); letter-spacing:.24em; text-transform:uppercase;
+    background:rgba(236,232,224,.04); transition:border-color .3s, color .3s, background .3s}
+  .kc-cta .arr{color:var(--champ); transition:transform .3s var(--ease-out)}
+  @media (hover:hover){ .kcard:hover .kc-cta{border-color:rgba(201,168,76,.42); background:rgba(236,232,224,.08)} .kcard:hover .kc-cta .arr{transform:translateX(4px)} }
+
+  /* two secondary hub links → Care Tiers + À la Carte (solid navy pills) */
+  .ala-link{display:inline-flex; align-items:center; gap:15px; cursor:pointer;
+    color:var(--on-dark); font-family:"Jost"; font-weight:500; font-size:clamp(13px,1.8vh,18px); letter-spacing:.22em; text-transform:uppercase;
+    padding:clamp(16px,2.3vh,22px) clamp(30px,4vw,54px); border:1px solid rgba(236,232,224,.24); border-radius:999px;
+    background:#1b2338;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:border-color .2s, color .2s, background .2s, transform .16s var(--ease-out)}
+  @media(hover:hover){ .ala-link:hover{border-color:rgba(201,168,76,.4); background:#212b44} .ala-link:hover .arr{transform:translateX(4px)} }
+  .ala-link:active{transform:scale(.97)}
+  .ala-link .arr{color:var(--champ); transition:transform .3s var(--ease-out)}
+
+  /* ════ KEY/SERVICE DETAIL — header + master-detail ════ */
+  .v-cons{justify-content:stretch; padding:clamp(38px,5.2vh,74px) clamp(16px,2.4vw,58px) clamp(34px,4.4vh,62px)}
+  .cons{position:relative; width:min(1380px,97vw); margin:0 auto; flex:1 1 auto; display:flex; flex-direction:column}
+  .cons-headtext{text-align:center; max-width:46ch; margin:0 auto clamp(14px,2.4vh,28px); opacity:0; transform:translateY(-12px);
+    transition:opacity .6s var(--ease-out), transform .6s var(--ease-out)}
+  .v-cons.is-on .cons-headtext{opacity:1; transform:none}
+  .ch-no{display:block; font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(13px,1.7vh,19px); letter-spacing:.04em}
+  .cons-headtext h2{font-family:"Cormorant Garamond",serif; font-weight:400; text-transform:uppercase; letter-spacing:.07em; color:var(--ink);
+    font-size:clamp(30px,5.2vh,60px); line-height:1.04; margin:3px 0 6px; text-shadow:0 2px 22px rgba(8,10,16,.6)}
+  .ch-ess{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(14px,1.9vh,22px); margin-bottom:clamp(8px,1.4vh,15px)}
+  .ch-intro{color:var(--on-light-dim); font-weight:300; font-size:clamp(12px,1.55vh,16px); line-height:1.6; max-width:46ch; margin:0 auto}
+
+  /* ════ MASTER–DETAIL (shared by detail + care tiers) ════ */
+  .ala-clusters{display:grid; grid-template-columns:clamp(230px,24vw,320px) 1fr; gap:clamp(24px,3.5vw,68px); width:100%; flex:0 1 auto; align-items:center; margin-top:clamp(8px,1.6vh,20px); transform-origin:center; transition:transform .14s ease-out}
+  .v-ala{touch-action:none}
+  /* left: vertical nav buttons (glass) */
+  .ala-nav{display:flex; flex-direction:column; gap:clamp(12px,1.8vh,20px)}
+  .anav-btn{position:relative; display:flex; align-items:center; gap:clamp(13px,1.1vw,18px); text-align:left; cursor:pointer; color:var(--on-dark);
+    padding:clamp(15px,2.1vh,21px) clamp(18px,1.6vw,26px); border:1px solid rgba(18,22,33,.25); border-radius:14px;
+    background:#121621;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    opacity:0; transform:translateX(-30px); transition:opacity .4s var(--ease-out) var(--d,0s), transform .45s var(--ease-out) var(--d,0s), border-color .3s, background .3s, box-shadow .3s}
+  .ala-nav.in .anav-btn{opacity:1; transform:none}
+  .ala-nav.in .anav-btn:not(.sel){opacity:.5}                         /* care tiers: dim but fully functional (direct toggling) */
+  #kdNav.in .anav-btn:not(.sel){opacity:.5}                           /* service detail: dim but fully functional (direct toggling) */
+  .anav-btn .an-ic{flex:0 0 auto; width:clamp(42px,3.8vw,54px); height:clamp(42px,3.8vw,54px); border-radius:50%; display:grid; place-items:center;
+    background:rgba(236,232,224,.06); border:1px solid var(--line-dark); transition:border-color .35s, background .35s}
+  .anav-btn .an-ic svg{width:52%; height:52%; stroke:#faf7f0; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
+  .anav-btn .an-t{font-family:"Cormorant Garamond",serif; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:var(--on-dark); font-size:clamp(17px,2.2vh,24px); line-height:1.1}
+  @media(hover:hover){ .anav-btn:hover{border-color:rgba(201,168,76,.34)} } .anav-btn:active{transform:scale(.985)}
+  .anav-btn.sel{border-color:rgba(201,168,76,.42); background:#121621;
+    box-shadow:0 22px 50px -22px rgba(6,9,16,.78), inset 0 1px 0 rgba(236,232,224,.16)}
+  .anav-btn.sel .an-ic{border-color:rgba(236,232,224,.28); background:rgba(236,232,224,.1)}
+  .anav-btn.sel .an-t{color:var(--champ)}
+
+  /* tier caption line (care tiers screen) */
+  .ala-tiercap{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(13px,1.8vh,19px);
+    text-align:center; margin:clamp(6px,1.1vh,12px) auto clamp(2px,.6vh,8px); min-height:1.4em; transition:opacity .3s}
+
+  /* right: grid of rich boxes (icon + title + desc) */
+  .kd-grid{display:flex; flex-wrap:wrap; justify-content:center; align-content:center; gap:clamp(14px,1.5vw,22px)}
+  .kd-grid>.kd-box{flex:0 1 clamp(200px,19vw,260px)}
+  .kd-box{position:relative; display:flex; flex-direction:column; gap:clamp(8px,1.1vh,12px); padding:clamp(15px,2vh,22px) clamp(16px,1.4vw,22px);
+    border:1px solid rgba(236,232,224,.28); border-radius:15px;
+    background:#1b2338;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(255,255,255,.14);
+    opacity:0; transform:scale(.92) translateY(10px); transition:opacity .35s var(--ease-out) var(--gd,0s), transform .42s var(--over) var(--gd,0s), border-color .3s, box-shadow .3s, background .3s}
+  .kd-grid.in .kd-box{opacity:1; transform:none}
+  @media(hover:hover){ .kd-box:hover{border-color:rgba(201,168,76,.5); background:#1f2942; box-shadow:0 30px 58px -24px rgba(6,9,16,.82)} }
+  .kd-box .kb-ic{width:clamp(34px,3.4vw,46px); height:clamp(34px,3.4vw,46px); border-radius:50%; display:grid; place-items:center; flex:0 0 auto;
+    background:rgba(236,232,224,.06); border:1px solid var(--line-dark)}
+  .kd-box .kb-ic svg{width:54%; height:54%; stroke:var(--champ); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
+  .kd-box b{font-family:"Cormorant Garamond",serif; font-weight:500; color:var(--on-dark); font-size:clamp(16px,2vh,22px); line-height:1.16; letter-spacing:.01em}
+  .kd-box span{font-family:"Jost"; font-weight:300; color:var(--on-dark-dim); font-size:clamp(11.5px,1.45vh,14.5px); line-height:1.5}
+  .ala-foot{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--on-light-dim); font-size:clamp(12px,1.6vh,17px);
+    margin-top:clamp(10px,1.8vh,22px); text-align:center}
+
+  /* ════ CARE TIERS head ════ */
+  .v-ala{justify-content:center; padding:clamp(44px,6vh,82px) clamp(18px,3vw,60px) clamp(40px,5vh,70px)}
+  .ala{width:min(1300px,96vw); margin:0 auto; display:flex; flex-direction:column; align-items:center}
+  .ala-head{text-align:center; margin-bottom:clamp(10px,1.8vh,22px); max-width:52ch}
+  .ala-head .eyebrow{margin-bottom:clamp(6px,1vh,11px)}
+  .ala-head h2{font-family:"Cormorant Garamond",serif; font-weight:400; text-transform:uppercase; letter-spacing:.07em; color:var(--ink);
+    font-size:clamp(28px,4.8vh,52px); line-height:1.04; text-shadow:0 2px 20px rgba(8,10,16,.6)}
+  .ala-intro{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--on-light-dim); font-size:clamp(13px,1.7vh,19px); line-height:1.5; max-width:54ch; margin:clamp(7px,1.2vh,14px) auto 0}
+
+  /* bottom-left back (text button) */
+  .cons-back{position:fixed; left:clamp(20px,2.6vw,52px); bottom:clamp(16px,2.8vh,32px); z-index:40; background:none; border:0; cursor:pointer;
+    color:#121621; font-family:"Jost"; font-weight:500; font-size:clamp(10px,1.2vh,13px); letter-spacing:.24em; text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:9px; padding-bottom:5px; opacity:0; transition:opacity .5s, transform .16s var(--ease-out); pointer-events:none}
+  .v-cons.is-on .cons-back, .v-ala.is-on .cons-back, .v-pay.is-on .cons-back{opacity:1; pointer-events:auto}
+  .cons-back::after{content:""; position:absolute; left:0; bottom:0; width:100%; height:1px; background:linear-gradient(90deg,#121621,transparent)}
+  .cons-back:active{transform:scale(.97)}
+
+  .stagger{opacity:0; transform:translateY(12px)}
+  .is-on .stagger{animation:rise .7s var(--ease-out) forwards}
+  @keyframes rise{to{opacity:1; transform:none}}
+
+  /* ── responsive ── */
+  /* mid widths / kiosk portrait: 2×2 card grid */
+  @media (max-width:1120px){ .keys4{grid-template-columns:repeat(2,minmax(0,1fr)); width:min(740px,94vw)} .kcard{min-height:clamp(220px,30vh,330px)} }
+  @media (max-aspect-ratio:1/1){ .keys4{grid-template-columns:repeat(2,minmax(0,1fr)); width:min(740px,94vw)} .kcard{min-height:clamp(210px,26vh,320px)} }
+  @media (max-aspect-ratio:1/1),(max-width:900px){
+    .ala-clusters{grid-template-columns:1fr; gap:clamp(16px,2.4vh,28px)}
+    .ala-nav{flex-direction:row; flex-wrap:wrap; justify-content:center}
+    .kd-grid>.kd-box{flex:0 1 clamp(150px,42vw,220px)}
+  }
+
+  /* phone portrait + narrow widths */
+  @media (max-width:600px){
+    .view{ overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
+      padding:clamp(58px,8vh,84px) clamp(16px,5vw,26px) calc(clamp(22px,4vh,40px) + env(safe-area-inset-bottom)); justify-content:flex-start }
+    .v-hub,.v-ala,.v-cons{ justify-content:flex-start }
+    .v-threshold{ justify-content:center }
+    .bs-title{ font-size:clamp(38px,12vw,60px) }
+    .bs-sub{ font-size:clamp(14px,4vw,18px); max-width:28ch }
+    .hubhead h2{ font-size:clamp(26px,7.5vw,38px) }
+    .keys4{ grid-template-columns:1fr; width:min(440px,92vw); gap:clamp(14px,3.5vw,20px) }
+    .kcard{ min-height:0; padding:clamp(18px,5vw,24px) clamp(16px,4.5vw,22px) }
+    .v-cons{ padding:clamp(56px,9vh,78px) clamp(14px,4.5vw,22px) clamp(60px,10vh,80px) }
+    .cons-headtext h2{ font-size:clamp(28px,8vw,40px) }
+    .ala-clusters{ grid-template-columns:1fr; gap:clamp(16px,3.5vh,24px); align-items:stretch; transform:none!important }
+    .ala-nav{ flex-direction:row; flex-wrap:wrap; justify-content:center; gap:clamp(9px,2.4vw,14px) }
+    .anav-btn{ flex:0 1 auto; min-height:46px; padding:10px clamp(13px,3.4vw,18px); border-radius:999px; gap:clamp(8px,2.2vw,12px); transform:none }
+    .ala-nav.in .anav-btn{ transform:none }
+    .anav-btn .an-ic{ width:30px; height:30px }
+    .anav-btn .an-t{ font-size:clamp(15px,4.2vw,19px) }
+    .kd-grid{ gap:clamp(10px,2.8vw,16px); align-content:flex-start } .kd-grid>.kd-box{ flex:1 1 100% }
+    .kd-box{ min-height:64px; padding:clamp(14px,3.6vw,18px) }
+    .ala-foot{ padding:0 8px }
+    .cons-back{ bottom:calc(clamp(12px,2.4vh,24px) + env(safe-area-inset-bottom)) }
+  }
+  @media (max-width:380px){ .anav-btn .an-t{ font-size:14px } .bs-title{ font-size:clamp(34px,12vw,52px) } }
+  @media (max-height:460px) and (orientation:landscape){
+    .view{ padding-top:clamp(40px,10vh,56px); padding-bottom:clamp(14px,5vh,26px) }
+    .bs-title{ font-size:clamp(32px,9vh,52px) }
+    .hubhead h2{ font-size:clamp(24px,6vh,40px) }
+    .keys4{ grid-template-columns:repeat(2,minmax(0,1fr)) } .kcard{ min-height:0; padding:12px 16px }
+    .ala-nav{ flex-direction:row; flex-wrap:wrap; justify-content:center }
+    .ala-clusters{ grid-template-columns:1fr; transform:none!important }
+    .kd-grid>.kd-box{ flex:0 1 clamp(150px,45vw,220px) }
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:opacity .2s linear!important} }
+
+  /* ── hub secondary links row (Care Tiers + À la Carte) ── */
+  .hub-links{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:clamp(12px,1.6vw,22px); margin:clamp(22px,3.6vh,46px) auto 0}
+  .hub-links .ala-link{margin:0}
+
+  /* ── care tiers — points as INDIVIDUAL BOXES (pillar-detail kd-box pattern), 4+3 grid, no scroll ── */
+  .kd-grid.care-mode{display:flex; flex-wrap:wrap; justify-content:center; align-content:center; gap:clamp(12px,1.3vw,20px); width:100%; max-width:none; margin:0}
+  .kd-grid.care-mode>.kd-box{flex:0 1 calc((100% - 3*clamp(12px,1.3vw,20px))/4)}
+  .kd-box.care-pt{align-items:center; justify-content:center; text-align:center; gap:0;
+    min-height:clamp(84px,10.5vh,116px); padding:clamp(24px,3vh,32px) clamp(11px,1vw,18px) clamp(12px,1.7vh,20px)}
+  /* diamond pinned top-center so the marks form one clean aligned row across every box */
+  .kd-box.care-pt .cp-mk{position:absolute; top:clamp(11px,1.5vh,16px); left:50%; margin-left:-3px;
+    width:6px; height:6px; background:var(--champ); transform:rotate(45deg); opacity:.85}
+  .kd-box.care-pt b{font-family:"Cormorant Garamond",serif; font-weight:500; color:var(--on-dark);
+    font-size:clamp(13.5px,1.75vh,19px); line-height:1.25; letter-spacing:.01em; text-wrap:balance}
+  @media (max-aspect-ratio:1/1),(max-width:900px){ .kd-grid.care-mode>.kd-box{flex:0 1 calc((100% - clamp(12px,1.3vw,20px))/2)} }
+  @media (max-width:600px){ .kd-grid.care-mode{grid-template-columns:1fr} }
+  .care-panel{width:100%; padding:clamp(16px,2.2vh,26px) clamp(18px,1.8vw,28px)}
+  .care-list{list-style:none; display:flex; flex-direction:column; width:100%}
+  .care-list li{position:relative; display:flex; align-items:center; min-height:44px;
+    padding:clamp(9px,1.3vh,13px) 4px clamp(9px,1.3vh,13px) 22px; border-bottom:1px solid var(--line-dark);
+    color:var(--on-dark); font-family:"Jost"; font-weight:300; font-size:clamp(12.5px,1.6vh,15.5px); line-height:1.4}
+  .care-list li:last-child{border-bottom:0}
+  .care-list li::before{content:""; position:absolute; left:6px; top:50%; transform:translateY(-50%); width:5px; height:5px; border-radius:50%; background:var(--champ)}
+  /* SOLID deep-navy panel (beige-theme card standard) — replaces the translucent glass that went grey over the light ground */
+  .kd-box.care-panel{background:#1b2338; border:1px solid rgba(236,232,224,.28);
+    -webkit-backdrop-filter:none!important; backdrop-filter:none!important; overflow:hidden; isolation:isolate;
+    box-shadow:0 26px 58px -28px rgba(0,0,0,.64), inset 0 1px 0 rgba(236,232,224,.14)}
+  /* static diagonal light sheen (home .card language — NOT animated) */
+  .kd-box.care-panel::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none; border-radius:inherit;
+    background:
+      linear-gradient(118deg, transparent 34%, rgba(255,255,255,.10) 46%, rgba(255,255,255,.04) 56%, transparent 66%),
+      radial-gradient(60px 14px at 20% 0%, rgba(255,255,255,.34), transparent 70%),
+      radial-gradient(60px 14px at 78% 100%, rgba(255,255,255,.24), transparent 70%)}
+  .kd-box.care-panel>*{position:relative; z-index:1}
+  @media(hover:hover){ .kd-box.care-panel:hover{background:#1b2338; border-color:rgba(236,232,224,.28);
+    box-shadow:0 26px 58px -28px rgba(0,0,0,.64), inset 0 1px 0 rgba(236,232,224,.14)} }
+  /* care-tier toggles: active = deep ink #121621 + gold (base .sel); inactive = SOLID navy #1b2338 + bone label (opaque → no grey/beige-bleed) */
+  #alaClusters .anav-btn{background:#1b2338; -webkit-backdrop-filter:none; backdrop-filter:none; border-color:rgba(236,232,224,.18)}
+  #alaClusters .ala-nav.in .anav-btn:not(.sel){opacity:.5}
+  #alaClusters .anav-btn:not(.sel) .an-t{color:rgba(236,232,224,.82)}
+  #alaClusters .anav-btn:not(.sel) .an-ic svg{stroke:rgba(250,247,240,.82)}
+  #alaClusters .anav-btn.sel{background:#121621; border-color:rgba(201,168,76,.42)}
+  /* à-la-carte group toggles — same treatment as care-tier toggles (opaque navy, all visible) */
+  #payClusters .anav-btn{background:#1b2338; -webkit-backdrop-filter:none; backdrop-filter:none; border-color:rgba(236,232,224,.18)}
+  #payClusters .ala-nav.in .anav-btn:not(.sel){opacity:.5}
+  #payClusters .anav-btn:not(.sel) .an-t{color:rgba(236,232,224,.82)}
+  #payClusters .anav-btn:not(.sel) .an-ic svg{stroke:rgba(250,247,240,.82)}
+  #payClusters .anav-btn.sel{background:#121621; border-color:rgba(201,168,76,.42)}
+  /* comfort boxes (à-la-carte) reuse the pillar kd-box; champagne index numeral on top */
+  .kd-box .cf-no{position:static; font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(15px,1.9vh,21px); line-height:1}
+
+  /* ── À la Carte (pay per use) view — SOLID navy panels (matches the app's card standard), NO vertical scroll ── */
+  .v-pay{justify-content:center; padding:clamp(48px,6vh,84px) clamp(18px,3vw,60px) clamp(24px,3.4vh,48px)}
+  .pay-scroll{width:min(1240px,96vw); margin:0 auto; max-height:100%; overflow:hidden;
+    padding:0 clamp(4px,1vw,14px)}
+  .pay-head{text-align:center; margin:0 auto clamp(12px,2vh,22px); max-width:56ch}
+  .pay-head .eyebrow{margin-bottom:clamp(5px,.9vh,10px)}
+  .pay-head h2{font-family:"Cormorant Garamond",serif; font-weight:400; text-transform:uppercase; letter-spacing:.07em; color:var(--ink);
+    font-size:clamp(28px,4.6vh,52px); line-height:1.02}
+  .pay-sub{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--on-light-dim); font-size:clamp(12.5px,1.6vh,18px); line-height:1.45; max-width:52ch; margin:clamp(5px,1vh,12px) auto 0}
+  /* three groups side-by-side — fits 1366×1024 AND 1024×768 with no scroll */
+  .pay-groups{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(14px,1.6vw,24px); align-items:start}
+  .pay-group{position:relative; overflow:hidden; isolation:isolate;
+    background:#1b2338; border:1px solid rgba(236,232,224,.28); border-radius:16px;
+    padding:clamp(15px,2vh,24px) clamp(15px,1.5vw,24px);
+    box-shadow:0 26px 58px -28px rgba(0,0,0,.64), inset 0 1px 0 rgba(236,232,224,.14)}
+  /* static diagonal light sheen (home .card language — NOT animated) */
+  .pay-group::before{content:""; position:absolute; inset:0; z-index:0; pointer-events:none; border-radius:inherit;
+    background:
+      linear-gradient(118deg, transparent 34%, rgba(255,255,255,.10) 46%, rgba(255,255,255,.04) 56%, transparent 66%),
+      radial-gradient(60px 14px at 20% 0%, rgba(255,255,255,.34), transparent 70%),
+      radial-gradient(60px 14px at 78% 100%, rgba(255,255,255,.24), transparent 70%)}
+  .pay-group>*{position:relative; z-index:1}
+  .pg-head{display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:clamp(8px,1.3vh,14px)}
+  .pg-title{font-family:"Cormorant Garamond",serif; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:var(--on-dark); font-size:clamp(15px,2vh,23px); line-height:1.12}
+  .pg-chip{font-family:"Jost"; font-weight:500; text-transform:uppercase; letter-spacing:.16em; font-size:clamp(8px,.95vh,10.5px); color:var(--champ);
+    padding:4px 10px; border:1px solid rgba(201,168,76,.34); border-radius:999px; background:rgba(201,168,76,.06)}
+  .pay-list{list-style:none; display:flex; flex-direction:column}
+  .pay-list li{position:relative; display:flex; align-items:center; min-height:40px; padding:clamp(6px,1vh,11px) 2px clamp(6px,1vh,11px) 20px;
+    color:var(--on-dark); font-family:"Jost"; font-weight:300; font-size:clamp(12px,1.5vh,14.5px); line-height:1.38; border-bottom:1px solid var(--line-dark)}
+  .pay-list li:last-child{border-bottom:0}
+  .pay-list li::before{content:""; position:absolute; left:4px; top:50%; transform:translateY(-50%); width:5px; height:5px; border-radius:50%; background:var(--champ)}
+  .pay-intro{font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--on-dark-dim); font-size:clamp(12px,1.55vh,16px); line-height:1.45; margin-bottom:clamp(8px,1.3vh,14px)}
+  /* comfort tiles — single column inside the navy panel, compact hairline rows */
+  .comfort{list-style:none; display:flex; flex-direction:column}
+  .comfort li{position:relative; min-height:40px; padding:clamp(8px,1.2vh,13px) 2px clamp(8px,1.2vh,13px) clamp(24px,2vw,30px); border-bottom:1px solid var(--line-dark)}
+  .comfort li:last-child{border-bottom:0}
+  .comfort li .cf-no{position:absolute; left:2px; top:clamp(8px,1.2vh,13px);
+    font-family:"Cormorant Garamond",serif; font-style:italic; color:var(--champ); font-size:clamp(14px,1.8vh,20px); line-height:1}
+  .comfort li b{display:block; font-family:"Cormorant Garamond",serif; font-weight:500; color:var(--on-dark); font-size:clamp(14px,1.8vh,19px); line-height:1.14; margin-bottom:2px}
+  .comfort li span{font-family:"Jost"; font-weight:300; color:var(--on-dark-dim); font-size:clamp(11px,1.35vh,13.5px); line-height:1.42}
+  /* short-height safety: tighten one step so 1024×768 stays scroll-free */
+  @media (max-height:820px){
+    .pay-group{padding:clamp(13px,1.7vh,20px) clamp(13px,1.4vw,20px)}
+    .pay-list li{min-height:38px; font-size:clamp(11.5px,1.45vh,14px)}
+    .comfort li{min-height:38px}
+  }
+  /* phone / portrait fallback only (primary iPad targets stay 3-across) */
+  @media (max-aspect-ratio:1/1),(max-width:900px){ .pay-scroll{overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding-bottom:calc(clamp(40px,7vh,64px) + env(safe-area-inset-bottom))} .pay-groups{grid-template-columns:1fr} }
+
+  /* ── 360° view button + viewer (navy-on-beige, per theme) ── */
+  .float360{position:fixed; top:clamp(16px,2.4vh,30px); right:clamp(20px,2.6vw,48px); z-index:60; display:inline-flex; align-items:center; gap:10px; cursor:pointer;
+    padding:9px 20px; border-radius:999px; border:1px solid rgba(18,22,33,.25); color:var(--on-dark);
+    background:#121621; color:#faf7f0;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.22em; text-transform:uppercase; font-size:clamp(10px,1.15vh,13px);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); transition:transform .16s var(--ease-out), border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{border-color:rgba(201,168,76,.36); transform:translateY(-2px)} }
+  .float360 svg{width:clamp(16px,2vh,20px); height:auto; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:80; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s var(--ease-out)}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:clamp(14px,2.4vh,26px); left:clamp(14px,2.4vw,26px); z-index:81; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:clamp(10px,1.4vh,14px) clamp(16px,1.6vw,22px); border-radius:999px; border:1px solid rgba(236,232,224,.24); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px) saturate(1.1); backdrop-filter:blur(14px) saturate(1.1); font-family:"Jost",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px); box-shadow:0 10px 26px -12px rgba(0,0,0,.7); transition:transform .16s var(--ease-out), background .2s}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621} }
+</style>
+</head>
+<body>
+  <div class="sky"></div>
+  <div class="grain"></div>
+
+  <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="backlbl">Return</span></button>
+  <button class="float360" id="btn360" aria-label="360 degree view">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+    <span>360° View</span>
+  </button>
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      <span>Back</span>
+    </button>
+  </div>
+
+  <div class="exp" id="exp">
+
+    <!-- ════════ THRESHOLD — clean intro, no key/crest ════════ -->
+    <section class="view v-threshold is-on" data-view="threshold" id="vThreshold">
+      <div class="thr-wrap">
+        <h1 class="bs-title stagger" style="animation-delay:.12s">Bespoke Services</h1>
+        <p class="bs-sub stagger" style="animation-delay:.34s">Managed living at Embassy ONE Private Residences — every need within the residence anticipated and attended to.</p>
+        <div class="orn stagger" style="animation-delay:.46s"><i></i><b></b><i></i></div>
+        <button class="enter-btn stagger" id="enterBtn" style="animation-delay:.6s" aria-label="Enter Bespoke Services"><span class="arr">→</span></button>
+        <div class="enter-cap stagger" style="animation-delay:.7s">ENTER</div>
+      </div>
+    </section>
+
+    <!-- ════════ HUB — four service cards + two secondary service links ════════ -->
+    <section class="view v-hub" data-view="hub" id="vHub">
+      <div class="hubhead">
+        <div class="eyebrow stagger" style="animation-delay:.05s">Bespoke Services</div>
+        <h2 class="stagger" style="animation-delay:.14s">Fully managed, <em>fully serviced</em></h2>
+        <div class="orn stagger" style="animation-delay:.2s"><i></i><b></b><i></i></div>
+        <p class="hubline stagger" style="animation-delay:.26s">A residence where life is quietly looked after — your own <b>Residence Manager</b>, Les Clefs d'Or trained, anticipating before you ask.</p>
+      </div>
+
+      <div class="keys4">
+        <button class="kcard" data-go="ease">
+          <span class="kc-no">Ⅰ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Ease</h3>
+          <p class="kc-ess">Friction removed before you feel it.</p>
+          <ul class="kc-list"><li>Seamless RFID access</li><li>Arrival &amp; departure choreography</li><li>Valet &amp; visitor parking</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+        <button class="kcard" data-go="sanctuary">
+          <span class="kc-no">Ⅱ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Sanctuary</h3>
+          <p class="kc-ess">Home kept immaculate, private, restorative.</p>
+          <ul class="kc-list"><li>Curated, Considered &amp; Complete care</li><li>Maintenance coordination</li><li>Seasonal home resets</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+        <button class="kcard" data-go="presence">
+          <span class="kc-no">Ⅲ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Presence</h3>
+          <p class="kc-ess">Known by name, served by relationship.</p>
+          <ul class="kc-list"><li>Private chef in residence</li><li>Spa, salon &amp; wellness</li><li>Personal training &amp; nutrition</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+        <button class="kcard" data-go="connection">
+          <span class="kc-no">Ⅳ</span>
+          <span class="kc-rule"><b></b><i></i></span>
+          <h3>Connection</h3>
+          <p class="kc-ess">Moments and people beyond the four walls.</p>
+          <ul class="kc-list"><li>Festive gifting &amp; provisions</li><li>Bespoke celebration cake</li><li>Experiences &amp; reservations</li></ul>
+          <span class="kc-cta">Explore <span class="arr">›</span></span>
+        </button>
+      </div>
+
+      <div class="hub-links">
+        <button class="ala-link" id="alaBtn">The Care Tiers <span class="arr">›</span></button>
+        <button class="ala-link" id="payBtn">À la Carte — Pay Per Use <span class="arr">›</span></button>
+      </div>
+    </section>
+
+    <!-- ════════ CARE TIERS — master-detail, sidebar toggles in place ════════ -->
+    <!-- CARE_DATA inclusions below are the client-approved verbatim lists (BESPOKE-CONTENT.md, 2026-07-07). -->
+    <section class="view v-ala" data-view="alacarte" id="vAla">
+      <div class="ala">
+        <div class="ala-head">
+          <h2>Care Tiers</h2>
+          <p class="ala-intro">Three tiers of managed living, arranged through your Residence Manager — from everyday upkeep to a household entirely looked after.</p>
+        </div>
+        <p class="ala-tiercap" id="alaTierCap"></p>
+        <div class="ala-clusters kd-md" id="alaClusters"></div>
+        <p class="ala-foot">Every service is arranged and overseen by your Residence Manager.</p>
+      </div>
+      <button class="cons-back" data-hub><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Bespoke Services</button>
+    </section>
+
+    <!-- ════════ À LA CARTE — pay-per-use facilities (beige surface) ════════ -->
+    <section class="view v-pay" data-view="paylist" id="vPay">
+      <div class="ala">
+        <div class="ala-head">
+          <div class="eyebrow">Bespoke Services</div>
+          <h2>À la Carte</h2>
+          <p class="ala-intro">Pay per use — arranged through your Residence Manager.</p>
+        </div>
+        <p class="ala-tiercap" id="payCap"></p>
+        <div class="ala-clusters kd-md" id="payClusters"></div>
+        <p class="ala-foot">Every service is arranged and overseen by your Residence Manager.</p>
+      </div>
+      <button class="cons-back" data-hub><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Bespoke Services</button>
+    </section>
+
+    <!-- ════════ SERVICE DETAIL — master-detail (faded nav inert) ════════ -->
+    <section class="view v-cons" data-view="keydetail" id="vKeyDetail">
+      <div class="cons" id="cons">
+        <div class="cons-headtext">
+          <span class="ch-no" id="chNo"></span>
+          <h2 id="chTitle"></h2>
+          <p class="ch-ess" id="chEss"></p>
+          <p class="ch-intro" id="chIntro"></p>
+        </div>
+        <div class="ala-clusters kd-md">
+          <div class="ala-nav" id="kdNav"></div>
+          <div class="kd-grid" id="kdGrid"></div>
+        </div>
+      </div>
+      <button class="cons-back" data-hub><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Bespoke Services</button>
+    </section>
+
+  </div>
+
+<script>
+  var views={}; document.querySelectorAll('.view').forEach(function(v){ views[v.dataset.view]=v; });
+  var cur='threshold';
+  var backBtn=document.getElementById('back'), backLbl=document.getElementById('backlbl');
+
+  function show(name){
+    if(!views[name]) return;
+    views[cur].classList.remove('is-on');
+    cur=name;
+    var v=views[name];
+    v.querySelectorAll('.stagger').forEach(function(el){ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; });
+    v.classList.add('is-on');
+    backLbl.textContent=(name==='threshold'||name==='hub')?'Return':'Back';
+  }
+
+  // ── THRESHOLD: simple elegant entry → hub ──
+  var enterBtn=document.getElementById('enterBtn');
+  if(enterBtn) enterBtn.addEventListener('click', function(){ show('hub'); });
+
+  // ── icon library (champagne line icons) ──
+  function svg(p){ return '<svg viewBox="0 0 24 24">'+p+'</svg>'; }
+  var ICON={
+    signal: svg('<path d="M4.5 11a10 10 0 0 1 15 0"/><path d="M7.5 14a6 6 0 0 1 9 0"/><circle cx="12" cy="17.4" r="1.1"/>'),
+    pin: svg('<path d="M12 21s6.5-6 6.5-10.5a6.5 6.5 0 0 0-13 0C5.5 15 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.3"/>'),
+    id: svg('<rect x="3" y="6" width="18" height="12.5" rx="2"/><circle cx="8.5" cy="11.4" r="1.9"/><path d="M13 10.5h5M13 13.5h5M5.6 15.4c.7-1.5 4.1-1.5 4.8 0"/>'),
+    parking: svg('<rect x="4.5" y="4.5" width="15" height="15" rx="3"/><path d="M10 15.5v-7h3a2.4 2.4 0 0 1 0 4.8h-3"/>'),
+    car: svg('<path d="M4 13l1.8-4.5h12.4L20 13"/><path d="M4 13h16v4H4z"/><circle cx="7.5" cy="17.2" r="1.3"/><circle cx="16.5" cy="17.2" r="1.3"/>'),
+    cup: svg('<path d="M6 8.5h10.5v4.5a5.25 5.25 0 0 1-10.5 0z"/><path d="M16.5 9.5h2a1.6 1.6 0 0 1 0 3.2h-2"/><path d="M9 5.4s-.6.8 0 1.7M12.4 5.4s-.6.8 0 1.7"/>'),
+    sparkle: svg('<path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"/>'),
+    layers: svg('<path d="M12 4l8 4-8 4-8-4z"/><path d="M4.5 12.4l7.5 3.8 7.5-3.8"/>'),
+    shield: svg('<path d="M12 3.2l7 2.8v4.8c0 4.4-3 7.4-7 8.9-4-1.5-7-4.5-7-8.9V6z"/><path d="M9 11.5l2 2 4-4"/>'),
+    wrench: svg('<path d="M15.5 7.2a3.6 3.6 0 0 1-4.7 4.7l-5.1 5.1a1.6 1.6 0 0 0 2.3 2.3l5.1-5.1a3.6 3.6 0 0 1 4.7-4.7l-2.4 2.4-2-2z"/>'),
+    leaf: svg('<path d="M5 19c-1-8 5-14 14-14 1 9-5 15-14 14z"/><path d="M5.5 18.5c3-5 7-8 11-9.5"/>'),
+    calendar: svg('<rect x="4" y="5.5" width="16" height="14" rx="2"/><path d="M4 9.5h16M8.5 3.5v4M15.5 3.5v4"/>'),
+    chef: svg('<path d="M7.5 13.5a3.6 3.6 0 1 1 1-7 3.9 3.9 0 0 1 7 0 3.6 3.6 0 1 1 1 7z"/><path d="M7.5 13.5v4h9v-4"/>'),
+    glass: svg('<path d="M7 4.5h10l-1 6.2a4 4 0 0 1-8 0z"/><path d="M12 14.5v4M9 18.5h6"/>'),
+    plate: svg('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/>'),
+    lotus: svg('<path d="M12 18.5c-4 0-7-2.4-7-4.8 1.9 0 3.4.9 4 1.9 0-2.9 1.4-4.9 3-5.9 1.6 1 3 3 3 5.9.6-1 2.1-1.9 4-1.9 0 2.4-3 4.8-7 4.8z"/>'),
+    dumbbell: svg('<path d="M4 9.5v5M7 7.5v9M17 7.5v9M20 9.5v5M7 12h10"/>'),
+    apple: svg('<path d="M12 8.5c-1.8-2.7-6.5-1.8-6.5 2.6 0 3.8 3 7.4 6.5 7.4s6.5-3.6 6.5-7.4c0-4.4-4.7-5.3-6.5-2.6z"/><path d="M12 8.5c0-2 1-3 2.6-3.4"/>'),
+    gift: svg('<rect x="4.5" y="9.5" width="15" height="10" rx="1"/><path d="M4.5 13h15M12 9.5v10"/><path d="M12 9.5S10.4 5 8.2 6.2 12 9.5 12 9.5zM12 9.5s1.6-4.5 3.8-3.3S12 9.5 12 9.5z"/>'),
+    cake: svg('<path d="M5 20v-7.5a2.5 2.5 0 0 1 2.5-2.5h9A2.5 2.5 0 0 1 19 12.5V20z"/><path d="M5 15.5h14M12 10V7"/><circle cx="12" cy="5.6" r="1"/>'),
+    basket: svg('<path d="M5 9.5h14l-1.4 9.5H6.4z"/><path d="M8.5 9.5l2-5M15.5 9.5l-2-5M4 9.5h16"/>'),
+    coffee: svg('<path d="M6 8.5h10.5v4.5a5.25 5.25 0 0 1-10.5 0z"/><path d="M16.5 9.5h2a1.6 1.6 0 0 1 0 3.2h-2"/><path d="M5 19.5h12"/>'),
+    star: svg('<path d="M12 3.5l2.4 5.6 6 .5-4.6 4 1.4 5.9L12 16.4 6.8 19.5l1.4-5.9-4.6-4 6-.5z"/>')
+  };
+
+  // ── content for the four service pillars (service detail) ──
+  var KEYS_DATA={
+    ease:{no:'Ⅰ · Arrival & Access', title:'Ease', ess:'Friction removed before you feel it.',
+      intro:'Arrival, parking and departure handled end to end, so the residence quietly moves for you.', items:[
+      {ic:'signal',  t:'Seamless RFID Access',   d:'Contactless gate and lobby entry — no stops, no waiting.'},
+      {ic:'id',      t:'Visitor Protocol',        d:'Guests pre-cleared, received and escorted to your door.'},
+      {ic:'car',     t:'Departure Coordination',  d:'Vehicle brought round, cab arranged, luggage handled.'},
+      {ic:'pin',     t:'Arrival Choreography',    d:'From gate to drop-off, received in person by the concierge.'},
+      {ic:'parking', t:'Valet & Visitor Parking', d:'Valet on call, or assisted self-park in the basement.'},
+      {ic:'cup',     t:'Lobby Comfort',           d:'Cold towels, refreshments and a seat the moment you arrive.'}]},
+    sanctuary:{no:'Ⅱ · Home & Upkeep', title:'Sanctuary', ess:'Home kept immaculate, private, restorative.',
+      intro:'Household care across three tiers — Curated, Considered and Complete — keeping the residence pristine without ever being asked.', items:[
+      {ic:'sparkle', t:'Curated Care',          d:'Weekly housekeeping, linen and plant care, quietly scheduled.'},
+      {ic:'layers',  t:'Considered Care',        d:'Monthly deep cleans, upholstery and soft-furnishing attention.'},
+      {ic:'shield',  t:'Complete Care',          d:'Quarterly resets, pest control and full home detailing.'},
+      {ic:'wrench',  t:'Maintenance Desk',       d:'AMC renewals, repairs and trades coordinated for you.'},
+      {ic:'leaf',    t:'Home Detox Reset',       d:'Post-festive deep clean, refresh and re-order.'},
+      {ic:'calendar',t:'Seasonal Readiness',     d:'Pantry restock and the home prepared ahead of the season.'}]},
+    presence:{no:'Ⅲ · Dining & Wellbeing', title:'Presence', ess:'Known by name, served by relationship.',
+      intro:'Dining, wellness and personal services brought into the residence, on your rhythm.', items:[
+      {ic:'chef',    t:'Private Chef in Residence',d:'In-home dining, menus and cook-alongs on request.'},
+      {ic:'glass',   t:'Wine & Spirits',          d:'Curated cellar selections, a mixologist for occasions.'},
+      {ic:'plate',   t:'In-Home Chef Series',     d:'Private dinner experiences arranged around your table.'},
+      {ic:'lotus',   t:'Spa, Massage & Salon',    d:'Vetted therapists and stylists, in your residence.'},
+      {ic:'dumbbell',t:'Personal Training & Yoga', d:'Practice at home or in the residents’ gym.'},
+      {ic:'apple',   t:'Nutrition Consultation',  d:'Guidance and meal planning tailored to you.'}]},
+    connection:{no:'Ⅳ · Gifting & Occasions', title:'Connection', ess:'Moments and people beyond the four walls.',
+      intro:'Curated provisions, gifting and seasonal occasions, thoughtfully sourced and dispatched.', items:[
+      {ic:'gift',    t:'Festive Gifting',        d:'Thoughtful gifts sourced, wrapped and dispatched.'},
+      {ic:'cake',    t:'Bespoke Celebration Cake',d:'Made to order for the occasion.'},
+      {ic:'basket',  t:'Artisanal Provisions',   d:'Specialty sourcing and pantry curation on request.'},
+      {ic:'coffee',  t:'Daily Provisions',       d:'Coffee, flowers and essentials delivered to schedule.'},
+      {ic:'star',    t:'Seasonal Moments',       d:'Occasions and celebrations curated through the year.'},
+      {ic:'pin',     t:'Experiences Desk',       d:'Reservations, tickets and city access arranged.'}]}
+  };
+
+  var chNo=document.getElementById('chNo'), chTitle=document.getElementById('chTitle'),
+      chEss=document.getElementById('chEss'), chIntro=document.getElementById('chIntro');
+
+  function boxHTML(it,i){ return '<div class="kd-box" style="--gd:'+(i*0.05).toFixed(2)+'s"><i class="kb-ic">'+(ICON[it.ic]||'')+'</i><b>'+it.t+'</b><span>'+it.d+'</span></div>'; }
+
+  // ── SERVICE DETAIL = master-detail: 4 pillar buttons (left, non-selected faded + inert) + that pillar's boxes (right) ──
+  var KD_ORDER=['ease','sanctuary','presence','connection'], KD_ICON={ease:'car', sanctuary:'sparkle', presence:'chef', connection:'gift'};
+  function buildKd(){ var nav=document.getElementById('kdNav'); if(!nav||nav.children.length) return;
+    KD_ORDER.forEach(function(name,i){ var k=KEYS_DATA[name]; if(!k) return; var btn=document.createElement('button');
+      btn.className='anav-btn'+(i===0?' sel':''); btn.dataset.k=name; btn.style.setProperty('--d',(i*0.07).toFixed(2)+'s');
+      btn.innerHTML='<span class="an-ic">'+(ICON[KD_ICON[name]]||'')+'</span><span class="an-t">'+k.title+'</span>';
+      btn.addEventListener('click', function(){ selectKey(name); }); nav.appendChild(btn); });
+  }
+  function selectKey(name){ var k=KEYS_DATA[name]; if(!k) return;
+    document.querySelectorAll('#kdNav .anav-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.k===name); });
+    chNo.textContent=k.no; chTitle.textContent=k.title; chEss.textContent=k.ess; chIntro.textContent=k.intro;
+    var grid=document.getElementById('kdGrid'); if(!grid) return; grid.classList.remove('in');
+    grid.innerHTML=k.items.map(boxHTML).join('');
+    void grid.offsetWidth; requestAnimationFrame(function(){ grid.classList.add('in'); });
+  }
+  buildKd();
+
+  function openDetail(go){
+    try{window.RDA&&RDA.track('bespoke_pillar', go);}catch(_){}
+    show('keydetail'); selectKey(go);
+    var kn=document.getElementById('kdNav'); if(kn){ kn.classList.remove('in'); void kn.offsetWidth; kn.classList.add('in'); }
+  }
+
+  // ── HUB cards: champagne scale+tint pop → service detail ──
+  var keys4El=document.querySelector('.keys4'), HOVER=matchMedia('(hover:hover)').matches;
+  document.querySelectorAll('.kcard').forEach(function(c, ci2){
+    var isRow=c.classList.contains('prow');   // slim pillar rows use a static CSS sheen — no 3D tilt / looping shine
+    if(!isRow){ var sh=document.createElement('span'); sh.className='kshine'; sh.style.setProperty('--sd', (ci2*1.4).toFixed(1)+'s'); c.appendChild(sh); }
+    function rest(){ c.classList.remove('tilt'); c.style.transform=''; }
+    if(HOVER && !isRow){
+      c.addEventListener('pointermove', function(e){ if(c.dataset.busy) return; var r=c.getBoundingClientRect();
+        var px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
+        c.classList.add('tilt'); c.style.transform='translateY(-8px) rotateX('+(-py*9).toFixed(2)+'deg) rotateY('+(px*11).toFixed(2)+'deg) scale(1.02)'; });
+      c.addEventListener('pointerleave', rest);
+    }
+    c.addEventListener('click', function(){ if(c.dataset.busy) return; rest(); c.dataset.busy='1'; var go=c.dataset.go;
+      keys4El.classList.add('dim'); c.classList.add('pop');
+      setTimeout(function(){ openDetail(go); }, 360);
+      setTimeout(function(){ c.classList.remove('pop'); keys4El.classList.remove('dim'); delete c.dataset.busy; }, 760);
+    });
+  });
+
+  // ── CARE TIERS — three tiers (Curated · Considered · Complete), sidebar toggles in place ──
+  /* Client-approved verbatim inclusions (BESPOKE-CONTENT.md, 2026-07-07). Do not paraphrase. */
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var CARE_DATA=[
+    {title:'Curated Care', ic:'sparkle', cadence:'Weekly', points:[
+      'White-glove dusting',
+      'Vacuum floors & furnishings',
+      'Biweekly entire home cleaning',
+      'Plant care',
+      'Mirrors streak-free',
+      'Bed & linen presentation',
+      'Waste removal']},
+    {title:'Considered Care', ic:'layers', cadence:'Monthly', points:[
+      'All Curated inclusions (excluding home cleaning)',
+      'Upholstery vacuum',
+      'Carpet spot treatment',
+      'Chrome polish',
+      'Thrice a week entire home cleaning',
+      'Annual maintenance contract renewal coordination',
+      'Ironing services - biweekly']},
+    {title:'Complete Care', ic:'shield', cadence:'Quarterly', points:[
+      'All Considered inclusions',
+      'High & low level clean',
+      'Carpet shampooing',
+      'Kitchen deep clean',
+      'Pest control',
+      'Floor scrub & buff',
+      'Photographs on completion']}
+  ];
+  var alaTierCap=document.getElementById('alaTierCap');
+  function buildAla(){ var host=document.getElementById('alaClusters'); if(!host||host.children.length) return;
+    var nav='<div class="ala-nav">';
+    CARE_DATA.forEach(function(cat,i){ nav+='<button class="anav-btn'+(i===0?' sel':'')+'" data-i="'+i+'" style="--d:'+(i*0.07).toFixed(2)+'s"><span class="an-ic">'+(ICON[cat.ic]||'')+'</span><span class="an-t">'+cat.title+'</span></button>'; });
+    nav+='</div>';
+    host.innerHTML=nav+'<div class="kd-grid care-mode" id="alaGrid"></div>';
+    host.querySelectorAll('.anav-btn').forEach(function(btn){ btn.addEventListener('click', function(){ selectCluster(+btn.dataset.i); }); });
+  }
+  function selectCluster(i){ if(i<0||i>=CARE_DATA.length) return; var cat=CARE_DATA[i];
+    try{window.RDA&&RDA.track('care_tier', cat.title);}catch(_){}
+    document.querySelectorAll('#alaClusters .anav-btn').forEach(function(b,j){ b.classList.toggle('sel', j===i); });
+    if(alaTierCap) alaTierCap.textContent=cat.cadence||'';
+    var grid=document.getElementById('alaGrid'); if(!grid) return; grid.classList.remove('in');
+    grid.innerHTML=cat.points.map(function(p,idx){ return '<div class="kd-box care-pt" style="--gd:'+(idx*0.04).toFixed(2)+'s"><span class="cp-mk"></span><b>'+esc(p)+'</b></div>'; }).join('');
+    void grid.offsetWidth; requestAnimationFrame(function(){ grid.classList.add('in'); });
+  }
+  buildAla();
+  function alaPlay(){ if(cur!=='alacarte') return;
+    var nav=document.querySelector('#alaClusters .ala-nav'); if(nav){ nav.classList.remove('in'); void nav.offsetWidth; requestAnimationFrame(function(){ nav.classList.add('in'); }); }
+    selectCluster(0);
+  }
+
+  // group zoom: pinch (touch) / wheel (desktop) + drag-pan over the whole Care Tiers cluster group
+  var azG=document.getElementById('alaClusters'), azS=1, azX=0, azY=0, azPD=0, azPS=1, azDrag=false, azLX=0, azLY=0, vAla=document.getElementById('vAla');
+  function azApply(){ if(azG) azG.style.transform='translate('+azX.toFixed(0)+'px,'+azY.toFixed(0)+'px) scale('+azS.toFixed(3)+')'; }
+  function azReset(){ azS=1; azX=0; azY=0; azApply(); }
+  function azClamp(){ azS=Math.max(0.6,Math.min(2.8,azS)); }
+  if(vAla){
+    vAla.addEventListener('wheel', function(e){ if(cur!=='alacarte') return; e.preventDefault(); azS-=e.deltaY*0.0016; azClamp(); azApply(); }, {passive:false});
+    vAla.addEventListener('touchmove', function(e){ if(cur!=='alacarte') return; if(e.touches.length===2){ e.preventDefault();
+      var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      if(!azPD){ azPD=d; azPS=azS; } azS=azPS*(d/azPD); azClamp(); azApply(); } }, {passive:false});
+    vAla.addEventListener('touchend', function(e){ if(e.touches.length<2) azPD=0; });
+    vAla.addEventListener('pointerdown', function(e){ if(cur!=='alacarte'||azS<=1.02||(e.target.closest&&e.target.closest('.anav-btn'))) return; azDrag=true; azLX=e.clientX; azLY=e.clientY; });
+    vAla.addEventListener('pointermove', function(e){ if(!azDrag) return; azX+=e.clientX-azLX; azY+=e.clientY-azLY; azLX=e.clientX; azLY=e.clientY; azApply(); });
+    window.addEventListener('pointerup', function(){ azDrag=false; });
+  }
+  var alaBtn=document.getElementById('alaBtn'); if(alaBtn) alaBtn.addEventListener('click', function(){ azReset(); show('alacarte'); requestAnimationFrame(alaPlay); });
+
+  // ── À la Carte (pay per use) — master-detail: 3 group toggles → that group's items as individual boxes ──
+  /* Client-approved verbatim (BESPOKE-CONTENT.md, 2026-07-07). Do not paraphrase. */
+  var PAY_DATA=[
+    {title:'In-Residence Dining', ic:'chef', cap:'By Arrangement', points:[
+      'Private chef — in-residence','Cook with the chef','Curated wine & spirits with mixologist',
+      'Artisanal provisions & sourcing','Daily coffee & provisions subscription','Bespoke celebration cake',
+      'Festive gifting — sourced & dispatched']},
+    {title:'Wellness & Wellbeing', ic:'lotus', cap:'By Arrangement', points:[
+      'In-residence yoga & meditation','Personal training — residence / gym','Spa & massage — vetted therapists',
+      'Salon & nail services in-residence','Nutritionist consultation']},
+    {title:'‘Comfort’ Services', ic:'leaf', cap:'Seasonal & on-request services — curated for moments that matter, arranged through your Residence Manager.', items:[
+      {t:'Home Detox Service', d:'Post-festive deep clean & plant refresh — your residence reset to pristine.'},
+      {t:'Festive Gifting Service', d:'Curated & dispatched by Fifth Key — thoughtful gifts, handled end to end.'},
+      {t:'In-Home Chef Series', d:'Private dinner experiences, booked seamlessly via your Residence Manager.'},
+      {t:'New Year Readiness', d:'Deep clean, plant refresh & pantry restock — ready to welcome the year.'}]}
+  ];
+  var payCap=document.getElementById('payCap');
+  function buildPay(){ var host=document.getElementById('payClusters'); if(!host||host.children.length) return;
+    var nav='<div class="ala-nav">';
+    PAY_DATA.forEach(function(g,i){ nav+='<button class="anav-btn'+(i===0?' sel':'')+'" data-i="'+i+'" style="--d:'+(i*0.07).toFixed(2)+'s"><span class="an-ic">'+(ICON[g.ic]||'')+'</span><span class="an-t">'+g.title+'</span></button>'; });
+    nav+='</div>';
+    host.innerHTML=nav+'<div class="kd-grid care-mode" id="payGrid"></div>';
+    host.querySelectorAll('.anav-btn').forEach(function(btn){ btn.addEventListener('click', function(){ selectPayGroup(+btn.dataset.i); }); });
+  }
+  function selectPayGroup(i){ if(i<0||i>=PAY_DATA.length) return; var g=PAY_DATA[i];
+    try{window.RDA&&RDA.track('alacarte_group', g.title);}catch(_){}
+    document.querySelectorAll('#payClusters .anav-btn').forEach(function(b,j){ b.classList.toggle('sel', j===i); });
+    if(payCap) payCap.textContent=g.cap||'';
+    var grid=document.getElementById('payGrid'); if(!grid) return; grid.classList.remove('in');
+    var html;
+    if(g.items){ grid.classList.remove('care-mode');   // comfort: pillar kd-box (numeral + title + description)
+      html=g.items.map(function(it,idx){ return '<div class="kd-box" style="--gd:'+(idx*0.05).toFixed(2)+'s"><span class="cf-no">'+(idx+1)+'</span><b>'+esc(it.t)+'</b><span>'+esc(it.d)+'</span></div>'; }).join('');
+    } else { grid.classList.add('care-mode');           // dining / wellness: centered single-line boxes (4+3 style)
+      html=g.points.map(function(p,idx){ return '<div class="kd-box care-pt" style="--gd:'+(idx*0.04).toFixed(2)+'s"><span class="cp-mk"></span><b>'+esc(p)+'</b></div>'; }).join('');
+    }
+    grid.innerHTML=html;
+    void grid.offsetWidth; requestAnimationFrame(function(){ grid.classList.add('in'); });
+  }
+  buildPay();
+  function payPlay(){ if(cur!=='paylist') return;
+    var nav=document.querySelector('#payClusters .ala-nav'); if(nav){ nav.classList.remove('in'); void nav.offsetWidth; requestAnimationFrame(function(){ nav.classList.add('in'); }); }
+    selectPayGroup(0);
+  }
+  var payBtn=document.getElementById('payBtn');
+  if(payBtn) payBtn.addEventListener('click', function(){ show('paylist'); requestAnimationFrame(payPlay); });
+
+  // any [data-hub] → back to hub
+  document.querySelectorAll('[data-hub]').forEach(function(b){ b.addEventListener('click', function(){ azReset(); show('hub'); }); });
+
+  // RETURN: from detail / care tiers / à la carte → hub; from hub/threshold → close to home
+  function backAction(){
+    if(cur==='keydetail'||cur==='alacarte'||cur==='paylist'){ if(cur==='alacarte') azReset(); show('hub'); }
+    else { try{ parent.postMessage('eo-screen-close','*'); }catch(e){} }
+  }
+  backBtn.addEventListener('click', backAction);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ backAction(); } });
+
+  // ── 360° view: open external tour full-screen, back button closes it (src set only on tap) ──
+  (function(){ var b=document.getElementById('btn360'), v=document.getElementById('view360'), f=document.getElementById('frame360'), bk=document.getElementById('back360');
+    if(!b||!v||!f) return;
+    b.addEventListener('click', function(){ try{window.RDA&&RDA.track('360_view','service');}catch(_){} f.src='https://www.turiya.co/360/EmbassyOne/'; v.classList.add('show'); v.setAttribute('aria-hidden','false'); });
+    if(bk) bk.addEventListener('click', function(){ v.classList.remove('show'); v.setAttribute('aria-hidden','true'); setTimeout(function(){ if(!v.classList.contains('show')) f.src='about:blank'; },420); });
+  })();
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label="bespoke-services"></script>
+</body>
+</html>

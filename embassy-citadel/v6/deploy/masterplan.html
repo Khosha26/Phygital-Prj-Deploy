@@ -1,0 +1,2240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Master Plan</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  MASTERPLAN v1 — assumptions + reasoning
+  ──────────────────────────────────────────────────────────────────────
+  Concept
+  · Inside-screen reached from the home's "02 Masterplan" tile. The
+    masterplan canvas is the protagonist; left rail carries the
+    editorial frame, right rail carries the legend + filters. No
+    bottom footer chrome — the canvas takes the full height down to
+    the "drag to explore" indicator.
+
+  Layout (1440 × 900 stage)
+  · Top bar 76px — identical chrome to gallery/amenities (brand
+    wordmark at left @ 44 / 38, eyebrow centre, Worli + clock +
+    right). Brand is the back button (cream-veil to home).
+  · Left rail @ x=64, w=300: tiny eyebrow, "Explore. Envision.
+    Experience." Cormorant headline, gold hairline, body paragraph,
+    4 stat tiles in a vertical stack pinned to the bottom of the rail.
+  · Centre canvas @ x≈386, w≈680, h≈648: zoomable, pannable
+    site-plan.png with 13 markers absolutely positioned in % of the
+    image. Wheel zoom (anchored at cursor), pointer drag pan,
+    pinch (gesture* events on iOS) zoom, double-click reset, +/-
+    floating buttons. Marker click → animate to scale 2.5 centered
+    on marker + activate spotlight + show info card.
+  · Right rail @ x=1080, w=320: category filter pills (ALL / AMEN /
+    LAND / ACCESS), legend toggles (7 categories on/off), about-
+    project mini-card pinned to bottom.
+
+  Zoom contract
+  · MIN_SCALE = 1 (image fits the canvas — floor)
+  · MAX_SCALE = 4 (zoom-in detail)
+  · Anchor-at-cursor math keeps the same image-point under the
+    cursor when zooming, both for wheel and pinch.
+  · clampPan() prevents the stage edges from pulling inside the
+    viewport when scaled (so you never see an empty gutter).
+
+  Markers (13 total, % coords on site-plan.png)
+  · Buildings:          North Tower, South Tower, Wing A
+  · Amenities (4):     Pool, Gym, Spa, Club House
+  · Landscape (2):     Sculpted Garden, Sky Lawn
+  · Water (1):         Reflective Pool
+  · Pathways (1):      Jogging Loop
+  · Access (2):        Main Gate, Service Gate
+  · (Parking is in the legend with default OFF — no marker by default;
+    the legend toggle reveals zero markers, faithful to the spec.)
+
+  Spotlight overlay
+  · Radial-gradient mask centred on the marker's screen position,
+    fading to a warm dark veil over the rest of the canvas. Fade
+    400ms.
+
+  Info card
+  · Cream tile, gold thin border, soft shadow, ~200×120, positioned
+    near the marker (right + down 20px), clipped to canvas edges.
+
+  Background contract
+  · Same paper bg + grain. NO tower silhouette (canvas is the
+    focus). NO day-tint cycle (would shift masterplan colors).
+    Faint cross-hatching blueprint-grid behind the canvas (5%
+    opacity) as an architectural cue.
+
+  Interactions wired
+  · Wheel zoom anchored at cursor
+  · Pinch zoom (gesturestart/change/end) anchored at gesture origin
+  · Pointer drag pan when scale > 1
+  · +/- floating buttons → ±0.5 scale
+  · Double-click empty canvas → reset to scale 1 centered
+  · Marker click → spotlight + animated zoom to ~2.5
+  · Click outside info card → reset
+  · Category filter tabs (ALL / AMEN / LAND / ACCESS) → filter
+    visible markers by data-cat
+  · Legend toggles → hide/show marker categories (multiplied with
+    the category filter)
+  · Brand wordmark → cream veil → home.html
+  · About-the-project card → cream veil → about (overview) page
+  · Live clock updates every 30s
+
+  Placeholders / to-wire-later
+  · Marker coordinates are reasonable guesses on the masterplan
+    image — they should be refined once an architect's overlay is
+    available (the existing screen-03-masterplan has ref-with-pins
+    coordinates for ground/circ; this v4 uses a curated 12-marker
+    storytelling set, not the 12 ground pins).
+  · Topbar has no menu button.
+  · About-the-project mini-card navigates to overview screen as a
+    soft fallback ("about" hasn't been built in v4 yet).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --tile-shadow:   0 18px 38px rgba(20, 14, 6, 0.16),
+                     0 6px 14px  rgba(20, 14, 6, 0.10);
+    --plate-shadow:  0 30px 60px -18px rgba(80, 58, 28, 0.32),
+                     0 14px 30px -10px rgba(80, 58, 28, 0.18),
+                     0 4px 10px        rgba(40, 28, 10, 0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage scaler — flex-center letterbox ─────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    display: flex; align-items: center; justify-content: center;
+    isolation: isolate;
+    /* Flat paper — matches the stage's own paper edge so the letterbox/
+       pillarbox margins (iPad 4:3, 65" 16:9) blend with no visible "cut".
+       (This screen has NO dayCycle keyframe, so no ::before tint per spec.) */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    z-index: 1;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+  }
+
+  /* ── PAPER BACKGROUND ─────────────────────────────────────────── */
+  .stage-bg {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.02;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 1px;
+    mix-blend-mode: multiply;
+  }
+
+  /* ── TOP BAR (seamless — paper bg shows through) ────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Unified left-side brand-back */
+  .ec-brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    min-height: 44px;
+  }
+  .ec-brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .ec-brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .ec-brand-back .brand-diamond {
+    width: 18px; height: 18px;
+    position: relative; display: inline-block;
+    transform: rotate(45deg);
+    border: 1px solid var(--gold-500);
+    background: linear-gradient(135deg, var(--gold-200) 0%, var(--gold-500) 100%);
+    box-shadow: 0 0 6px rgba(148,111,56,0.20);
+    flex-shrink: 0;
+  }
+  .ec-brand-back .brand-diamond::before {
+    content: ''; position: absolute; inset: 3px;
+    border: 0.5px solid rgba(255,255,255,0.55); background: transparent;
+  }
+  .ec-brand-back .brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+  .ec-brand-back .brand-text .name {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500; font-size: 22px;
+    color: var(--onyx-700); letter-spacing: 0.04em;
+  }
+  .ec-brand-back .brand-text .loc {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  /* Right-side BACK button */
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+  /* ── TAP RESPONSIVENESS — interactive surfaces inside the app ── */
+  button, [role="button"], a[href], .stat-row, .spotlight, .pill {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  svg .tap, svg [data-tap], svg [role="button"], .spotlight, .mp-region { pointer-events: all; cursor: pointer; }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+  }
+  .brand:hover { opacity: 0.72; transform: translateX(-1px); }
+  .brand:focus-visible { outline: none; opacity: 0.72; }
+  .brand::after {
+    content: '← Home';
+    position: absolute;
+    left: 100%; top: 50%;
+    transform: translate(8px, -50%);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: none;
+  }
+  .brand:hover::after, .brand:focus-visible::after {
+    opacity: 0.85;
+    transform: translate(12px, -50%);
+  }
+  .brand-wordmark {
+    width: 156px; height: 43.2px;
+    color: var(--onyx-700);
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+  .top-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 9px;
+    letter-spacing: 0.55em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.78;
+  }
+  .top-right {
+    display: flex; align-items: center; gap: 14px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--onyx-100); opacity: 0.78;
+    font-variant-numeric: tabular-nums;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold-300);
+    box-shadow: 0 0 8px rgba(217,185,122,0.6);
+    animation: livePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.18); }
+  }
+  /* ── LEFT EDITORIAL RAIL ─────────────────────────────────────────── */
+  .leftrail {
+    position: absolute;
+    left: 64px;
+    top: 108px;
+    width: 300px;
+    height: 760px;
+    z-index: 6;
+    display: flex; flex-direction: column;
+  }
+  .lr-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.85;
+    margin-bottom: 18px;
+  }
+  .lr-headline {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 52px;
+    line-height: 1.02;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0 0 14px 0;
+  }
+  .lr-rule {
+    height: 1px; width: 70px;
+    background: var(--hair-hi);
+    margin: 0 0 16px 0;
+  }
+  .lr-body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--onyx-100);
+    opacity: 0.82;
+    margin: 0 0 28px 0;
+  }
+
+  /* Stat tile stack */
+  .stat-list {
+    display: flex; flex-direction: column;
+    gap: 14px;
+  }
+  .stat-row {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .stat-icon {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.85);
+    border: 1px solid var(--hair-lo);
+    display: grid; place-items: center;
+    color: var(--gold-500);
+    flex-shrink: 0;
+    box-shadow:
+      0 6px 14px -6px rgba(80, 58, 28, 0.2),
+      0 2px 4px rgba(40, 28, 10, 0.06);
+  }
+  .stat-icon svg { width: 22px; height: 22px; display: block; }
+  .stat-text {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .stat-num {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+
+  /* ── FULL-BLEED MASTERPLAN CANVAS (extends edge-to-edge) ────────── */
+  .mp-wrap {
+    position: absolute;
+    left: 0;
+    top: 76px;          /* below top bar */
+    right: 0;
+    bottom: 0;          /* extends to stage bottom */
+    z-index: 2;         /* below rails (z:6) and back nav, above bg paper */
+  }
+  /* Blueprint cross-hatch hidden — masterplan is full-bleed now, no plate chrome */
+  .mp-blueprint { display: none; }
+  .mp-canvas {
+    position: relative;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: transparent;       /* let stage paper show through any letterbox */
+    touch-action: none;
+    cursor: grab;
+  }
+  .mp-canvas.is-panning { cursor: grabbing; }
+  .mp-stage {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    transform-origin: 0 0;
+    transform: translate(0px, 0px) scale(1);
+    will-change: transform;
+  }
+  .mp-stage.is-animating {
+    transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mp-image {
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;           /* real extracted plan on transparent canvas — never stretch */
+    object-position: center;
+    display: block;
+    pointer-events: none;
+    -webkit-user-drag: none;
+    /* Crisp-up the washed-out render — subtle contrast + saturation lift,
+       a hair darker so the linework reads. Static (no animated tint loop). */
+    filter: contrast(1.08) saturate(1.06) brightness(0.99);
+  }
+  .mp-image-fallback {
+    position: absolute; inset: 0;
+    display: none;
+    place-items: center;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 45%, var(--paper) 0%, var(--bone-50) 55%, var(--bone-200) 100%);
+  }
+  .mp-image-fallback.is-on { display: grid; }
+  .mp-image-fallback span {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--taupe-400);
+    opacity: 0.7;
+  }
+
+  /* ── MARKER ───────────────────────────────────────────────────────
+     Anchored to .mp-stage (tracks the map point on pan/zoom). The button
+     itself is a generous 36px hit-target (well over the 28px minimum);
+     a 30px bronze-ringed disc sits inside with a clear gold core dot and
+     an always-pulsing halo, so it unmistakably reads as "tap me". */
+  .mp-marker {
+    position: absolute;
+    width: 36px; height: 36px;          /* ≥28px hit area (36px) */
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--gold-500);
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: transform 200ms cubic-bezier(0.22,1,0.36,1), opacity 240ms ease;
+    z-index: 4;
+    -webkit-appearance: none; appearance: none;
+    touch-action: manipulation;
+  }
+  /* The visible disc */
+  .mp-marker .mk-disc {
+    position: absolute; top: 50%; left: 50%;
+    width: 30px; height: 30px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 30%, var(--gold-300) 0%, var(--gold-500) 62%, var(--gold-600) 100%);
+    border: 1.5px solid var(--gold-200);
+    display: grid; place-items: center;
+    color: #FFFFFF;
+    box-shadow:
+      0 0 0 4px rgba(252, 250, 244, 0.7),     /* cream collar lifts it off the plan */
+      0 8px 16px -5px rgba(80, 58, 28, 0.45),
+      0 2px 5px rgba(40, 28, 10, 0.20),
+      inset 0 1px 1px rgba(255,255,255,0.40);
+    transition: background 200ms ease, border-color 200ms ease,
+                box-shadow 220ms ease, transform 200ms ease;
+  }
+  .mp-marker .mk-disc svg {
+    width: 14px; height: 14px; display: block;
+    stroke-width: 2;
+  }
+  /* Always-visible pulsing halo (the "tappable" affordance) */
+  .mp-marker::before {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    width: 30px; height: 30px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1.5px solid var(--gold-300);
+    opacity: 0.6;
+    animation: markerPulse 2.4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes markerPulse {
+    0%   { transform: translate(-50%,-50%) scale(1);    opacity: 0.6;  }
+    70%  { transform: translate(-50%,-50%) scale(1.9);  opacity: 0;    }
+    100% { transform: translate(-50%,-50%) scale(1.9);  opacity: 0;    }
+  }
+
+  /* Always-visible label chip below the disc */
+  .mp-marker .mk-label {
+    position: absolute; top: calc(50% + 20px); left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    padding: 3px 9px;
+    background: rgba(252, 250, 244, 0.94);
+    border: 1px solid var(--hair);
+    border-radius: 100px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 8px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--onyx-700);
+    box-shadow: 0 3px 8px -3px rgba(80,58,28,0.30);
+    pointer-events: none;
+    opacity: 0.92;
+    transition: opacity 200ms ease, transform 200ms ease, background 200ms ease;
+  }
+
+  .mp-marker.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* Hover lift + brighten — obvious interactive feedback */
+  .mp-marker:hover { transform: translate(-50%, -50%) scale(1.06); }
+  .mp-marker:hover .mk-disc {
+    background: radial-gradient(circle at 38% 32%, #FFFFFF 0%, var(--paper) 50%, var(--bone-50) 100%);
+    border-color: var(--gold-500);
+    box-shadow:
+      0 0 0 4px rgba(252, 250, 244, 0.75),
+      0 12px 22px -6px rgba(80, 58, 28, 0.50),
+      0 3px 7px rgba(40, 28, 10, 0.22),
+      inset 0 1px 1px rgba(255,255,255,0.9);
+  }
+  .mp-marker:hover .mk-label {
+    opacity: 1;
+    background: var(--paper);
+    transform: translateX(-50%) translateY(1px);
+  }
+  .mp-marker:focus-visible { outline: none; }
+  .mp-marker:focus-visible .mk-disc {
+    border-color: var(--gold-500);
+    box-shadow:
+      0 0 0 3px var(--gold-300),
+      0 8px 16px -5px rgba(80, 58, 28, 0.45);
+  }
+  .mp-marker:active { transform: translate(-50%, -50%) scale(0.94); }
+
+  /* Active marker — bronze-filled core + standing gold ring */
+  .mp-marker.is-active {
+    z-index: 6;
+  }
+  .mp-marker.is-active .mk-disc {
+    background: radial-gradient(circle at 38% 32%, var(--gold-200) 0%, var(--gold-400) 55%, var(--gold-500) 100%);
+    border-color: var(--gold-500);
+    color: var(--paper);
+    box-shadow:
+      0 0 0 4px rgba(252, 250, 244, 0.65),
+      0 0 18px rgba(217, 185, 122, 0.55),
+      0 10px 24px -6px rgba(80, 58, 28, 0.50),
+      inset 0 1px 1px rgba(255,255,255,0.5);
+  }
+  .mp-marker.is-active .mk-label {
+    opacity: 1;
+    background: var(--gold-500);
+    border-color: var(--gold-500);
+    color: var(--paper);
+  }
+  /* Gold radius ring — visible "spotlight area" around the active marker */
+  .mp-marker.is-active::after {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    width: 84px; height: 84px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1.5px solid var(--gold-500);
+    opacity: 0.55;
+    box-shadow:
+      0 0 18px rgba(217, 185, 122, 0.45),
+      0 0 36px rgba(217, 185, 122, 0.22),
+      inset 0 0 12px rgba(217, 185, 122, 0.18);
+    pointer-events: none;
+    animation: radiusBreath 2.6s ease-in-out infinite;
+  }
+  @keyframes radiusBreath {
+    0%, 100% { transform: translate(-50%,-50%) scale(1);    opacity: 0.55; }
+    50%      { transform: translate(-50%,-50%) scale(1.10); opacity: 0.80; }
+  }
+
+  /* Spotlight overlay */
+  .mp-spotlight {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 400ms ease;
+    z-index: 5;
+    /* background set dynamically with a radial-gradient */
+  }
+  .mp-spotlight.is-on {
+    opacity: 1;
+    pointer-events: none;   /* click-through: lets you tap pin-to-pin; the
+                               canvas click handler still closes on bg tap */
+  }
+
+  /* Marker info card — positioned in canvas pixels */
+  .mp-info {
+    position: absolute;
+    width: 220px;
+    padding: 14px 16px 14px 16px;
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 12px;
+    box-shadow: var(--plate-shadow);
+    z-index: 7;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 240ms ease, transform 240ms ease;
+  }
+  .mp-info.is-on {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .mp-info-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .mp-info-icon {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.85);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .mp-info-icon svg { width: 11px; height: 11px; display: block; }
+  .mp-info-title {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+    flex: 1;
+  }
+  .mp-info-close {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--taupe-400);
+    display: grid; place-items: center;
+    cursor: pointer;
+    padding: 0;
+    transition: color 200ms ease, background 200ms ease;
+  }
+  .mp-info-close:hover {
+    color: var(--gold-500);
+    background: rgba(252, 250, 244, 0.85);
+  }
+  .mp-info-close svg { width: 10px; height: 10px; }
+  .mp-info-body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--onyx-100);
+    opacity: 0.78;
+    margin: 0;
+  }
+  .mp-info-cat {
+    margin-top: 8px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.78;
+  }
+
+  /* Zoom controls (bottom-right of canvas) */
+  .mp-zoom {
+    position: absolute;
+    right: 14px; bottom: 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    z-index: 6;
+  }
+  .mp-zoom button {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.92);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    display: grid; place-items: center;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 200ms ease, transform 200ms ease;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+  }
+  .mp-zoom button:hover { background: var(--paper); transform: scale(1.06); }
+
+  /* Scale readout (under zoom buttons) */
+  .mp-scale-read {
+    position: absolute;
+    right: 14px; bottom: 84px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.72;
+    background: rgba(252, 250, 244, 0.78);
+    padding: 5px 10px;
+    border-radius: 100px;
+    border: 1px solid var(--hair-lo);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-variant-numeric: tabular-nums;
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  /* "DRAG TO EXPLORE" caption — floats centered at the bottom of the stage */
+  .mp-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 18px;
+    background: rgba(252, 250, 244, 0.65);
+    border: 1px solid var(--hair-lo);
+    border-radius: 999px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 6px 14px rgba(20, 14, 6, 0.10);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.92;
+    white-space: nowrap;
+    z-index: 7;
+  }
+  .mp-hint svg { width: 14px; height: 14px; display: block; }
+
+  /* ── RIGHT RAIL ─────────────────────────────────────────────────── */
+  .rightrail {
+    position: absolute;
+    left: 1086px;
+    top: 108px;
+    width: 320px;
+    height: 760px;
+    z-index: 6;
+    display: flex; flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Category filter pill */
+  .filter-pills {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 4px;
+    background: rgba(252, 250, 244, 0.78);
+    border: 1px solid var(--hair-lo);
+    border-radius: 12px;
+    box-shadow: var(--tile-shadow);
+  }
+  .filter-pill {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    padding: 8px 4px 9px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--onyx-100);
+    transition: background 220ms ease, border-color 220ms ease,
+                color 220ms ease, box-shadow 220ms ease;
+  }
+  .filter-pill:hover {
+    background: rgba(252, 250, 244, 0.95);
+    color: var(--gold-500);
+  }
+  .filter-pill.is-active {
+    background: var(--paper);
+    border-color: var(--hair);
+    color: var(--gold-500);
+    box-shadow:
+      0 4px 10px -4px rgba(80, 58, 28, 0.22),
+      0 1px 2px rgba(40, 28, 10, 0.06);
+  }
+  .filter-pill svg { width: 13px; height: 13px; display: block; }
+  .filter-pill .lab {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+  }
+
+  /* Legend container */
+  .legend-card {
+    background: rgba(252, 250, 244, 0.85);
+    border: 1px solid var(--hair-lo);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--tile-shadow);
+    display: flex;
+    flex-direction: column;
+  }
+  .legend-card:not(.is-collapsed) {
+    min-height: 520px;
+  }
+  .legend-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--hair-lo);
+    cursor: pointer;
+    transition: background 200ms ease;
+  }
+  .legend-head:hover { background: rgba(252, 250, 244, 0.95); }
+  .legend-head .lh-left {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .legend-head .lh-left svg { width: 14px; height: 14px; display: block; }
+  .legend-head .lh-chev {
+    width: 12px; height: 12px;
+    color: var(--gold-500);
+    opacity: 0.7;
+    transition: transform 240ms ease;
+  }
+  .legend-card.is-collapsed .lh-chev { transform: rotate(-90deg); }
+  .legend-body {
+    display: flex; flex-direction: column;
+    justify-content: flex-start;
+    flex: 1 1 auto;
+    padding: 8px 6px 12px 6px;
+    max-height: 600px;
+    overflow-y: auto; overflow-x: hidden;
+    transition: max-height 280ms ease, opacity 240ms ease;
+  }
+  .legend-body::-webkit-scrollbar { width: 7px; }
+  .legend-body::-webkit-scrollbar-thumb { background: var(--hair); border-radius: 7px; }
+  .legend-card.is-collapsed .legend-body {
+    max-height: 0;
+    opacity: 0;
+    padding: 0 8px;
+    flex: 0 0 auto;
+  }
+  .legend-row {
+    display: flex; align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 200ms ease;
+  }
+  .legend-row:hover { background: rgba(252, 250, 244, 0.95); }
+  .legend-row .lr-ic {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(252, 250, 244, 0.85);
+    border: 1px solid var(--hair-lo);
+    display: grid; place-items: center;
+    color: var(--gold-500);
+    flex-shrink: 0;
+  }
+  .legend-row .lr-ic svg { width: 11px; height: 11px; display: block; }
+  .legend-row .lr-lab {
+    flex: 1;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+  }
+  /* Toggle pill */
+  .lr-toggle {
+    width: 32px; height: 16px;
+    border-radius: 100px;
+    background: rgba(252, 250, 244, 0.95);
+    border: 1px solid var(--hair);
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 220ms ease, border-color 220ms ease;
+  }
+  .lr-toggle::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 2px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--taupe-400);
+    transform: translateY(-50%);
+    transition: left 220ms ease, background 220ms ease;
+  }
+  .lr-toggle.is-on {
+    background: var(--gold-300);
+    border-color: var(--gold-500);
+  }
+  .lr-toggle.is-on::after {
+    left: 19px;
+    background: var(--paper);
+  }
+  .legend-row.is-off .lr-lab,
+  .legend-row.is-off .lr-ic { opacity: 0.45; }
+
+  /* ── Legend as a navigable detail list (grouped by category, click → focus) ── */
+  .lg-group { padding-bottom: 2px; }
+  .lg-group + .lg-group { border-top: 1px solid var(--hair-lo); margin-top: 4px; padding-top: 4px; }
+  .lg-group-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 10px 5px;
+  }
+  .lg-group-head .ic {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(252,250,244,0.9); border: 1px solid var(--hair-lo);
+    display: grid; place-items: center; color: var(--gold-500); flex-shrink: 0;
+  }
+  .lg-group-head .ic svg { width: 10px; height: 10px; display: block; }
+  .lg-group-head .nm {
+    flex: 1; font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: 9px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold-600);
+  }
+  .lg-group-head .ct {
+    font-family: 'Lato', sans-serif; font-weight: 600; font-size: 10px;
+    color: var(--taupe-400); font-variant-numeric: tabular-nums;
+  }
+  .lg-item {
+    display: flex; gap: 9px; align-items: flex-start;
+    padding: 7px 10px 7px 12px; border-radius: 7px; cursor: pointer;
+    transition: background 180ms ease;
+  }
+  .lg-item:hover { background: rgba(252,250,244,0.96); }
+  .lg-item.is-active { background: rgba(217,185,122,0.18); box-shadow: inset 2px 0 0 var(--gold-400); }
+  .lg-item .pin {
+    width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+    background: var(--gold-400); box-shadow: 0 0 0 3px rgba(217,185,122,0.18);
+  }
+  .lg-item .txt { flex: 1; min-width: 0; }
+  .lg-item .l {
+    font-family: 'Lato', sans-serif; font-weight: 700; font-size: 12px;
+    color: var(--onyx-700); line-height: 1.25;
+  }
+  .lg-item .d {
+    font-family: 'Lato', sans-serif; font-weight: 400; font-size: 10.5px;
+    color: var(--taupe-500); line-height: 1.4; margin-top: 2px;
+  }
+  .lg-item .go { flex-shrink: 0; color: var(--gold-500); opacity: 0; font-size: 14px; line-height: 1; margin-top: 2px; transition: opacity 180ms ease; }
+  .lg-item:hover .go, .lg-item.is-active .go { opacity: 0.9; }
+
+  /* ── Cream veil ──────────────────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+  body.fast-entry .veil {
+    opacity: 1;
+    animation: veilWakeOut 700ms cubic-bezier(0.4, 0, 0.2, 1) 80ms forwards;
+  }
+  @keyframes veilWakeOut { to { opacity: 0; } }
+
+  /* Entrance settle */
+  .leftrail, .mp-wrap, .rightrail {
+    animation: settleIn 700ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+  }
+  .mp-wrap    { animation-delay: 140ms; }
+  .rightrail  { animation-delay: 200ms; }
+  @keyframes settleIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .leftrail, .mp-wrap, .rightrail { animation: none; }
+    .live-dot, .mp-marker::before { animation: none; }
+  }
+
+  /* Tower popup — typical floor plan thumbnail (click → fullscreen) */
+  .mp-info-plan { margin-top: 10px; }
+  .mp-plan-thumb {
+    position: relative; display: block; width: 100%; height: auto;
+    border-radius: 8px; overflow: hidden; padding: 0;
+    background: var(--paper-2); border: 1px solid var(--hair-lo);
+    cursor: zoom-in; -webkit-appearance: none; appearance: none;
+    transition: border-color 200ms ease, box-shadow 220ms ease;
+  }
+  .mp-plan-thumb:hover { border-color: var(--gold-400); box-shadow: var(--card-shadow); }
+
+  /* Plan wrapper + North/South wing highlight (shared) */
+  .plan-wrap {
+    position: relative; display: block; width: 100%;
+    aspect-ratio: 3200 / 2216;            /* typical plate ratio → overlays align */
+    container-type: inline-size;
+    transform-origin: center center;
+  }
+  .plan-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .wing-hl {
+    position: absolute; border-radius: 5px; pointer-events: none;
+    opacity: 0; transition: opacity 320ms ease;
+  }
+  .wing-hl .wl {
+    position: absolute; top: 4%; left: 6%;
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: clamp(6px, 2.6cqw, 15px);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 0.25em 0.6em; border-radius: 999px; line-height: 1; white-space: nowrap;
+  }
+  .wing-n { left: 4%; top: 21%; width: 40%; height: 56%;
+    border: 2px solid rgba(47,90,120,0.92); background: rgba(47,90,120,0.15); }
+  .wing-n .wl { background: rgba(47,90,120,0.94); color: #F4F2ED; }
+  .wing-s { left: 56%; top: 21%; width: 40%; height: 56%;
+    border: 2px solid rgba(148,111,56,0.95); background: rgba(148,111,56,0.16); }
+  .wing-s .wl { background: var(--gold-500); color: var(--paper); }
+  .plan-wrap.show-north .wing-n,
+  .plan-wrap.show-south .wing-s,
+  .plan-wrap.show-both  .wing-n,
+  .plan-wrap.show-both  .wing-s { opacity: 1; }
+  .mp-plan-hint {
+    position: absolute; bottom: 6px; right: 6px;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'Lato', sans-serif; font-weight: 700; font-size: 8px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-600);
+    background: rgba(252,250,244,0.9); border: 1px solid var(--hair-lo);
+    padding: 3px 7px; border-radius: 999px;
+  }
+  .mp-plan-hint svg { width: 9px; height: 9px; }
+  .mp-plan-cap {
+    display: block; margin-top: 6px;
+    font-family: 'Lato', sans-serif; font-weight: 600; font-size: 9px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--taupe-500);
+  }
+
+  /* Fullscreen floor-plan lightbox */
+  .mp-lightbox {
+    position: fixed; inset: 0; z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(120% 120% at 50% 40%, rgba(20,15,8,0.92), rgba(8,6,3,0.985));
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    opacity: 0; visibility: hidden;
+    transition: opacity 360ms ease, visibility 0s linear 360ms; touch-action: none;
+  }
+  .mp-lightbox.is-open { opacity: 1; visibility: visible; transition: opacity 360ms ease; }
+  .mp-lb-stage { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .mp-lb-wrap {
+    max-width: 92vw; max-height: 86vh; aspect-ratio: 3200 / 2216;
+    transform-origin: center center; opacity: 0;
+    transition: opacity 360ms ease;
+    filter: drop-shadow(0 40px 120px rgba(0,0,0,0.6));
+    cursor: zoom-in; user-select: none; -webkit-user-drag: none;
+  }
+  .mp-lightbox.is-open .mp-lb-wrap { opacity: 1; }
+  .mp-lb-wrap.is-zoomed { cursor: grab; }
+  .mp-lb-wrap.is-panning { cursor: grabbing; will-change: transform; }
+  .mp-lb-img { width: 100%; height: 100%; object-fit: contain; border-radius: 2px; display: block; }
+  .mp-lb-top {
+    position: absolute; top: 0; left: 0; right: 0; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 26px; z-index: 3;
+    background: linear-gradient(180deg, rgba(0,0,0,0.42), rgba(0,0,0,0));
+  }
+  .mp-lb-cap { font-family: 'Lato', sans-serif; font-weight: 600; font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: rgba(244,238,228,0.8); }
+  .mp-lb-close { width: 40px; height: 40px; border-radius: 999px; background: rgba(244,238,228,0.1); border: 1px solid rgba(244,238,228,0.22); color: rgba(244,238,228,0.92); font-size: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 200ms ease, transform 160ms ease; }
+  .mp-lb-close:hover { background: rgba(244,238,228,0.18); }
+  .mp-lb-close:active { transform: scale(0.92); }
+  .mp-lb-hint { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; font-family: 'Lato', sans-serif; font-weight: 500; font-size: 9px; letter-spacing: 0.26em; text-transform: uppercase; color: rgba(244,238,228,0.46); pointer-events: none; }
+</style>
+
+<script>
+  // Stage scaler — fit-to-viewport (letterbox on either axis as needed).
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel wordmark — same SVG symbol as gallery -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+    <div class="stage-bg"></div>
+    <div class="stage-grain"></div>
+
+    <!-- ╔══ TOP BAR ══╗ -->
+    <header class="topbar">
+      <a class="ec-brand-back" id="brandLink" aria-label="Embassy Citadel">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <div class="ec-topbar-actions"><button class="ec-360-btn" data-ec360 type="button" aria-label="Open 360 degree view"><span class="ec360-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="9.6" ry="4"/><path d="M12 3.1a8.9 8.9 0 0 1 0 17.8 8.9 8.9 0 0 1 0-17.8"/><path d="M9.6 2.3 12 3.1l-.8 2.4"/></svg></span><span>360&deg;</span></button><button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to home">
+        <span class="arr" aria-hidden="true">←</span>
+        <span>Back</span>
+      </button></div>
+    </header>
+
+    <!-- ╔══ LEFT EDITORIAL RAIL ══╗ -->
+    <aside class="leftrail">
+      <div class="lr-eyebrow">— Master Plan Explorer</div>
+      <h1 class="lr-headline">Explore. Envision.<br/>Experience.</h1>
+      <div class="lr-rule"></div>
+      <p class="lr-body">A considered ecosystem where every element is designed to elevate life and inspire connection.</p>
+
+      <div class="stat-list" id="statList"></div>
+    </aside>
+
+    <!-- ╔══ MASTERPLAN CANVAS ══╗ -->
+    <div class="mp-wrap">
+      <div class="mp-blueprint"></div>
+      <div class="mp-canvas" id="mpCanvas">
+        <div class="mp-stage" id="mpStage">
+          <img class="mp-image" id="mpImage"
+               src="assets/floorplans-final/site/master-layout.webp"
+               alt="Embassy Citadel ground floor site plan"
+               decoding="async" draggable="false" />
+          <div class="mp-image-fallback" id="mpFallback"><span>Site plan pending</span></div>
+          <!-- Marker layer is populated by JS -->
+        </div>
+
+        <!-- Spotlight is INSIDE the canvas but OUTSIDE the stage (doesn't transform) -->
+        <div class="mp-spotlight" id="mpSpotlight"></div>
+
+        <!-- Info card (positioned in canvas pixels, not in stage coords) -->
+        <div class="mp-info" id="mpInfo">
+          <div class="mp-info-head">
+            <div class="mp-info-icon" id="mpInfoIcon"></div>
+            <div class="mp-info-title" id="mpInfoTitle">—</div>
+            <button class="mp-info-close" id="mpInfoClose" type="button" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 6l12 12M18 6L6 18"/>
+              </svg>
+            </button>
+          </div>
+          <p class="mp-info-body" id="mpInfoBody">—</p>
+          <div class="mp-info-cat" id="mpInfoCat">—</div>
+          <div class="mp-info-plan" id="mpInfoPlan" hidden>
+            <button class="mp-plan-thumb" id="mpInfoPlanBtn" type="button" aria-label="Enlarge floor plan">
+              <span class="plan-wrap" id="mpInfoPlanWrap">
+                <img id="mpInfoPlanImg" alt="Typical floor plan" decoding="async">
+                <span class="wing-hl wing-n"><span class="wl">North</span></span>
+                <span class="wing-hl wing-s"><span class="wl">South</span></span>
+              </span>
+              <span class="mp-plan-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Tap to enlarge</span>
+            </button>
+            <span class="mp-plan-cap" id="mpInfoPlanCap"></span>
+          </div>
+        </div>
+
+        <!-- Scale readout -->
+        <div class="mp-scale-read" id="mpScale">100%</div>
+
+        <!-- Zoom controls -->
+        <div class="mp-zoom">
+          <button type="button" id="mpZoomIn"  aria-label="Zoom in">+</button>
+          <button type="button" id="mpZoomOut" aria-label="Zoom out">−</button>
+        </div>
+      </div>
+
+      <!-- Drag-to-explore hint -->
+      <div class="mp-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11V6a1.5 1.5 0 0 1 3 0v5M12 11V5a1.5 1.5 0 0 1 3 0v6M15 11V7a1.5 1.5 0 0 1 3 0v7c0 4-2.5 7-6 7-2.6 0-4-1.5-5-3l-3-5c-.5-1 .2-2.4 1.5-2 .7.2 1.2.7 1.5 1.5"/>
+        </svg>
+        <span>Drag to Explore</span>
+      </div>
+    </div>
+
+    <!-- ╔══ RIGHT RAIL ══╗ -->
+    <aside class="rightrail">
+      <!-- Category filter pills -->
+      <div class="filter-pills" id="filterPills"></div>
+
+      <!-- Legend card -->
+      <div class="legend-card" id="legendCard">
+        <div class="legend-head" id="legendHead">
+          <div class="lh-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l9 5-9 5-9-5 9-5z"/>
+              <path d="M3 12l9 5 9-5M3 17l9 5 9-5"/>
+            </svg>
+            <span>View Legend</span>
+          </div>
+          <svg class="lh-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
+        <div class="legend-body" id="legendBody"></div>
+      </div>
+    </aside>
+
+    <!-- Cream veil for navigation fades -->
+    <div class="veil" id="veil"></div>
+
+  </div>
+</div>
+
+<!-- Fullscreen floor-plan viewer (North/South Tower) — outside the scaled stage -->
+<div class="mp-lightbox" id="mpLightbox" role="dialog" aria-modal="true" aria-label="Floor plan full screen">
+  <div class="mp-lb-stage" id="mpLbStage">
+    <div class="mp-lb-wrap plan-wrap" id="mpLbWrap">
+      <img class="mp-lb-img" id="mpLbImg" alt="" decoding="async" draggable="false">
+      <span class="wing-hl wing-n"><span class="wl">North</span></span>
+      <span class="wing-hl wing-s"><span class="wl">South</span></span>
+    </div>
+  </div>
+  <div class="mp-lb-top">
+    <span class="mp-lb-cap" id="mpLbCap"></span>
+    <button class="mp-lb-close" id="mpLbClose" type="button" aria-label="Close">×</button>
+  </div>
+  <div class="mp-lb-hint">Scroll or pinch to zoom · Esc to close</div>
+</div>
+
+<script>
+  // ─────────────────────────────────────────────────────────────
+  // ICON LIBRARY (line stroke, gold)
+  // ─────────────────────────────────────────────────────────────
+  const ICONS = {
+    pin:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-7-7-12a7 7 0 0 1 14 0c0 5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>',
+    building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v16"/><path d="M3 21h18M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/></svg>',
+    lotus:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-2 3-2 7 0 10 2-3 2-7 0-10z"/><path d="M4 14c2 3 5 4 8 4s6-1 8-4"/><path d="M7 11c1 4 3 6 5 7 2-1 4-3 5-7"/></svg>',
+    tree:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M12 8c-3-2-6-2-6 0M12 8c3-2 6-2 6 0M12 13c-3-2-6-2-6 0M12 13c3-2 6-2 6 0"/></svg>',
+    water:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10c2-2 4 2 6 0s4-2 6 0 4-2 6 0"/><path d="M3 16c2-2 4 2 6 0s4-2 6 0 4-2 6 0"/></svg>',
+    walk:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="M9 22l3-7-3-3 2-5 4 5 3 1M9 14l-3 6"/></svg>',
+    parking:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M10 17V8h3a2.5 2.5 0 0 1 0 5h-3"/></svg>',
+    car:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16h14M6 16l1-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2l1 5"/><circle cx="8" cy="17.5" r="1.5"/><circle cx="16" cy="17.5" r="1.5"/></svg>',
+    grid:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="0.6"/><rect x="14" y="3" width="7" height="7" rx="0.6"/><rect x="3" y="14" width="7" height="7" rx="0.6"/><rect x="14" y="14" width="7" height="7" rx="0.6"/></svg>',
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // LEFT-RAIL STATS
+  // ─────────────────────────────────────────────────────────────
+  const STATS = [
+    { icon: 'pin',      num: '6.4+',  label: 'Acres of Land Parcel' },
+    { icon: 'building', num: '2',     label: 'Towers' },
+    { icon: 'lotus',    num: '12+',   label: 'Amenity Zones' },
+    { icon: 'tree',     num: '80%+',  label: 'Open Spaces' },
+  ];
+
+  const statListEl = document.getElementById('statList');
+  STATS.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML =
+      '<span class="stat-icon">' + ICONS[s.icon] + '</span>' +
+      '<span class="stat-text">' +
+      '<span class="stat-num">' + s.num + '</span>' +
+      '<span class="stat-label">' + s.label + '</span>' +
+      '</span>';
+    statListEl.appendChild(row);
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // CATEGORY FILTER (top-of-right-rail pills)
+  // ALL maps to every legend-on category. Each named filter maps
+  // to a subset of legend categories.
+  // ─────────────────────────────────────────────────────────────
+  const FILTERS = [
+    { key: 'all',       label: 'All',       icon: 'grid',  cats: ['buildings','amenities','landscape','water','pathways','parking','access'] },
+    { key: 'amenities', label: 'Amenities', icon: 'lotus', cats: ['amenities','water'] },
+    { key: 'landscape', label: 'Landscape', icon: 'tree',  cats: ['landscape','pathways'] },
+    { key: 'access',    label: 'Access',    icon: 'car',   cats: ['access','parking'] },
+  ];
+
+  const filterPillsEl = document.getElementById('filterPills');
+  FILTERS.forEach((f, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'filter-pill' + (i === 0 ? ' is-active' : '');
+    btn.dataset.filter = f.key;
+    btn.innerHTML = ICONS[f.icon] + '<span class="lab">' + f.label + '</span>';
+    btn.addEventListener('click', () => setFilter(f.key));
+    filterPillsEl.appendChild(btn);
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // LEGEND (7 categories, each with on/off toggle).
+  // PARKING is OFF by default (per task spec).
+  // ─────────────────────────────────────────────────────────────
+  const LEGEND = [
+    { key: 'buildings', label: 'Buildings',      icon: 'building', on: true  },
+    { key: 'amenities', label: 'Amenities',      icon: 'lotus',    on: true  },
+    { key: 'landscape', label: 'Landscape',      icon: 'tree',     on: true  },
+    { key: 'water',     label: 'Water Features', icon: 'water',    on: true  },
+    { key: 'pathways',  label: 'Pathways',       icon: 'walk',     on: true  },
+    { key: 'parking',   label: 'Parking',        icon: 'parking',  on: false },
+    { key: 'access',    label: 'Access Points',  icon: 'car',      on: true  },
+  ];
+  const legendOn = {};
+  LEGEND.forEach(l => { legendOn[l.key] = l.on; });
+
+  const legendBodyEl = document.getElementById('legendBody');
+  // The legend is a navigable DETAIL LIST (not toggles): show everything,
+  // grouped by category; clicking an item zooms/focuses that pointer.
+  Object.keys(legendOn).forEach(k => { legendOn[k] = true; });
+  const LEGEND_BY_KEY = {};
+  LEGEND.forEach(l => { LEGEND_BY_KEY[l.key] = l; });
+
+  function renderLegend(markers) {
+    legendBodyEl.innerHTML = '';
+    const byCat = {};
+    markers.forEach(m => { (byCat[m.cat] = byCat[m.cat] || []).push(m); });
+    LEGEND.map(l => l.key).forEach(cat => {
+      const items = byCat[cat];
+      if (!items || !items.length) return;
+      const def = LEGEND_BY_KEY[cat] || { label: cat, icon: 'pin' };
+      const group = document.createElement('div');
+      group.className = 'lg-group';
+      group.innerHTML = '<div class="lg-group-head"><span class="ic">' +
+        (ICONS[def.icon] || ICONS.pin) + '</span><span class="nm">' + def.label +
+        '</span><span class="ct">' + items.length + '</span></div>';
+      items.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'lg-item';
+        item.dataset.id = m.id;
+        item.innerHTML =
+          '<span class="pin"></span>' +
+          '<span class="txt"><span class="l">' + m.label + '</span>' +
+          (m.desc ? '<span class="d">' + m.desc + '</span>' : '') + '</span>' +
+          '<span class="go">\u203a</span>';
+        item.addEventListener('click', () => {
+          const el = markerEls[m.id];
+          if (el) el.classList.remove('is-hidden');   // ensure pointer is visible
+          focusMarker(m);                              // existing zoom + spotlight + info card
+        });
+        group.appendChild(item);
+      });
+      legendBodyEl.appendChild(group);
+    });
+  }
+  function syncLegendActive(id) {
+    legendBodyEl.querySelectorAll('.lg-item').forEach(it =>
+      it.classList.toggle('is-active', !!id && it.dataset.id === id));
+    const act = id && legendBodyEl.querySelector('.lg-item.is-active');
+    if (act && act.scrollIntoView) act.scrollIntoView({ block: 'nearest' });
+  }
+
+  // Legend collapse
+  document.getElementById('legendHead').addEventListener('click', () => {
+    document.getElementById('legendCard').classList.toggle('is-collapsed');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // MARKERS — % coords on site-plan.png (12 markers)
+  // ─────────────────────────────────────────────────────────────
+  // Coordinates are in % of the .mp-stage box (which fills the canvas).
+  // The plan art sits letterboxed inside that box via object-fit:contain
+  // (≈5.2% pillarbox each side at this aspect ratio), so these values were
+  // derived by reading each feature's pixel centre on master-layout.webp
+  // and converting through the contain transform — each marker lands ON its
+  // real feature in the rendered plan.
+  const MARKERS = [
+    // Buildings (3) — along the central diagonal residential spine
+    { id: 't-a', cat: 'buildings', icon: 'building', label: 'North Tower',
+      desc: 'The north wing — residences on the elevated podium.',
+      plan: 'assets/floorplans-final/typical/typical-lvl-43-47.webp',
+      planLabel: 'Typical Floor Plate · North Wing', wing: 'north',
+      px: 40.6, py: 47.5 },
+    { id: 't-b', cat: 'buildings', icon: 'building', label: 'South Tower',
+      desc: 'The south wing — rising over the grand lobby.',
+      plan: 'assets/floorplans-final/typical/typical-lvl-43-47.webp',
+      planLabel: 'Typical Floor Plate · South Wing', wing: 'south',
+      px: 47.8, py: 55.5 },
+    { id: 't-c', cat: 'buildings', icon: 'building', label: 'Wing A',
+      desc: 'The adjacent residential wing.',
+      px: 62.0, py: 70.0 },
+
+    // Amenities (4)
+    { id: 'pool',  cat: 'amenities', icon: 'lotus', label: 'Lap Pool',
+      desc: 'A 25-metre infinity pool aligned to the western light.',
+      px: 41.5, py: 57.5 },
+    { id: 'gym',   cat: 'amenities', icon: 'lotus', label: 'Gymnasium',
+      desc: 'A double-height fitness pavilion with terrace yoga deck.',
+      px: 54.9, py: 51.5 },
+    { id: 'spa',   cat: 'amenities', icon: 'lotus', label: 'Spa & Hammam',
+      desc: 'Treatment suites, vitality pool, and a quiet meditation room.',
+      px: 69.3, py: 66.5 },
+    { id: 'club',  cat: 'amenities', icon: 'lotus', label: 'Club House',
+      desc: 'Members lounge, library, and a private dining room.',
+      px: 36.1, py: 43.5 },
+
+    // Landscape (2)
+    { id: 'gard',  cat: 'landscape', icon: 'tree', label: 'Sculpted Garden',
+      desc: 'A walking garden of native flora and stone water elements.',
+      px: 75.5, py: 71.0 },
+    { id: 'lawn',  cat: 'landscape', icon: 'tree', label: 'Sky Lawn',
+      desc: 'An elevated lawn for sunrise practice and quiet gatherings.',
+      px: 45.5, py: 22.5 },
+
+    // Water (1)
+    { id: 'refl',  cat: 'water', icon: 'water', label: 'Reflective Pool',
+      desc: 'A still water mirror at the grand arrival, framing the tower.',
+      px: 50.0, py: 60.0 },
+
+    // Pathways (1)
+    { id: 'jog',   cat: 'pathways', icon: 'walk', label: 'Jogging Loop',
+      desc: 'A 1.1 km tree-lined loop tracing the perimeter of the site.',
+      px: 32.1, py: 72.0 },
+
+    // Access (2)
+    { id: 'main',  cat: 'access', icon: 'car', label: 'Main Gate',
+      desc: 'The principal arrival from the sea-face boulevard.',
+      px: 15.5, py: 85.5 },
+    { id: 'svc',   cat: 'access', icon: 'car', label: 'Service Gate',
+      desc: 'A discreet rear approach for service and staff.',
+      px: 64.0, py: 19.0 },
+  ];
+
+  // ─────────────────────────────────────────────────────────────
+  // PER-CATEGORY PLANS — each filter swaps the base plan drawing AND its
+  // own pointer set, calibrated to THAT drawing's framing.
+  //  · all       -> master-layout.webp        (overview, original pins)
+  //  · amenities -> amenities-plan.webp        (enlarged ground-floor podium)
+  //  · landscape -> landscape-plan.webp        (view-corridors context)
+  //  · access    -> access-plan.webp           (ground circulation; shares the
+  //                                             master-layout framing, so the
+  //                                             gate coords carry straight over)
+  // ─────────────────────────────────────────────────────────────
+  const PLAN_BASE = {
+    all:       'assets/floorplans-final/site/master-layout.webp',
+    amenities: 'assets/floorplans-final/site/amenities-plan.webp',
+    landscape: 'assets/floorplans-final/site/landscape-plan.webp',
+    access:    'assets/floorplans-final/site/access-plan.webp',
+  };
+
+  const PLAN_MARKERS = {
+    all: MARKERS,
+
+    // AMENITIES — on the enlarged ground-floor podium drawing.
+    amenities: [
+      { id: 'a-club', cat: 'amenities', icon: 'lotus', label: 'Club House',
+        desc: 'Members lounge, library and a private dining room at the podium core.',
+        px: 50.0, py: 41.0 },
+      { id: 'a-gym',  cat: 'amenities', icon: 'lotus', label: 'Gymnasium',
+        desc: 'A double-height fitness pavilion with a terrace yoga deck.',
+        px: 33.5, py: 44.0 },
+      { id: 'a-spa',  cat: 'amenities', icon: 'lotus', label: 'Spa & Hammam',
+        desc: 'Treatment suites, a vitality pool and a quiet meditation room.',
+        px: 64.0, py: 44.5 },
+      { id: 'a-pool', cat: 'water',     icon: 'water', label: 'Lap Pool',
+        desc: 'A 25-metre pool aligned to the western light.',
+        px: 40.0, py: 62.0 },
+      { id: 'a-banq', cat: 'amenities', icon: 'lotus', label: 'Banquet & Party Hall',
+        desc: 'A flexible event hall opening to the landscaped forecourt.',
+        px: 25.5, py: 80.0 },
+    ],
+
+    // LANDSCAPE — on the view-corridors context drawing.
+    landscape: [
+      { id: 'l-city', cat: 'landscape', icon: 'tree', label: 'City View',
+        desc: 'The northern corridor framing the city skyline.',
+        px: 50.0, py: 22.0 },
+      { id: 'l-sealink', cat: 'landscape', icon: 'tree', label: 'Sea Link & City View',
+        desc: 'The north-west corridor toward the sea link.',
+        px: 28.0, py: 31.0 },
+      { id: 'l-sea',  cat: 'landscape', icon: 'tree', label: 'Sea View',
+        desc: 'The western corridor opening to the Arabian Sea.',
+        px: 30.0, py: 66.0 },
+      { id: 'l-race', cat: 'landscape', icon: 'tree', label: 'Race Course & Sea View',
+        desc: 'The eastern corridor over the race course greens.',
+        px: 70.0, py: 42.0 },
+      { id: 'l-site', cat: 'landscape', icon: 'tree', label: 'The Site',
+        desc: 'Embassy Citadel at the centre of three open view corridors.',
+        px: 49.0, py: 47.0 },
+    ],
+
+    // ACCESS — on the ground-circulation drawing (master-layout framing).
+    access: [
+      { id: 'x-main', cat: 'access',  icon: 'car', label: 'Main Gate',
+        desc: 'The principal arrival from the sea-face boulevard.',
+        px: 15.5, py: 85.5 },
+      { id: 'x-svc',  cat: 'access',  icon: 'car', label: 'Service Gate',
+        desc: 'A discreet rear approach for service and staff.',
+        px: 64.0, py: 19.0 },
+      { id: 'x-drop', cat: 'access',  icon: 'car', label: 'Residential Drop-Off',
+        desc: 'The sheltered drop-off court at the double-height lobby.',
+        px: 44.0, py: 52.0 },
+      { id: 'x-base', cat: 'parking', icon: 'parking', label: 'Basement Parking',
+        desc: 'The ramp down to resident basement parking.',
+        px: 33.0, py: 64.0 },
+      { id: 'x-pod',  cat: 'parking', icon: 'parking', label: 'Podium Parking',
+        desc: 'The route up to podium-deck parking.',
+        px: 56.0, py: 47.0 },
+    ],
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // STATE
+  // ─────────────────────────────────────────────────────────────
+  let activeFilter = 'all';
+  let activeMarker = null; // marker object or null
+
+  const canvas     = document.getElementById('mpCanvas');
+  const stage      = document.getElementById('mpStage');
+  const imageEl    = document.getElementById('mpImage');
+  const fallback   = document.getElementById('mpFallback');
+  const spotlight  = document.getElementById('mpSpotlight');
+  const infoCard   = document.getElementById('mpInfo');
+  const infoTitle  = document.getElementById('mpInfoTitle');
+  const infoBody   = document.getElementById('mpInfoBody');
+  const infoIcon   = document.getElementById('mpInfoIcon');
+  const infoCat    = document.getElementById('mpInfoCat');
+  const infoClose  = document.getElementById('mpInfoClose');
+  const infoPlan    = document.getElementById('mpInfoPlan');
+  const infoPlanImg = document.getElementById('mpInfoPlanImg');
+  const infoPlanBtn = document.getElementById('mpInfoPlanBtn');
+  const infoPlanWrap = document.getElementById('mpInfoPlanWrap');
+  const infoPlanCap = document.getElementById('mpInfoPlanCap');
+  const scaleRead  = document.getElementById('mpScale');
+
+  // Image-load fallback
+  imageEl.addEventListener('error', () => {
+    imageEl.style.display = 'none';
+    fallback.classList.add('is-on');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // MARKER RENDER
+  // ─────────────────────────────────────────────────────────────
+  let markerEls = {};
+  let currentMarkers = MARKERS;   // the pointer set for the active plan
+
+  function renderMarkers(list) {
+    // Drop any markers from the previous plan, then build the new set.
+    Object.values(markerEls).forEach(el => { try { el.remove(); } catch (_) {} });
+    markerEls = {};
+    currentMarkers = list;
+    list.forEach(m => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'mp-marker';
+      el.dataset.id = m.id;
+      el.dataset.cat = m.cat;
+      el.dataset.label = m.label;
+      el.setAttribute('aria-label', m.label);
+      el.style.left = m.px + '%';
+      el.style.top  = m.py + '%';
+      el.innerHTML =
+        '<span class="mk-disc">' + (ICONS[m.icon] || ICONS.pin) + '</span>' +
+        '<span class="mk-label">' + m.label + '</span>';
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Selecting any pin always re-centres it on screen with the full
+        // focus-zoom + spotlight reveal (popup sits right above the pin).
+        focusMarker(m);
+      });
+      stage.appendChild(el);
+      markerEls[m.id] = el;
+    });
+  }
+  renderMarkers(MARKERS);
+  renderLegend(MARKERS);
+
+  // ─────────────────────────────────────────────────────────────
+  // ZOOM + PAN MATH
+  // ─────────────────────────────────────────────────────────────
+  // The stage is sized to fill the canvas at scale=1 (transform-origin 0 0).
+  // Translation moves the stage in canvas-pixels.
+  // Clamp: at scale s, the stage is canvasW*s × canvasH*s. To keep the
+  // stage filling the canvas, tx ∈ [canvasW*(1-s), 0] and similar for ty.
+  const MIN_SCALE = 1;
+  const MAX_SCALE = 4;
+
+  let scale = 1, tx = 0, ty = 0;
+
+  function getCanvasSize() {
+    // Use layout (offset) size, NOT getBoundingClientRect: the whole screen is
+    // a 1440x900 stage scaled to fit big displays. getBoundingClientRect would
+    // return post-scale pixels, but tx/ty operate in pre-scale design pixels —
+    // mixing them makes the focused pin drift on larger screens. offsetWidth/
+    // Height are unaffected by CSS transforms, so they match the tx/ty space.
+    return { w: canvas.offsetWidth, h: canvas.offsetHeight };
+  }
+
+  function clampPan() {
+    const { w, h } = getCanvasSize();
+    const minTx = w * (1 - scale);
+    const minTy = h * (1 - scale);
+    if (tx > 0) tx = 0;
+    if (ty > 0) ty = 0;
+    if (tx < minTx) tx = minTx;
+    if (ty < minTy) ty = minTy;
+  }
+
+  function applyTransform(animate) {
+    if (animate) stage.classList.add('is-animating');
+    else stage.classList.remove('is-animating');
+    stage.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) scale(' + scale + ')';
+    scaleRead.textContent = Math.round(scale * 100) + '%';
+  }
+
+  function setScaleAtPoint(newScale, anchorX, anchorY) {
+    newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+    if (newScale === scale) return;
+    const ratio = newScale / scale;
+    // Keep the anchor point fixed under the cursor:
+    // newTx = anchorX - ratio * (anchorX - tx)
+    tx = anchorX - ratio * (anchorX - tx);
+    ty = anchorY - ratio * (anchorY - ty);
+    scale = newScale;
+    clampPan();
+    applyTransform(false);
+  }
+
+  // Wheel zoom (anchored at cursor)
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const ax = e.clientX - rect.left;
+    const ay = e.clientY - rect.top;
+    const dz = e.deltaY < 0 ? 1.12 : (1 / 1.12);
+    setScaleAtPoint(scale * dz, ax, ay);
+  }, { passive: false });
+
+  // Pinch zoom (iOS Safari gesture events)
+  let gestureStartScale = 1;
+  let gestureAnchor = { x: 0, y: 0 };
+  canvas.addEventListener('gesturestart', (e) => {
+    e.preventDefault();
+    gestureStartScale = scale;
+    const rect = canvas.getBoundingClientRect();
+    gestureAnchor = { x: (e.clientX || rect.width / 2) - rect.left,
+                      y: (e.clientY || rect.height / 2) - rect.top };
+  });
+  canvas.addEventListener('gesturechange', (e) => {
+    e.preventDefault();
+    setScaleAtPoint(gestureStartScale * e.scale, gestureAnchor.x, gestureAnchor.y);
+  });
+  canvas.addEventListener('gestureend', (e) => { e.preventDefault(); });
+
+  // Pointer drag pan
+  const drag = { active: false, sx: 0, sy: 0, btx: 0, bty: 0, moved: false };
+  canvas.addEventListener('pointerdown', (e) => {
+    // Ignore drags that begin on a marker or on the info card / zoom controls
+    if (e.target.closest('.mp-marker, .mp-info, .mp-zoom, .mp-info-close')) return;
+    if (scale <= 1) {
+      // Still allow clicks; record so we can treat as a "background click"
+      drag.active = false;
+      return;
+    }
+    drag.active = true;
+    drag.sx = e.clientX; drag.sy = e.clientY;
+    drag.btx = tx; drag.bty = ty;
+    drag.moved = false;
+    canvas.setPointerCapture(e.pointerId);
+    canvas.classList.add('is-panning');
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!drag.active) return;
+    const dx = e.clientX - drag.sx;
+    const dy = e.clientY - drag.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+    tx = drag.btx + dx;
+    ty = drag.bty + dy;
+    clampPan();
+    applyTransform(false);
+  });
+  function endDrag(e) {
+    if (drag.active) {
+      drag.active = false;
+      canvas.classList.remove('is-panning');
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  }
+  canvas.addEventListener('pointerup',     endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('pointerleave',  endDrag);
+
+  // Background click → close info / reset spotlight
+  canvas.addEventListener('click', (e) => {
+    if (drag.moved) return;
+    if (e.target.closest('.mp-marker, .mp-info, .mp-zoom, .mp-info-close')) return;
+    if (activeMarker) clearFocus();
+  });
+
+  // Double-click → reset zoom + recenter
+  canvas.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.mp-marker')) return;
+    resetView();
+  });
+
+  // +/- buttons
+  document.getElementById('mpZoomIn').addEventListener('click', () => {
+    const { w, h } = getCanvasSize();
+    setScaleAtPoint(scale + 0.5, w / 2, h / 2);
+  });
+  document.getElementById('mpZoomOut').addEventListener('click', () => {
+    const { w, h } = getCanvasSize();
+    setScaleAtPoint(scale - 0.5, w / 2, h / 2);
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // SMART CARD PLACEMENT — try right/left/below/above based on space,
+  // and ensure the card never overlaps the marker or its gold ring.
+  // ─────────────────────────────────────────────────────────────
+  const CARD_W = 220, CARD_H = 130, MARKER_HALO = 46, GAP = 14, PAD = 16;
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function placeCardSmart(mx, my, cw, ch) {
+    // mx, my = marker SCREEN position in canvas pixels
+    // Try right
+    if (mx + MARKER_HALO + GAP + CARD_W <= cw - PAD) {
+      return {
+        left: mx + MARKER_HALO + GAP,
+        top:  clamp(my - CARD_H / 2, PAD, ch - CARD_H - PAD),
+      };
+    }
+    // Try left
+    if (mx - MARKER_HALO - GAP - CARD_W >= PAD) {
+      return {
+        left: mx - MARKER_HALO - GAP - CARD_W,
+        top:  clamp(my - CARD_H / 2, PAD, ch - CARD_H - PAD),
+      };
+    }
+    // Try below
+    if (my + MARKER_HALO + GAP + CARD_H <= ch - PAD) {
+      return {
+        left: clamp(mx - CARD_W / 2, PAD, cw - CARD_W - PAD),
+        top:  my + MARKER_HALO + GAP,
+      };
+    }
+    // Above (fallback)
+    return {
+      left: clamp(mx - CARD_W / 2, PAD, cw - CARD_W - PAD),
+      top:  Math.max(PAD, my - MARKER_HALO - GAP - CARD_H),
+    };
+  }
+
+  // Place the card ABOVE the marker, horizontally centred on it, clamped to the
+  // canvas, never overlapping the disc/gold-ring. Falls back to below only when
+  // there genuinely isn't room above.
+  function placeCardAbove(mx, my, cw, ch, cardH) {
+    cardH = cardH || CARD_H;                            // taller for tower (plan) cards
+    const left = clamp(mx - CARD_W / 2, PAD, cw - CARD_W - PAD);
+    let top = my - MARKER_HALO - GAP - cardH;          // sit above the halo
+    if (top < PAD) top = my + MARKER_HALO + GAP;       // no room up top -> drop below
+    top = clamp(top, PAD, ch - cardH - PAD);
+    return { left, top };
+  }
+
+  // ── Fullscreen floor-plan viewer (North/South Tower plates) ─────
+  const lb      = document.getElementById('mpLightbox');
+  const lbStage = document.getElementById('mpLbStage');
+  const lbImg   = document.getElementById('mpLbImg');
+  const lbWrap  = document.getElementById('mpLbWrap');
+  const lbCap   = document.getElementById('mpLbCap');
+  const lbClose = document.getElementById('mpLbClose');
+  let lbOpen = false;
+  const lz = { s: 1, x: 0, y: 0 };
+  function lbApply(anim) {
+    lbWrap.style.transition = anim === false ? 'transform 0s' : 'transform 300ms cubic-bezier(.16,.84,.32,1)';
+    lbWrap.style.transform = 'translate(' + lz.x + 'px,' + lz.y + 'px) scale(' + lz.s + ')';
+    lbWrap.classList.toggle('is-zoomed', lz.s > 1.01);
+  }
+  function lbClamp() {
+    const r = lbWrap.getBoundingClientRect();
+    const mx = Math.max(0, (r.width  - window.innerWidth)  / 2 + 8);
+    const my = Math.max(0, (r.height - window.innerHeight) / 2 + 8);
+    lz.x = Math.max(-mx, Math.min(mx, lz.x));
+    lz.y = Math.max(-my, Math.min(my, lz.y));
+  }
+  function lbSet(n, anim) { lz.s = Math.max(1, Math.min(4, n)); if (lz.s <= 1.01) { lz.x = 0; lz.y = 0; } else lbClamp(); lbApply(anim); }
+  function lbReset() { lz.s = 1; lz.x = 0; lz.y = 0; lbApply(false); }
+  function openPlanLightbox(src, cap, wing) {
+    lbReset();
+    lbWrap.classList.remove('show-north', 'show-south', 'show-both');
+    if (wing === 'north') lbWrap.classList.add('show-north');
+    else if (wing === 'south') lbWrap.classList.add('show-south');
+    lbImg.style.opacity = '0';
+    const tmp = new Image();
+    tmp.onload = tmp.onerror = function () { lbImg.src = src; lbImg.style.opacity = '1'; };
+    tmp.src = src;
+    lbCap.textContent = cap || '';
+    lbOpen = true; lb.classList.add('is-open');
+  }
+  function closePlanLightbox() { lbOpen = false; lb.classList.remove('is-open'); lbReset(); }
+  lbClose.addEventListener('click', closePlanLightbox);
+  lbStage.addEventListener('click', function (e) { if (e.target === lbStage && lz.s <= 1.01) closePlanLightbox(); });
+  lbImg.addEventListener('dblclick', function (e) { e.preventDefault(); if (lz.s > 1.01) lbReset(); else { lz.s = 2.4; lbClamp(); lbApply(true); } });
+  lb.addEventListener('wheel', function (e) { if (!lbOpen) return; e.preventDefault(); e.stopPropagation(); lbSet(lz.s + (e.deltaY < 0 ? 0.4 : -0.4), false); }, { passive: false });
+  window.addEventListener('keydown', function (e) { if (lbOpen && e.key === 'Escape') closePlanLightbox(); });
+  const lbpts = new Map(); let lbpan = null, lbpinch = 0, lbsb = 1;
+  lbImg.addEventListener('pointerdown', function (e) {
+    if (!lbOpen) return;
+    try { lbImg.setPointerCapture(e.pointerId); } catch (_) {}
+    lbpts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (lbpts.size === 2) { const p = [...lbpts.values()]; lbpinch = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); lbsb = lz.s; }
+    else if (lz.s > 1.01) { lbpan = { x: e.clientX - lz.x, y: e.clientY - lz.y }; lbWrap.classList.add('is-panning'); }
+  });
+  lbImg.addEventListener('pointermove', function (e) {
+    if (!lbpts.has(e.pointerId)) return;
+    lbpts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (lbpts.size === 2 && lbpinch) { const p = [...lbpts.values()]; const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); lbSet(lbsb * (d / lbpinch), false); }
+    else if (lbpan && lz.s > 1.01) { lz.x = e.clientX - lbpan.x; lz.y = e.clientY - lbpan.y; lbClamp(); lbApply(false); }
+  });
+  function lbUp(e) { lbpts.delete(e.pointerId); if (lbpts.size < 2) lbpinch = 0; if (lbpts.size === 0) { lbpan = null; lbWrap.classList.remove('is-panning'); lbApply(true); } }
+  lbImg.addEventListener('pointerup', lbUp);
+  lbImg.addEventListener('pointercancel', lbUp);
+
+  // Aim the spotlight's bright centre at a specific canvas-pixel point.
+  function setSpotlightAt(mx, my, cw, ch) {
+    const px = (mx / cw) * 100, py = (my / ch) * 100;
+    spotlight.style.background =
+      'radial-gradient(circle at ' + px.toFixed(2) + '% ' + py.toFixed(2) + '%, ' +
+      'transparent 0%, transparent 10%, rgba(20, 14, 6, 0.12) 18%, rgba(20, 14, 6, 0.55) 36%, rgba(20, 14, 6, 0.7) 100%)';
+  }
+
+  // Marker's CURRENT screen position in canvas pixels (accounting for tx/ty/scale)
+  function markerScreenPos(m) {
+    const { w, h } = getCanvasSize();
+    return {
+      x: (m.px / 100) * w * scale + tx,
+      y: (m.py / 100) * h * scale + ty,
+    };
+  }
+
+  function writeCardContent(m) {
+    infoIcon.innerHTML = ICONS[m.icon] || ICONS.pin;
+    infoTitle.textContent = m.label;
+    infoBody.textContent  = m.desc;
+    infoCat.textContent   = '— ' + m.cat;
+    // Towers (North/South) carry a typical floor plate — shown in the card, click to enlarge.
+    if (m.plan) {
+      if (infoPlanImg.getAttribute('src') !== m.plan) infoPlanImg.src = m.plan;
+      infoPlanCap.textContent = m.planLabel || 'Typical Floor Plan';
+      infoPlan.hidden = false;
+      infoPlanWrap.classList.remove('show-north', 'show-south', 'show-both');
+      if (m.wing === 'north') infoPlanWrap.classList.add('show-north');
+      else if (m.wing === 'south') infoPlanWrap.classList.add('show-south');
+      infoPlanBtn.onclick = function (e) { e.stopPropagation(); openPlanLightbox(m.plan, m.planLabel || m.label, m.wing); };
+    } else {
+      infoPlan.hidden = true;
+      infoPlanBtn.onclick = null;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // FOCUS A MARKER (full reveal — animated zoom + spotlight + card)
+  // Used when user clicks a marker from the default zoomed-out state.
+  // ─────────────────────────────────────────────────────────────
+  let wasFocusedZoom = false;
+  function focusMarker(m) {
+    activeMarker = m;
+    Object.values(markerEls).forEach(el => el.classList.remove('is-active'));
+    markerEls[m.id].classList.add('is-active');
+
+    const targetScale = 2.5;
+    const { w, h } = getCanvasSize();
+    // Land the marker EXACTLY at the canvas centre. We intentionally skip
+    // clampPan() here — clamping would shove edge pins off-centre, which is
+    // the bug. The dark spotlight vignette covers any plan-edge gap, so the
+    // selected pin always sits dead-centre of the screen.
+    tx = w / 2 - (m.px / 100) * w * targetScale;
+    ty = h / 2 - (m.py / 100) * h * targetScale;
+    scale = targetScale;
+    applyTransform(true);
+    wasFocusedZoom = true;
+
+    // Marker is now at the exact canvas centre → spotlight + card anchor there.
+    setSpotlightAt(w / 2, h / 2, w, h);
+    spotlight.classList.add('is-on');
+
+    writeCardContent(m);
+    // Tower cards carry a plan thumbnail and are taller — measure, then place above.
+    const cardH = infoCard.offsetHeight || CARD_H;
+    const placement = placeCardAbove(w / 2, h / 2, w, h, cardH);   // right above the pin
+    infoCard.style.left = placement.left + 'px';
+    infoCard.style.top  = placement.top  + 'px';
+    infoCard.classList.add('is-on');
+    syncLegendActive(m.id);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // SHOW MARKER INFO (multi-touch — used when already zoomed in)
+  // No re-zoom, no spotlight darkening. Card hops to the new marker.
+  // ─────────────────────────────────────────────────────────────
+  function showMarkerInfo(m) {
+    activeMarker = m;
+    Object.values(markerEls).forEach(el => el.classList.remove('is-active'));
+    markerEls[m.id].classList.add('is-active');
+
+    // Make sure spotlight isn't darkening the view in this mode
+    spotlight.classList.remove('is-on');
+
+    const { w, h } = getCanvasSize();
+    const pos = markerScreenPos(m);
+    // Clamp marker pos to visible canvas (when scrolled off-screen the
+    // card still anchors to the nearest visible edge in that direction)
+    const visMx = clamp(pos.x, 0, w);
+    const visMy = clamp(pos.y, 0, h);
+    writeCardContent(m);
+    const cardH = infoCard.offsetHeight || CARD_H;
+    const placement = placeCardAbove(visMx, visMy, w, h, cardH);
+    infoCard.style.left = placement.left + 'px';
+    infoCard.style.top  = placement.top  + 'px';
+    infoCard.classList.add('is-on');
+    syncLegendActive(m.id);
+  }
+
+  function clearFocus() {
+    activeMarker = null;
+    Object.values(markerEls).forEach(el => el.classList.remove('is-active'));
+    spotlight.classList.remove('is-on');
+    infoCard.classList.remove('is-on');
+    syncLegendActive(null);
+    // Only reset zoom if the active state was triggered by focusMarker
+    // (so user-pan zooms are preserved when they click around)
+    if (wasFocusedZoom) {
+      resetView();
+      wasFocusedZoom = false;
+    }
+  }
+
+  function resetView() {
+    scale = 1; tx = 0; ty = 0;
+    clampPan();
+    applyTransform(true);
+    spotlight.classList.remove('is-on');
+    infoCard.classList.remove('is-on');
+    Object.values(markerEls).forEach(el => el.classList.remove('is-active'));
+    syncLegendActive(null);
+    activeMarker = null;
+  }
+
+  infoClose.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearFocus();
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // VISIBILITY UPDATE — combines filter + legend toggles.
+  // ─────────────────────────────────────────────────────────────
+  function updateVisibility() {
+    const filterDef = FILTERS.find(f => f.key === activeFilter);
+    const allowed = new Set(filterDef ? filterDef.cats : []);
+    currentMarkers.forEach(m => {
+      const el = markerEls[m.id];
+      if (!el) return;
+      const visible = allowed.has(m.cat) && legendOn[m.cat];
+      el.classList.toggle('is-hidden', !visible);
+    });
+    // If active marker is now hidden, close the focus
+    if (activeMarker) {
+      const el = markerEls[activeMarker.id];
+      if (el.classList.contains('is-hidden')) clearFocus();
+    }
+  }
+  updateVisibility();
+
+  function setFilter(key) {
+    activeFilter = key;
+    document.querySelectorAll('.filter-pill').forEach(p => {
+      p.classList.toggle('is-active', p.dataset.filter === key);
+    });
+    // Swap the base plan drawing + its calibrated pointer set for this category.
+    const planSrc = PLAN_BASE[key] || PLAN_BASE.all;
+    const planMk  = PLAN_MARKERS[key] || MARKERS;
+    clearFocus();
+    if (imageEl.getAttribute('src') !== planSrc) {
+      imageEl.style.display = '';
+      fallback.classList.remove('is-on');
+      imageEl.setAttribute('src', planSrc);
+    }
+    renderMarkers(planMk);
+    renderLegend(planMk);
+    resetView();
+    updateVisibility();
+  }
+
+  function toggleLegend(key) {
+    legendOn[key] = !legendOn[key];
+    const row = document.querySelector('[data-toggle="' + key + '"]');
+    if (row) {
+      row.classList.toggle('is-off', !legendOn[key]);
+      const tog = row.querySelector('.lr-toggle');
+      if (tog) tog.classList.toggle('is-on', legendOn[key]);
+    }
+    updateVisibility();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // LIVE CLOCK
+  // ─────────────────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    // IST = UTC + 5h30m
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const ist = new Date(utc + (5.5 * 60 * 60 * 1000));
+    const hh = String(ist.getHours()).padStart(2, '0');
+    const mm = String(ist.getMinutes()).padStart(2, '0');
+    const el = document.getElementById('clock');
+    if (el) el.textContent = hh + ':' + mm + ' IST';
+  }
+  updateClock();
+  setInterval(updateClock, 30000);
+
+  // ─────────────────────────────────────────────────────────────
+  // CREAM-VEIL NAVIGATION
+  // ─────────────────────────────────────────────────────────────
+  function navFade(href) {
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = href; }, 220);
+  }
+
+  const brandLink = document.getElementById('brandLink');
+  if (brandLink) {
+    brandLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      navFade('home.html?from=masterplan');
+    });
+  }
+  const ecBackBtn = document.getElementById('ecBackBtn');
+  if (ecBackBtn) {
+    const goBack = (e) => { if (e) e.preventDefault(); navFade('home.html?from=masterplan'); };
+    ecBackBtn.addEventListener('click', goBack);
+    ecBackBtn.addEventListener('touchend', goBack, { passive: false });
+  }
+  // Fast-entry veil when arriving from home
+  if (location.search && location.search.indexOf('from=home') !== -1) {
+    document.body.classList.add('fast-entry');
+  }
+
+  // Initial transform
+  applyTransform(false);
+</script>
+
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+</script>
+<!-- PWA-JS-END -->
+
+<script>
+  // ── Preload likely next screens + touch-start prefetch on tap targets ───
+  (function () {
+    function prefetch(url) {
+      if (!url || url.startsWith('http') || document.querySelector('link[rel="prefetch"][href="' + url + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+    function preloadNextScreens(urls) {
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 400); };
+      idle(function () { urls.forEach(prefetch); });
+    }
+    // masterplan.html → preload home.html
+    preloadNextScreens(['home.html']);
+
+    document.querySelectorAll('a[href], button[data-href]').forEach(function (el) {
+      var href = el.getAttribute('href') || el.dataset.href;
+      if (!href || href.startsWith('http')) return;
+      el.addEventListener('touchstart', function () { prefetch(href); }, { passive: true, once: true });
+    });
+  })();
+</script>
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+<script src="assets/view360.js" defer></script>
+</body>
+</html>

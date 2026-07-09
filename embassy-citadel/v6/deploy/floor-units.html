@@ -1,0 +1,1081 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Choose Your Residence</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  FLOOR UNITS v2 — "Choose your residence"
+  ──────────────────────────────────────────────────────────────────────
+  Reached from inventory-floors.html after a floor is confirmed
+  (sessionStorage 'ec.floor'). This screen is two coordinated halves:
+
+  Layout (1440 × 900 stage, paper bg full-bleed)
+  · Top bar 76px — shared chrome:
+      LEFT   wordmark (brand-back) → home.html (cream veil)
+      RIGHT  BACK pill → inventory-floors.html (drill-up, cream veil)
+
+  · HERO (left, ~62%) — the FULL TYPICAL FLOOR PLATE for the chosen
+    floor: EC_INV.floorToTypical(lvl).file, drawn object-fit:contain on
+    a clean paper card so the ENTIRE plate is visible, never cropped.
+    This is the focus of the screen. Floating eyebrow ("Choose your
+    residence") + big "Floor N" title sit over the card's top-left;
+    a small band tag (the plate's floor band) sits bottom-left.
+
+  · UNIT RAIL (right, ~38%) — one selectable card per residence on
+    this floor, from EC_INV.unitsOnFloor(lvl) (codes N01/N02/N03/
+    S01/S02/S03). Each card shows: code, wing (North/South from the
+    code's N/S), bedrooms, and usable carpet (sq.ft.). Selecting a
+    card sets ec.unit + ec.floor in sessionStorage and cream-veils to
+    unit-detail.html.
+
+  How units map to the floor
+  · The hero plate is the WHOLE floor (both wings). The right-rail
+    cards are the individually-purchasable residences sitting on that
+    plate. North-wing codes (N01–N03) and South-wing codes (S01–S03)
+    are split into two labelled groups in the rail so the spatial
+    read (which side of the plate) stays legible. Selecting a card =
+    choosing that residence on the displayed floor.
+
+  No prices anywhere. No marker badges. Cormorant for display,
+  Inter for body. Bronze used only as the decision accent on the
+  selected / hovered card.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<script src="assets/inventory-data.js"></script>
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --card-shadow: 0 14px 32px -10px rgba(80, 58, 28, 0.22),
+                   0 4px 12px  -4px  rgba(40, 28, 10, 0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage ─────────────────────────────────────────────────────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    isolation: isolate;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    z-index: 1;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+    background: var(--bone);
+  }
+
+  /* Paper bg — full bleed, slight overshoot to hide rounding seams */
+  .stage-bg {
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    z-index: 0; pointer-events: none;
+    background-color: var(--bone);
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+  .stage-grain {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 1;
+    opacity: 0.025;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 5px 5px;
+    background-position: 0 0, 1px 1px;
+  }
+
+  /* ── TOP BAR (seamless — paper bg shows through) ────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  /* Unified right-side BACK button */
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+    margin-left: 8px;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+
+  /* ── TAP RESPONSIVENESS — interactive surfaces inside the app ── */
+  button, [role="button"], a[href], .unit-card {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+  }
+  .brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .brand-back::after {
+    content: '← Home';
+    position: absolute; left: 100%; top: 50%;
+    transform: translate(10px, -50%);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0; white-space: nowrap;
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: none;
+  }
+  .brand-back:hover::after, .brand-back:focus-visible::after {
+    opacity: 0.85; transform: translate(14px, -50%);
+  }
+  .brand-wordmark {
+    width: 156px; height: 43.2px;
+    color: var(--onyx-700);
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+
+  /* ── BODY GRID — hero (left) + unit rail (right) ───────────────── */
+  .floor-stage {
+    position: absolute;
+    left: 0; right: 0; top: 76px; bottom: 0;
+    display: grid;
+    grid-template-columns: 1fr 432px;
+    z-index: 3;
+  }
+
+  /* ── HERO — full floor plate ───────────────────────────────────── */
+  .hero {
+    position: relative;
+    padding: 30px 24px 30px 44px;
+    min-width: 0; min-height: 0;
+    display: flex; flex-direction: column;
+  }
+  .hero-head {
+    position: relative; z-index: 4;
+    flex: 0 0 auto;
+    margin-bottom: 14px;
+  }
+  .hero-eyebrow {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 9px;
+  }
+  .hero-eyebrow::before {
+    content: ''; width: 22px; height: 1px;
+    background: var(--gold-500); opacity: 0.6;
+  }
+  .hero-title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400; font-size: 52px; line-height: 0.98;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0;
+  }
+  .hero-title .lvl {
+    font-style: italic; font-weight: 500;
+    color: var(--gold-500);
+  }
+  .hero-sub {
+    margin-top: 7px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--taupe-400);
+  }
+
+  /* The plate card holds the full floor image, contained */
+  .plate-card {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    border-radius: 6px;
+    background:
+      linear-gradient(180deg, #FFFDF8 0%, #FBF8F1 100%);
+    border: 1px solid var(--hair-lo);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    padding: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* faint inner frame line for a drawn-on-paper feel */
+  .plate-card::after {
+    content: '';
+    position: absolute; inset: 12px;
+    border: 1px solid var(--hair-lo);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .plate-img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+    mix-blend-mode: multiply;
+    filter: contrast(1.04);
+  }
+  /* North arrow tucked in the plate's top-right */
+  .plate-compass {
+    position: absolute;
+    top: 18px; right: 18px;
+    z-index: 3;
+    width: 44px; height: 44px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.82);
+    border: 1px solid var(--hair);
+    display: grid; place-items: center;
+    color: var(--gold-500);
+    box-shadow: 0 4px 10px rgba(80, 58, 28, 0.10);
+  }
+  .plate-compass .n {
+    position: absolute; top: 4px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px; letter-spacing: 0.28em;
+    font-family: 'Lato', sans-serif; font-weight: 600;
+    text-transform: uppercase;
+  }
+  .plate-compass .needle {
+    width: 2px; height: 16px;
+    background: linear-gradient(180deg, var(--gold-500) 0%, var(--gold-500) 50%, var(--hair) 50%, var(--hair) 100%);
+    border-radius: 1px;
+  }
+  /* Floor band tag bottom-left of the plate */
+  .plate-band {
+    position: absolute;
+    bottom: 16px; left: 16px;
+    z-index: 3;
+    padding: 7px 13px;
+    background: rgba(252, 250, 244, 0.88);
+    border: 1px solid var(--hair-lo);
+    border-radius: 999px;
+    display: flex; align-items: center; gap: 9px;
+    box-shadow: 0 4px 10px rgba(80, 58, 28, 0.08);
+  }
+  .plate-band .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8px;
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .plate-band .val {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-weight: 500; font-size: 14px;
+    color: var(--gold-500); line-height: 1;
+  }
+
+  /* ── UNIT RAIL — selectable residence cards ────────────────────── */
+  .rail {
+    position: relative;
+    background:
+      linear-gradient(180deg, rgba(244,242,237,0.42), rgba(244,242,237,0.16));
+    border-left: 1px solid var(--hair-lo);
+    display: flex; flex-direction: column;
+    min-height: 0;
+  }
+  .rail-head {
+    flex: 0 0 auto;
+    padding: 30px 38px 16px 38px;
+  }
+  .rail-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--gold-500);
+    margin-bottom: 8px;
+  }
+  .rail-title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400; font-size: 26px; line-height: 1.05;
+    color: var(--onyx-700);
+    margin: 0; letter-spacing: 0.045em;}
+  .rail-hint {
+    margin-top: 7px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--taupe-400);
+  }
+  .rail-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 32px 30px 32px;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scrollbar-width: thin;
+    scrollbar-color: var(--hair) transparent;
+  }
+  .rail-scroll::-webkit-scrollbar { width: 5px; }
+  .rail-scroll::-webkit-scrollbar-thumb { background: var(--hair-lo); border-radius: 99px; }
+
+  .wing-group + .wing-group { margin-top: 18px; }
+  .wing-label {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 8.5px;
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--taupe-400);
+    margin: 4px 6px 11px 6px;
+  }
+  .wing-label::after {
+    content: ''; flex: 1; height: 1px;
+    background: var(--hair-lo);
+  }
+
+  .unit-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0 16px;
+    width: 100%;
+    padding: 15px 16px 15px 18px;
+    margin-bottom: 10px;
+    border: 1px solid var(--hair-lo);
+    border-radius: 8px;
+    background: rgba(255, 253, 248, 0.62);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit; color: inherit;
+    -webkit-appearance: none; appearance: none;
+    transition: border-color 200ms ease, background 200ms ease,
+                transform 180ms ease, box-shadow 220ms ease;
+  }
+  .unit-card::before {
+    /* left accent rail — bronze, reveals on hover/active only */
+    content: '';
+    position: absolute; left: 0; top: 14px; bottom: 14px;
+    width: 2px; border-radius: 99px;
+    background: var(--gold-400);
+    transform: scaleY(0); transform-origin: center;
+    transition: transform 220ms cubic-bezier(.2,.7,.2,1);
+  }
+  @media (hover: hover) {
+    .unit-card:hover {
+      border-color: var(--hair);
+      background: rgba(255, 253, 248, 0.95);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px -12px rgba(80, 58, 28, 0.30);
+    }
+    .unit-card:hover::before { transform: scaleY(1); }
+  }
+  .unit-card:active { transform: translateY(0) scale(0.992); }
+  .unit-card.is-selected {
+    border-color: var(--gold-400);
+    background:
+      linear-gradient(180deg, rgba(232,207,161,0.20), rgba(232,207,161,0.08));
+    box-shadow: 0 12px 26px -14px rgba(148, 111, 56, 0.38);
+  }
+  .unit-card.is-selected::before { transform: scaleY(1); background: var(--gold-500); }
+  .unit-card:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+
+  .uc-code {
+    grid-row: 1 / span 2;
+    width: 50px; height: 50px;
+    border-radius: 7px;
+    display: grid; place-items: center;
+    background: var(--bone-50);
+    border: 1px solid var(--hair-lo);
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500; font-size: 19px; letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+  }
+  .unit-card.is-selected .uc-code {
+    background: var(--gold-500); color: var(--paper); border-color: var(--gold-500);
+  }
+  .uc-main { min-width: 0; }
+  .uc-wing {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 12px;
+    color: var(--onyx-700);
+    margin-bottom: 3px;
+  }
+  .uc-beds {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--taupe-400);
+  }
+  .uc-carpet {
+    grid-row: 1 / span 2;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .uc-carpet .num {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500; font-size: 21px; line-height: 1;
+    color: var(--gold-500);
+  }
+  .uc-carpet .unit-lbl {
+    display: block; margin-top: 4px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 7.5px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+
+  .rail-empty {
+    padding: 40px 8px;
+    text-align: center;
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-size: 16px;
+    color: var(--taupe-400);
+  }
+
+  /* ── Cream-veil ─────────────────────────────────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+
+  /* Entrance — quiet stagger (transform/opacity only) */
+  @keyframes ec-rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim { opacity: 0; animation: ec-rise 520ms cubic-bezier(.2,.7,.2,1) forwards; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .anim { animation: none; opacity: 1; }
+    .unit-card, .unit-card:hover { transform: none !important; }
+  }
+
+  /* Tab S7 / 65" handled by the stage scaler (contain). The 1440×900
+     stage is the single source of truth; the scaler fits it to any
+     4:3 / 16:10 / 16:9 viewport without reflow. */
+
+  /* ── Plate zoom (HD floor plate · pinch / wheel / drag / double-tap) ── */
+  .plate-card { touch-action: none; }
+  .plate-card.is-zoomed  { cursor: grab; }
+  .plate-card.is-grabbing { cursor: grabbing; }
+  #plateWrap {
+    position: relative; display: block;
+    transform-origin: center center;
+    container-type: inline-size;
+    transition: transform 200ms cubic-bezier(.2,.7,.2,1);
+  }
+  /* will-change only while actively manipulating — keeps the zoomed HD plate crisp at rest */
+  #plateWrap.is-dragging { transition: none; will-change: transform; }
+  /* North / South wing highlight (shown on typical floor plates) */
+  .wing-hl { position: absolute; border-radius: 5px; pointer-events: none; opacity: 0; transition: opacity 320ms ease; }
+  .wing-hl .wl {
+    position: absolute; top: 4%; left: 6%;
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: clamp(7px, 2.2cqw, 17px);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 0.25em 0.6em; border-radius: 999px; line-height: 1; white-space: nowrap;
+  }
+  .wing-n { left: 4%; top: 21%; width: 40%; height: 56%; border: 2px solid rgba(47,90,120,0.92); background: rgba(47,90,120,0.15); }
+  .wing-n .wl { background: rgba(47,90,120,0.94); color: #F4F2ED; }
+  .wing-s { left: 56%; top: 21%; width: 40%; height: 56%; border: 2px solid rgba(148,111,56,0.95); background: rgba(148,111,56,0.16); }
+  .wing-s .wl { background: var(--gold-500); color: var(--paper); }
+  #plateWrap.show-both .wing-n, #plateWrap.show-both .wing-s { opacity: 1; }
+  .plate-zoom {
+    position: absolute; bottom: 16px; right: 16px; z-index: 5;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .plate-zbtn {
+    width: 34px; height: 34px; border-radius: 999px;
+    background: rgba(252,250,244,0.92); border: 1px solid var(--hair);
+    color: var(--gold-500); font-family: 'Lato', sans-serif; font-weight: 400;
+    font-size: 17px; line-height: 1; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(40,28,10,0.08);
+    transition: background 200ms ease, color 200ms ease, border-color 200ms ease, transform 160ms ease;
+    -webkit-tap-highlight-color: transparent; -webkit-appearance: none; appearance: none;
+  }
+  .plate-zbtn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .plate-zbtn:active { transform: scale(0.92); }
+  .plate-zbtn.plate-zfit { font-size: 8px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; color: var(--taupe-400); }
+  .plate-zpct {
+    position: absolute; bottom: 18px; right: 60px; z-index: 5;
+    font-family: 'Lato', sans-serif; font-weight: 600; font-size: 9px;
+    letter-spacing: 0.22em; color: var(--taupe-400);
+    background: rgba(252,250,244,0.85); border: 1px solid var(--hair-lo);
+    padding: 5px 9px; border-radius: 999px; font-variant-numeric: tabular-nums;
+    opacity: 0; transition: opacity 220ms ease; pointer-events: none;
+  }
+  .plate-zpct.is-on { opacity: 1; }
+</style>
+
+<script>
+  // ── Stage scaler — scale-to-fit (contain). Fixes iPad13 side overflow.
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+
+    // iOS hardening
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel wordmark — same SVG symbol as home -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+
+    <div class="stage-bg" aria-hidden="true"></div>
+    <div class="stage-grain" aria-hidden="true"></div>
+
+    <!-- ── TOP BAR ───────────────────────────────────────────── -->
+    <header class="topbar">
+      <a class="brand-back" href="home.html" id="brandBack" aria-label="Embassy Citadel — home">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <div class="top-chips">
+        <button class="ec-360-btn" data-ec360 type="button" aria-label="Open 360 degree view"><span class="ec360-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="9.6" ry="4"/><path d="M12 3.1a8.9 8.9 0 0 1 0 17.8 8.9 8.9 0 0 1 0-17.8"/><path d="M9.6 2.3 12 3.1l-.8 2.4"/></svg></span><span>360&deg;</span></button>
+        <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to floor selection">
+          <span class="arr" aria-hidden="true">←</span>
+          <span>Back</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ── BODY: hero plate + unit rail ──────────────────────── -->
+    <main class="floor-stage" aria-label="Choose your residence">
+
+      <!-- HERO — full typical floor plate -->
+      <section class="hero anim" style="animation-delay:40ms;" aria-label="Floor plan">
+        <div class="hero-head">
+          <div class="hero-eyebrow">Choose your residence</div>
+          <h1 class="hero-title">Floor <span class="lvl" id="heroLvl">45</span></h1>
+          <div class="hero-sub" id="heroSub">The full floor — both wings, drawn to plan.</div>
+        </div>
+
+        <div class="plate-card">
+          <span class="plan-wrap" id="plateWrap">
+            <img class="plate-img" id="plateImg" alt="" decoding="async">
+            <span class="wing-hl wing-n"><span class="wl">North</span></span>
+            <span class="wing-hl wing-s"><span class="wl">South</span></span>
+          </span>
+          <div class="plate-compass" aria-hidden="true">
+            <span class="n">N</span>
+            <span class="needle"></span>
+          </div>
+          <div class="plate-band">
+            <span class="lbl">Plate</span>
+            <span class="val" id="plateBand">—</span>
+          </div>
+          <div class="plate-zpct" id="plZpct">100%</div>
+          <div class="plate-zoom" aria-label="Plan zoom">
+            <button class="plate-zbtn" id="plZin"  type="button" aria-label="Zoom in">+</button>
+            <button class="plate-zbtn" id="plZout" type="button" aria-label="Zoom out">−</button>
+            <button class="plate-zbtn plate-zfit" id="plZfit" type="button" aria-label="Fit">Fit</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- UNIT RAIL — selectable residences -->
+      <aside class="rail anim" style="animation-delay:120ms;" aria-label="Residences on this floor">
+        <div class="rail-head">
+          <div class="rail-eyebrow">The residences</div>
+          <h2 class="rail-title" id="railTitle">Select a home</h2>
+          <div class="rail-hint" id="railHint">Each home, drawn for this floor.</div>
+        </div>
+        <div class="rail-scroll" id="railScroll">
+          <!-- unit cards injected here -->
+        </div>
+      </aside>
+
+    </main>
+
+    <div class="veil" id="veil" aria-hidden="true"></div>
+
+  </div>
+</div>
+
+<script>
+  // ── 1 · Read the selected section + floor (sessionStorage) ───────
+  var rawFloor = sessionStorage.getItem('ec.floor') || '45';
+  var section  = sessionStorage.getItem('ec.section') || 'residential';
+  var lvlNum   = parseInt(rawFloor, 10);
+  var lvl      = (lvlNum >= 1 && lvlNum <= 79) ? lvlNum : (isNaN(lvlNum) ? 0 : lvlNum);
+  var displayFloor = isNaN(lvlNum) ? rawFloor : String(lvlNum);
+
+  var INV = window.EC_INV || null;
+  var hasUnits = INV ? INV.sectionHasUnits(section) : true;
+
+  // ── 2 · HERO — exact plan for THIS section + floor (no fuzzy match) ─
+  (function paintHero() {
+    document.getElementById('heroLvl').textContent = displayFloor;
+    var plan = INV ? INV.planFor(section, rawFloor) : null;
+    var img = document.getElementById('plateImg');
+    var band = document.getElementById('plateBand');
+    if (plan && plan.file) {
+      img.style.display = '';
+      img.src = plan.file;
+      img.alt = 'Embassy Citadel — plan for ' + section + ' ' + displayFloor;
+      if (plan.label) {
+        band.textContent = plan.label;                       // amenity/parking/basement/etc.
+      } else {
+        var bandTxt = (plan.band || '').replace(/-/g, '–').replace(/\+/g, ' · ');
+        band.textContent = bandTxt ? ('Floors ' + bandTxt) : ('Floor ' + displayFloor);
+        if (plan.kind === 'refuge') band.textContent = 'Refuge · ' + (bandTxt || displayFloor);
+      }
+    } else {
+      img.style.display = 'none';
+      band.textContent = 'Plan pending';
+    }
+  })();
+
+  // ── 3 · UNIT RAIL — selectable residences on this floor ──────────
+  function wingName(code) {
+    if (code === 'MN') return 'North Tower';
+    if (code === 'MS') return 'South Tower';
+    return code.charAt(0) === 'N' ? 'North' : 'South';
+  }
+  function isMansion(code) { return code === 'MN' || code === 'MS'; }
+  function bedsLabel(n) { return n + ' Bedroom' + (n === 1 ? '' : 's'); }
+
+  function sectionNote() {
+    switch (section) {
+      case 'amenity':  return 'Amenity level — a shared floor. No individual residences here.';
+      case 'basement': return 'Basement level — parking & services. No individual residences.';
+      case 'parking':  return 'Parking podium — no individual residences on this level.';
+      case 'entrance': return 'Arrival lobby — no individual residences on this level.';
+      case 'service':  return 'Service floor — building plant. No individual residences.';
+      default:         return 'No residences listed for this floor.';
+    }
+  }
+  function buildRail() {
+    var scroll = document.getElementById('railScroll');
+
+    // Non-residential sections: plan-only, no unit selection.
+    if (!hasUnits) {
+      scroll.innerHTML = '<div class="rail-empty">' + sectionNote() + '</div>';
+      document.getElementById('railTitle').textContent = 'Floor plan';
+      return;
+    }
+
+    var units = INV ? INV.unitsOnFloor(lvl) : [];
+    if (!units.length) {
+      scroll.innerHTML = '<div class="rail-empty">' + sectionNote() + '</div>';
+      document.getElementById('railTitle').textContent = 'Select a home';
+      return;
+    }
+
+    document.getElementById('railTitle').textContent =
+      units.length + (units.length === 1 ? ' residence' : ' residences');
+
+    // Split into North / South groups, preserving N01..N03, S01..S03 order.
+    var north = units.filter(function (u) { return u.code === 'MN' || (u.code.charAt(0) === 'N' && u.code !== 'MS'); });
+    var south = units.filter(function (u) { return u.code === 'MS' || (u.code.charAt(0) === 'S'); });
+
+    var html = '';
+    function groupHtml(arr, label) {
+      if (!arr.length) return '';
+      var rows = arr.map(unitCardHtml).join('');
+      return '<div class="wing-group">'
+        + '<div class="wing-label">' + label + '</div>'
+        + rows + '</div>';
+    }
+    var wingWord = (section === 'mansion') ? ' Tower' : ' Wing';
+    html += groupHtml(north, 'North' + wingWord);
+    html += groupHtml(south, 'South' + wingWord);
+    scroll.innerHTML = html;
+
+    // Wire selection on each card.
+    Array.prototype.forEach.call(scroll.querySelectorAll('.unit-card'), function (card) {
+      var code = card.getAttribute('data-code');
+      var select = function (e) {
+        if (e) e.preventDefault();
+        Array.prototype.forEach.call(scroll.querySelectorAll('.unit-card'), function (c) {
+          c.classList.remove('is-selected');
+        });
+        card.classList.add('is-selected');
+        try {
+          sessionStorage.setItem('ec.unit', code);
+          sessionStorage.setItem('ec.floor', String(lvl));
+        } catch (_) {}
+        try { if (window.RDA) RDA.track('unit_select', code, 1, { floor: lvl }); } catch (_) {}
+        document.body.classList.add('is-leaving');
+        setTimeout(function () { window.location.href = 'unit-detail.html'; }, 220);
+      };
+      card.addEventListener('click', select);
+      card.addEventListener('touchend', select, { passive: false });
+    });
+  }
+
+  function unitCardHtml(u) {
+    var carpet = u.carpet || '—';
+    if (isMansion(u.code)) {
+      return ''
+        + '<button type="button" class="unit-card" data-code="' + u.code + '" '
+        +   'aria-label="' + wingName(u.code) + ' Mansion, triplex residence">'
+        +   '<span class="uc-code">' + (u.code === 'MN' ? 'N' : 'S') + '</span>'
+        +   '<span class="uc-main">'
+        +     '<span class="uc-wing">' + wingName(u.code) + ' Mansion</span>'
+        +     '<span class="uc-beds">Triplex \u00b7 3 levels</span>'
+        +   '</span>'
+        +   '<span class="uc-carpet">'
+        +     '<span class="num">' + bedsLabel(u.beds).replace(' Bedrooms','') + '</span>'
+        +     '<span class="unit-lbl">bedrooms</span>'
+        +   '</span>'
+        + '</button>';
+    }
+    return ''
+      + '<button type="button" class="unit-card" data-code="' + u.code + '" '
+      +   'aria-label="' + u.code + ', ' + wingName(u.code) + ' wing, '
+      +   bedsLabel(u.beds) + ', ' + carpet + ' square feet usable carpet">'
+      +   '<span class="uc-code">' + u.code + '</span>'
+      +   '<span class="uc-main">'
+      +     '<span class="uc-wing">' + wingName(u.code) + ' Wing</span>'
+      +     '<span class="uc-beds">' + bedsLabel(u.beds) + '</span>'
+      +   '</span>'
+      +   '<span class="uc-carpet">'
+      +     '<span class="num">' + carpet + '</span>'
+      +     '<span class="unit-lbl">sq.ft. carpet</span>'
+      +   '</span>'
+      + '</button>';
+  }
+
+  buildRail();
+
+  // ── 4 · Navigation chrome ────────────────────────────────────────
+  // Brand wordmark → home (top-level identity)
+  document.getElementById('brandBack').addEventListener('click', function (e) {
+    e.preventDefault();
+    document.body.classList.add('is-leaving');
+    setTimeout(function () { window.location.href = 'home.html'; }, 220);
+  });
+  // Right-side BACK → inventory-floors (drill-up)
+  var ecBackBtn = document.getElementById('ecBackBtn');
+  if (ecBackBtn) {
+    var goBack = function (e) {
+      if (e) e.preventDefault();
+      document.body.classList.add('is-leaving');
+      setTimeout(function () { window.location.href = 'inventory-floors.html'; }, 220);
+    };
+    ecBackBtn.addEventListener('click', goBack);
+    ecBackBtn.addEventListener('touchend', goBack, { passive: false });
+  }
+</script>
+
+<script>
+  /* Plate zoom controller — pinch / wheel / drag / double-tap + buttons.
+     Keeps the HD plan crisp (will-change toggled only during gestures). */
+  (function () {
+    var card = document.querySelector('.plate-card');
+    var img  = document.getElementById('plateImg');
+    var wrap = document.getElementById('plateWrap');
+    if (!card || !img || !wrap) return;
+    var pct = document.getElementById('plZpct');
+    var z = { s: 1, x: 0, y: 0 };
+    function apply(anim) {
+      wrap.style.transition = anim === false ? 'none' : '';
+      wrap.style.transform = 'translate(' + z.x + 'px,' + z.y + 'px) scale(' + z.s + ')';
+      card.classList.toggle('is-zoomed', z.s > 1.01);
+      if (pct) { pct.textContent = Math.round(z.s * 100) + '%'; pct.classList.toggle('is-on', z.s > 1.01); }
+    }
+    function clamp() {
+      var r = card.getBoundingClientRect();
+      var mx = Math.max(0, (r.width  * (z.s - 1)) / 2);
+      var my = Math.max(0, (r.height * (z.s - 1)) / 2);
+      z.x = Math.max(-mx, Math.min(mx, z.x));
+      z.y = Math.max(-my, Math.min(my, z.y));
+    }
+    function setS(n, anim) { z.s = Math.max(1, Math.min(4, n)); if (z.s <= 1.01) { z.x = 0; z.y = 0; } else clamp(); apply(anim); }
+    function reset() { z.s = 1; z.x = 0; z.y = 0; apply(false); }
+    document.getElementById('plZin').addEventListener('click', function () { setS(z.s + 0.4); });
+    document.getElementById('plZout').addEventListener('click', function () { setS(z.s - 0.4); });
+    document.getElementById('plZfit').addEventListener('click', reset);
+    card.addEventListener('wheel', function (e) { e.preventDefault(); setS(z.s + (e.deltaY < 0 ? 0.35 : -0.35), false); }, { passive: false });
+    card.addEventListener('dblclick', function () { if (z.s > 1.01) reset(); else { z.s = 2.2; clamp(); apply(true); } });
+    var pts = new Map(), panning = false, sx = 0, sy = 0, tx0 = 0, ty0 = 0, pinch = null;
+    card.addEventListener('pointerdown', function (e) {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 1 && z.s > 1.01) {
+        panning = true; sx = e.clientX; sy = e.clientY; tx0 = z.x; ty0 = z.y;
+        card.classList.add('is-grabbing'); wrap.classList.add('is-dragging');
+        try { card.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    });
+    card.addEventListener('pointermove', function (e) {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) {
+        panning = false;
+        var p = Array.from(pts.values());
+        var d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+        if (pinch == null) { pinch = { d: d, s: z.s }; wrap.classList.add('is-dragging'); }
+        else { setS(pinch.s * (d / pinch.d), false); }
+        return;
+      }
+      if (panning && z.s > 1.01) { z.x = tx0 + (e.clientX - sx); z.y = ty0 + (e.clientY - sy); clamp(); apply(false); }
+    });
+    function up(e) {
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = null;
+      if (pts.size === 0) { panning = false; card.classList.remove('is-grabbing'); wrap.classList.remove('is-dragging'); apply(true); try { card.releasePointerCapture(e.pointerId); } catch (_) {} }
+    }
+    card.addEventListener('pointerup', up);
+    card.addEventListener('pointercancel', up);
+    card.addEventListener('pointerleave', up);
+    function fitWrap() {                                   // size wrap = image box (so wing overlays align)
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      var pad = 22;
+      var cw = card.clientWidth - pad * 2, ch = card.clientHeight - pad * 2;
+      if (cw <= 0 || ch <= 0) return;
+      var ar = img.naturalWidth / img.naturalHeight;
+      var w = cw, h = cw / ar;
+      if (h > ch) { h = ch; w = ch * ar; }
+      wrap.style.width = Math.round(w) + 'px';
+      wrap.style.height = Math.round(h) + 'px';
+    }
+    img.addEventListener('load', function () {            // reset zoom + size + align wing overlay on each new plan
+      reset();
+      fitWrap();
+      var src = img.getAttribute('src') || '';
+      wrap.classList.toggle('show-both', /typical-lvl-/.test(src));   // wings only on typical floor plates
+    });
+    window.addEventListener('resize', fitWrap);
+    if (img.complete) { reset(); fitWrap(); var s0 = img.getAttribute('src') || ''; wrap.classList.toggle('show-both', /typical-lvl-/.test(s0)); }
+  })();
+</script>
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+
+  // ── Prefetch next-screen on touchstart for faster transitions ───
+  (function() {
+    function wirePrefetch() {
+      document.querySelectorAll('a[href], button[data-href]').forEach(function(el) {
+        var href = el.getAttribute('href') || el.dataset.href;
+        if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:')) return;
+        el.addEventListener('touchstart', function() {
+          if (!document.querySelector('link[rel="prefetch"][href="' + href + '"]')) {
+            var link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = href;
+            document.head.appendChild(link);
+          }
+        }, { passive: true, once: true });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wirePrefetch);
+    } else {
+      wirePrefetch();
+    }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(function() {
+        if (location.pathname.indexOf('home.html') !== -1) return;
+        if (document.querySelector('link[rel="prefetch"][href="home.html"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'home.html';
+        document.head.appendChild(link);
+      });
+    }
+  })();
+</script>
+<!-- PWA-JS-END -->
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets restore the previous page from bfcache with its DOM intact —
+     including the cream "is-leaving" veil set just before navigating away.
+     Clear the leaving state whenever the page is shown (incl. bfcache). */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+<script src="assets/view360.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Embassy Citadel — Sales Suite",
+  "short_name": "Citadel",
+  "description": "Embassy Citadel Worli — interactive sales suite",
+  "start_url": "./intro.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#FCFAF4",
+  "theme_color": "#FCFAF4",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,1760 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Location Explorer</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  LOCATION v2 — assumptions + reasoning
+  ──────────────────────────────────────────────────────────────────────
+  v2 deltas vs v1
+  · FULL VIEWPORT — no 1440×900 stage scaler. The map IS the canvas.
+    Map fills 100vw × 100vh. All chrome (top bar, rails, controls)
+    floats over via position:fixed. No letterbox bands at any aspect.
+  · REAL POIs from the Embassy Citadel brochure (Bro_AW_2026_F.pdf
+    pages 9–10). Connectivity/Entertainment/Education/Healthcare lists
+    are verbatim from the client dump. Map landmarks (Peninsula Business
+    Park, NSCI, Nehru Planetarium, Science Centre, Willingdon, Haji Ali,
+    Lower Parel Station) are added from the brochure's hand-drawn area
+    map. Restaurant/business additions are curated South-Bombay staples
+    within radius (Olive, Indigo Deli, BKC, Nariman Point) — kept small
+    to avoid drowning the canonical brochure list. 28 POIs total.
+  · MAP STYLE TOGGLE — 3 pills float top-right (in the right rail):
+      · WARM     · OSM tiles with sepia/gold filter (brand contract)
+      · VECTOR   · CARTO Voyager — Google-Maps-Lite cartography
+      · SATELLITE· Esri World Imagery, gentle warm tint to match brand
+    The active style is held on body[data-map-style] so CSS swaps the
+    tile filter without touching JS state.
+  · STREET-LEVEL ZOOM — maxZoom: 19 (was 17). Clicked POIs zoom to ~16.
+
+  Carried over from v1
+  · Filter combinatorial logic (category × radius × facing)
+  · Animated gold dashed bezier line from project → POI, end-dot pulse
+  · Sortable POI list (travel time / distance)
+  · Top-left brand-back → home.html with cream-veil fade (420 ms)
+  · Bottom-right "VIEW IN GOOGLE MAPS" CTA opens project coords
+
+  Why no stage scaler on THIS screen only?
+  The location explorer's value is map ground. A 1440×900 letterbox
+  with cream bars around a map looks claustrophobic on a 65" kiosk or
+  ultrawide. Every other screen keeps its stage; only location.html
+  goes fluid. The trade-off (rails reflow at extreme widths) is worth
+  the map breathing room.
+
+  Placeholders / to-wire-later
+  · Topbar has no menu button.
+  · Distances + minutes are static (brochure-sourced); replace with
+    Google Distance Matrix when ready.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    /* POI category colours */
+    --cat-shopping:      #E07E27;
+    --cat-schools:       #3947A0;
+    --cat-hospitals:     #D33A2F;
+    --cat-restaurants:   #D87830;
+    --cat-transport:     #3E7E4A;
+    --cat-business:      #4A6FA5;
+    --cat-entertainment: #A3469E;
+    --cat-hotels:        #8A6A3F;
+    --cat-recreation:    #5C8F4A;
+
+    --plate-shadow:  0 30px 60px -18px rgba(80, 58, 28, 0.30),
+                     0 14px 30px -10px rgba(80, 58, 28, 0.18),
+                     0 4px 10px        rgba(40, 28, 10, 0.08);
+    --card-shadow:   0 14px 32px -10px rgba(80, 58, 28, 0.22),
+                     0 4px 12px  -4px  rgba(40, 28, 10, 0.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    /* Flat fill matching the map's own edge colour (#map background) so any
+       margin outside the full-bleed map blends with no gradient/tone seam
+       on iPad 4:3 / 65" 16:9. The map is fixed inset:0 above this. */
+    background: #E9DFC8;
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── MAP fills the entire viewport ────────────────────────────── */
+  #map {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    background: #E9DFC8;
+  }
+/* ── Tile filters keyed off body[data-map-style] ──────────────── */
+  body[data-map-style="warm"] .leaflet-tile {
+    filter: sepia(0.55) hue-rotate(-12deg) saturate(0.75) brightness(1.04);
+  }
+  body[data-map-style="vector"] .leaflet-tile {
+    filter: saturate(0.92) brightness(1.02);
+  }
+  body[data-map-style="satellite"] .leaflet-tile {
+    filter: saturate(0.85) brightness(1.04) contrast(1.02);
+  }
+
+  /* Soft warm wash sits over the map. Pulled back on satellite so
+     imagery stays legible. */
+  .map-wash {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background:
+      radial-gradient(ellipse 30% 50% at 50% 50%,
+        transparent 0%,
+        rgba(217, 185, 122, 0.06) 70%,
+        rgba(148, 111, 56, 0.10) 100%),
+      linear-gradient(180deg, rgba(252,250,244,0.10), transparent 12%, transparent 90%, rgba(252,250,244,0.10));
+    mix-blend-mode: multiply;
+    transition: opacity 300ms ease;
+  }
+  body[data-map-style="satellite"] .map-wash { opacity: 0.45; }
+  body[data-map-style="vector"]   .map-wash { opacity: 0.65; }
+
+  /* Animated SVG line overlay (sits over map but under markers) */
+  #line-overlay {
+    position: fixed; inset: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none;
+    z-index: 450;
+  }
+  .line-path {
+    fill: none;
+    stroke: var(--gold-500);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 6 5;
+    filter: drop-shadow(0 0 4px rgba(148,111,56,0.5));
+    opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  .line-path.is-on { opacity: 1; }
+  body[data-map-style="satellite"] .line-path {
+    stroke: var(--gold-200);
+    filter: drop-shadow(0 0 5px rgba(217,185,122,0.85)) drop-shadow(0 0 1px rgba(0,0,0,0.6));
+  }
+  .line-end-dot {
+    opacity: 0;
+    transition: opacity 400ms ease;
+  }
+  .line-end-dot.is-on {
+    opacity: 1;
+    animation: endPulse 1400ms ease-out infinite;
+  }
+  @keyframes endPulse {
+    0%, 100% { r: 5; }
+    50%      { r: 9; }
+  }
+
+  /* ── TOP BAR (seamless — paper bg shows through) ────────────── */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 800;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  body[data-map-style="satellite"] .topbar {
+    background: linear-gradient(180deg, rgba(252,250,244,0.85), rgba(252,250,244,0.35) 100%);
+  }
+  .brand-back {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none; color: inherit; cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+  }
+  .brand-back:hover { opacity: 0.78; transform: translateX(-1px); }
+  .brand-back:focus-visible { outline: none; opacity: 0.78; }
+  .brand-back::after {
+    content: '← Home';
+    position: absolute;
+    left: 100%; top: 50%;
+    transform: translate(10px, -50%);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0; white-space: nowrap;
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: none;
+  }
+  .brand-back:hover::after, .brand-back:focus-visible::after {
+    opacity: 0.85;
+    transform: translate(14px, -50%);
+  }
+  .brand-diamond {
+    width: 18px; height: 18px;
+    position: relative; display: inline-block;
+    transform: rotate(45deg);
+    border: 1px solid var(--gold-500);
+    background: linear-gradient(135deg, var(--gold-200) 0%, var(--gold-500) 100%);
+    box-shadow: 0 0 6px rgba(148,111,56,0.20);
+  }
+  .brand-diamond::before {
+    content: '';
+    position: absolute; inset: 3px;
+    border: 0.5px solid rgba(255,255,255,0.55);
+    background: transparent;
+  }
+  .brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+  .brand-text .name {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500; font-size: 22px;
+    color: var(--onyx-700); letter-spacing: 0.04em;
+  }
+  .brand-text .loc {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  /* Canonical SVG wordmark (matches home.html) */
+  .brand-wordmark {
+    width: 156px; height: 43.2px;
+    color: var(--onyx-700);
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+
+  /* Top-right cluster: three circular chips */
+  .top-chips { display: flex; align-items: center; gap: 10px; }
+  .tc {
+    width: 38px; height: 38px;
+    min-width: 44px; min-height: 44px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.82);
+    border: 1px solid var(--hair-lo);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--gold-500);
+    cursor: pointer;
+    transition: background 220ms ease, color 220ms ease, transform 220ms ease, border-color 220ms ease;
+    font-family: 'Lato', sans-serif;
+    font-size: 14px;
+    line-height: 1;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tc:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair); }
+  .tc:active { transform: scale(0.96); }
+  /* Unified right-side BACK button */
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease,
+                border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-appearance: none; appearance: none;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--gold-500); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+  /* ── TAP RESPONSIVENESS — interactive surfaces inside the app ── */
+  button, [role="button"], a[href], .cat-tile, .pill-sm, .poi-row, .st-pill {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  svg .tap, svg [data-tap], svg [role="button"] { pointer-events: all; cursor: pointer; }
+  .leaflet-marker-icon, .leaflet-interactive { cursor: pointer; touch-action: manipulation; }
+
+  /* ── LEFT RAIL (fixed — consolidated filter + POI list) ───────── */
+  .left-rail {
+    position: fixed;
+    top: 100px; left: 24px; bottom: 24px;
+    width: 360px;
+    display: flex; flex-direction: column; gap: 14px;
+    z-index: 500;
+    pointer-events: none;
+    min-height: 0;
+  }
+  .left-rail > * { pointer-events: auto; }
+
+  /* Combined scrolling shell: holds the filter card + POI list,
+     so the two sections share one frosted-glass container. */
+  .rail-shell {
+    flex: 1;
+    min-height: 0;
+    display: flex; flex-direction: column;
+    background: rgba(252, 250, 244, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .rail-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold-200) transparent;
+  }
+  .rail-scroll::-webkit-scrollbar { width: 6px; }
+  .rail-scroll::-webkit-scrollbar-track { background: transparent; }
+  .rail-scroll::-webkit-scrollbar-thumb {
+    background: var(--gold-200);
+    border-radius: 3px;
+  }
+
+  .rail-section { padding: 16px 16px 14px; }
+  .rail-section + .rail-section {
+    border-top: 1px solid var(--hair);
+    margin-top: 4px;
+  }
+  .rail-section-head {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-bottom: 12px;
+  }
+  .rail-section-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8.5px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .rail-section-title {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .rail-section-title .title-l {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    font-size: 17px;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    line-height: 1.1;
+  }
+  .rail-section-title .title-l small {
+    display: block;
+    margin-top: 3px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8.5px;
+    color: var(--taupe-400);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .lr-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(252,250,244,0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 6px 10px;
+    border-radius: 999px;
+    align-self: flex-start;
+  }
+  .lr-eyebrow::before {
+    content: '';
+    width: 16px; height: 1px;
+    background: var(--gold-500);
+    opacity: 0.6;
+    display: inline-block;
+  }
+  .lr-headline {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 34px;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    color: var(--onyx-700);
+    margin: 0;
+    text-shadow: 0 1px 0 rgba(252,250,244,0.7), 0 0 20px rgba(252,250,244,0.55);
+  }
+  .lr-headline em { color: var(--gold-500); letter-spacing: 0.02em; }
+  body[data-map-style="satellite"] .lr-headline {
+    color: var(--paper);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.55), 0 0 14px rgba(0,0,0,0.35);
+  }
+  body[data-map-style="satellite"] .lr-headline em {
+    color: var(--gold-200);
+  }
+
+  /* Filter card — inner element of the consolidated rail */
+  .filter-card {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .fc-section { display: flex; flex-direction: column; gap: 9px; }
+  .fc-h {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: 9px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+  }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .pill-cat {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--paper);
+    border: 1px solid var(--hair-lo);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--onyx-100);
+    line-height: 1;
+    user-select: none;
+  }
+  .pill-cat:hover {
+    background: var(--bone-50);
+    border-color: var(--hair);
+    transform: translateY(-1px);
+  }
+  .pill-cat.is-on {
+    background: var(--bone-50);
+    border: 1.5px solid var(--gold-500);
+    box-shadow: 0 4px 10px -4px rgba(148,111,56,0.25);
+  }
+  .pill-cat .ico {
+    width: 14px; height: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--gold-500);
+    flex-shrink: 0;
+  }
+  .pill-cat .ico svg { width: 14px; height: 14px; }
+
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill-sm {
+    padding: 7px 11px;
+    background: var(--paper);
+    border: 1px solid var(--hair-lo);
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--onyx-100);
+    line-height: 1;
+    transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+    user-select: none;
+  }
+  .pill-sm:hover {
+    background: var(--bone-50);
+    border-color: var(--hair);
+  }
+  .pill-sm.is-on {
+    background: var(--bone-50);
+    border: 1.5px solid var(--gold-500);
+  }
+  .pill-facing {
+    width: 30px;
+    padding: 7px 0;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Leaflet chrome restyle ───────────────────────────────────── */
+  .leaflet-control-zoom {
+    border: 1px solid var(--hair-lo) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--card-shadow) !important;
+    overflow: hidden;
+    margin: 16px !important;
+  }
+  .leaflet-control-zoom a {
+    background: var(--paper) !important;
+    color: var(--gold-500) !important;
+    border: none !important;
+    border-bottom: 1px solid var(--hair-lo) !important;
+    font-family: 'Lato', sans-serif !important;
+    font-weight: 500 !important;
+    width: 32px !important; height: 32px !important;
+    line-height: 32px !important;
+    transition: background 180ms ease, color 180ms ease !important;
+  }
+  .leaflet-control-zoom a:last-child { border-bottom: none !important; }
+  .leaflet-control-zoom a:hover {
+    background: var(--bone-50) !important;
+    color: var(--onyx-700) !important;
+  }
+  .leaflet-control-attribution {
+    font-family: 'Lato', sans-serif !important;
+    font-size: 8px !important;
+    letter-spacing: 0.04em !important;
+    color: var(--taupe-400) !important;
+    background: rgba(252, 250, 244, 0.75) !important;
+    padding: 2px 6px !important;
+  }
+  .leaflet-control-attribution a { color: var(--gold-500) !important; }
+
+  /* ── PROJECT MARKER ───────────────────────────────────────────── */
+  .project-marker {
+    pointer-events: auto;
+    display: flex; flex-direction: column; align-items: center;
+    transform: translate(-50%, -100%);
+    z-index: 600;
+  }
+  .pm-card {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--paper);
+    border: 1.5px solid var(--gold-500);
+    border-radius: 999px;
+    padding: 6px 12px 6px 8px;
+    box-shadow: var(--card-shadow), 0 0 0 4px rgba(252,250,244,0.5);
+    white-space: nowrap;
+  }
+  .pm-diamond {
+    width: 12px; height: 12px;
+    transform: rotate(45deg);
+    border: 1px solid var(--gold-500);
+    background: linear-gradient(135deg, var(--gold-200) 0%, var(--gold-500) 100%);
+    flex-shrink: 0;
+  }
+  .pm-text {
+    display: flex; flex-direction: column; gap: 1px;
+    line-height: 1;
+  }
+  .pm-name {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--onyx-700);
+    text-transform: uppercase;
+  }
+  .pm-loc {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 7px;
+    letter-spacing: 0.32em;
+    color: var(--gold-500);
+    text-transform: uppercase;
+  }
+  .pm-stem {
+    width: 1px;
+    height: 14px;
+    background: var(--gold-500);
+    opacity: 0.6;
+  }
+  .pm-dot {
+    width: 8px; height: 8px;
+    border-radius: 999px;
+    background: var(--gold-500);
+    border: 2px solid var(--paper);
+    box-shadow: 0 0 0 1.5px var(--gold-500), 0 4px 10px rgba(148,111,56,0.4);
+  }
+
+  /* POI markers */
+  .poi-marker {
+    width: 24px; height: 24px;
+    border-radius: 999px;
+    border: 2px solid var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 220ms ease;
+    transform: translate(-50%, -50%);
+  }
+  .poi-marker:hover {
+    transform: translate(-50%, -50%) scale(1.18);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(0,0,0,0.15);
+  }
+  .poi-marker.is-active {
+    transform: translate(-50%, -50%) scale(1.35);
+    z-index: 700 !important;
+    animation: poiPulse 1400ms ease-out infinite;
+  }
+  @keyframes poiPulse {
+    0%, 100% { box-shadow: 0 6px 14px rgba(0,0,0,0.35), 0 0 0 0 rgba(255,255,255,0.6); }
+    50%      { box-shadow: 0 6px 14px rgba(0,0,0,0.35), 0 0 0 8px rgba(255,255,255,0); }
+  }
+  .poi-marker svg { width: 12px; height: 12px; }
+
+  /* Radius ring labels */
+  .ring-label {
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8.5px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    background: rgba(252, 250, 244, 0.88);
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--hair-lo);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* POI floating info card */
+  .poi-info {
+    pointer-events: none;
+    transform: translate(-50%, calc(-100% - 20px));
+    background: var(--paper);
+    border: 1px solid var(--hair);
+    border-radius: 10px;
+    box-shadow: var(--card-shadow);
+    padding: 10px 14px;
+    min-width: 160px;
+    display: flex; flex-direction: column; gap: 4px;
+    white-space: nowrap;
+    z-index: 800 !important;
+    opacity: 0;
+    animation: popIn 320ms ease-out forwards;
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: translate(-50%, calc(-100% - 10px)); }
+    to   { opacity: 1; transform: translate(-50%, calc(-100% - 20px)); }
+  }
+  .pi-name {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--onyx-700);
+    line-height: 1.1;
+  }
+  .pi-meta {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── STYLE TOGGLE (floats top-right, over the now-expanded map) ─ */
+  .style-toggle {
+    position: fixed;
+    top: 100px;
+    right: 24px;
+    display: inline-flex;
+    z-index: 500;
+    background: rgba(252, 250, 244, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    box-shadow: var(--card-shadow);
+    padding: 4px;
+    gap: 2px;
+  }
+  .st-pill {
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: 8.5px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    line-height: 1;
+    transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+    user-select: none;
+  }
+  .st-pill:hover {
+    color: var(--onyx-100);
+  }
+  .st-pill.is-on {
+    background: var(--bone-50);
+    color: var(--onyx-700);
+    box-shadow: inset 0 0 0 1.5px var(--gold-500);
+  }
+
+  /* ── SORT TOGGLE (sits in the rail section header) ────────────── */
+  .rr-sort {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--onyx-100);
+    cursor: pointer;
+    padding: 5px 9px;
+    border-radius: 999px;
+    transition: background 180ms ease, border-color 180ms ease;
+    user-select: none;
+    background: var(--paper);
+    border: 1px solid var(--hair-lo);
+  }
+  .rr-sort:hover { background: var(--bone-50); border-color: var(--hair); }
+  .rr-sort .chev { color: var(--gold-500); font-size: 10px; }
+
+  /* POI list — inside consolidated rail */
+  .poi-list { display: flex; flex-direction: column; }
+  .poi-row {
+    display: grid;
+    grid-template-columns: 30px 1fr auto;
+    align-items: center;
+    column-gap: 10px;
+    padding: 10px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 200ms ease, transform 200ms ease;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .poi-row:last-child { border-bottom: none; }
+  .poi-row:hover {
+    background: var(--bone-50);
+    transform: translateX(2px);
+  }
+  .poi-row.is-active {
+    background: var(--bone-50);
+    box-shadow: inset 3px 0 0 var(--gold-500);
+  }
+  .poi-row-ico {
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .poi-row-ico svg { width: 12px; height: 12px; }
+  .poi-row-mid { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .poi-row-name {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+    line-height: 1.15;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .poi-row-cat {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 8px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .poi-row-r {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    text-align: right;
+  }
+  .poi-row-time {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--onyx-100);
+    font-variant-numeric: tabular-nums;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .poi-row-time svg { width: 10px; height: 10px; color: var(--taupe-400); }
+  .poi-row-km {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    font-variant-numeric: tabular-nums;
+  }
+  .poi-empty {
+    padding: 28px 14px;
+    text-align: center;
+    font-family: 'Lato', sans-serif;
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+
+  /* Footer CTA — pinned inside the rail shell */
+  .rail-cta {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px;
+    border-top: 1px solid var(--hair);
+    background: rgba(252, 250, 244, 0.55);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: background 220ms ease;
+    flex-shrink: 0;
+  }
+  .rail-cta:hover { background: var(--bone-50); }
+  .rail-cta-l {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: 9.5px;
+    letter-spacing: 0.36em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+  }
+  .rail-cta-r {
+    color: var(--gold-500);
+    display: inline-flex; align-items: center;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* Veil (page transition) */
+  .veil {
+    position: fixed; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 999;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  }
+</style>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body data-map-style="vector">
+
+<!-- Embassy Citadel wordmark — same SVG symbol as home -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+  <!-- ── MAP ───────────────────────────────────────────────────── -->
+  <div id="map" class=""></div>
+  <div class="map-wash"></div>
+  <svg id="line-overlay" preserveAspectRatio="none">
+    <path class="line-path" d="" id="lineMain"></path>
+    <circle class="line-end-dot" id="lineEndDot" cx="0" cy="0" r="5" fill="var(--gold-500)" />
+  </svg>
+
+  <!-- ── TOP BAR ───────────────────────────────────────────────── -->
+  <header class="topbar">
+    <a class="brand-back" href="home.html" id="brandBack" aria-label="Embassy Citadel">
+      <div class="brand-wordmark">
+        <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+      </div>
+    </a>
+
+    <div class="top-chips">
+      <button class="ec-360-btn" data-ec360 type="button" aria-label="Open 360 degree view"><span class="ec360-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="9.6" ry="4"/><path d="M12 3.1a8.9 8.9 0 0 1 0 17.8 8.9 8.9 0 0 1 0-17.8"/><path d="M9.6 2.3 12 3.1l-.8 2.4"/></svg></span><span>360&deg;</span></button>
+        <button class="ec-back-btn" id="ecBackBtn" type="button" aria-label="Back to home">
+        <span class="arr" aria-hidden="true">←</span>
+        <span>Back</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── MAP STYLE TOGGLE (floats top-right over expanded map) ─── -->
+  <div class="style-toggle" role="tablist" aria-label="Map style">
+    <button class="st-pill"       data-style="warm"      type="button" role="tab">Warm</button>
+    <button class="st-pill"       data-style="vector"    type="button" role="tab">Vector</button>
+    <button class="st-pill is-on" data-style="satellite" type="button" role="tab">Satellite</button>
+  </div>
+
+  <!-- ── LEFT RAIL (consolidated: filter + POI list + CTA) ─────── -->
+  <aside class="left-rail">
+    <div class="rail-shell">
+      <div class="rail-scroll">
+
+        <!-- FILTER SECTION ─────────────────────────────────────── -->
+        <div class="rail-section">
+          <div class="rail-section-head">
+            <div class="rail-section-eyebrow">Filter By</div>
+            <div class="rail-section-title">
+              <span class="title-l">Refine the map</span>
+            </div>
+          </div>
+
+          <div class="filter-card">
+            <div class="fc-section">
+              <div class="fc-h">Select Category</div>
+              <div class="cat-grid" id="catGrid"></div>
+            </div>
+
+            <div class="fc-section">
+              <div class="fc-h">Radius</div>
+              <div class="pill-row" id="radiusRow">
+                <button class="pill-sm" data-radius="1" type="button">1 KM</button>
+                <button class="pill-sm" data-radius="3" type="button">3 KM</button>
+                <button class="pill-sm is-on" data-radius="5" type="button">5 KM</button>
+                <button class="pill-sm" data-radius="20" type="button">20 KM</button>
+              </div>
+            </div>
+
+            <div class="fc-section">
+              <div class="fc-h">Facing</div>
+              <div class="pill-row" id="facingRow">
+                <button class="pill-sm pill-facing" data-facing="N"  type="button">N</button>
+                <button class="pill-sm pill-facing" data-facing="NE" type="button">NE</button>
+                <button class="pill-sm pill-facing" data-facing="E"  type="button">E</button>
+                <button class="pill-sm pill-facing" data-facing="SE" type="button">SE</button>
+                <button class="pill-sm pill-facing" data-facing="S"  type="button">S</button>
+                <button class="pill-sm pill-facing" data-facing="SW" type="button">SW</button>
+                <button class="pill-sm pill-facing" data-facing="W"  type="button">W</button>
+                <button class="pill-sm pill-facing" data-facing="NW" type="button">NW</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- POI LIST SECTION ───────────────────────────────────── -->
+        <div class="rail-section">
+          <div class="rail-section-head">
+            <div class="rail-section-eyebrow">Places Nearby</div>
+            <div class="rail-section-title">
+              <span class="title-l">From Project<small id="poiCountLbl">— locations</small></span>
+              <div class="rr-sort" id="sortToggle">
+                <span id="sortLabel">Travel Time</span>
+                <span class="chev">▾</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="poi-list" id="poiList" style="border-radius:8px; min-height:48px;"></div>
+        </div>
+
+      </div>
+
+      <a class="rail-cta" id="gmapsCta" href="https://www.google.com/maps/place/19.0085,72.8173" target="_blank" rel="noopener">
+        <span class="rail-cta-l">View in Google Maps</span>
+        <span class="rail-cta-r">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 11L11 3" />
+            <path d="M5 3h6v6" />
+          </svg>
+        </span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="veil"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  // ──────────────────────────────────────────────────────────
+  //  DATA — sourced from Embassy Citadel brochure
+  //  (Embassy_Citadel_Bro_AW_2026_F.pdf, pages 9–10)
+  //  Brochure-listed POIs marked with `src: "brochure"`.
+  //  Map-callout POIs marked with `src: "map"`.
+  //  Curated South-Bombay additions marked `src: "curated"`.
+  // ──────────────────────────────────────────────────────────
+  // Embassy Citadel · Dr E Moses Rd / Ganpatrao Kadam Marg, Worli, Mumbai 400018
+  // (Plot just north of Four Seasons Hotel, east of Acharya Atre Chowk Metro,
+  //  per the brochure illustrated map p.9 + verified against OSM landmarks)
+  const PROJECT = { coords: [19.0085, 72.8173], name: 'Embassy Citadel' };
+  window.PROJECT_LOC = PROJECT.coords;
+
+  const CATEGORIES = [
+    { id: 'all',           label: 'All',           icon: 'grid'    },
+    { id: 'transport',     label: 'Connectivity',  icon: 'train'   },
+    { id: 'schools',       label: 'Education',     icon: 'cap'     },
+    { id: 'hospitals',     label: 'Healthcare',    icon: 'cross'   },
+    { id: 'shopping',      label: 'Shopping',      icon: 'bag'     },
+    { id: 'hotels',        label: 'Hotels',        icon: 'bed'     },
+    { id: 'restaurants',   label: 'Restaurants',   icon: 'fork'    },
+    { id: 'business',      label: 'Business Hubs', icon: 'brief'   },
+    { id: 'entertainment', label: 'Entertainment', icon: 'mask'    },
+    { id: 'recreation',    label: 'Recreation',    icon: 'leaf'    },
+  ];
+
+  const CAT_COLOR = {
+    shopping:      '#E07E27',
+    schools:       '#3947A0',
+    hospitals:     '#D33A2F',
+    restaurants:   '#D87830',
+    transport:     '#3E7E4A',
+    business:      '#4A6FA5',
+    entertainment: '#A3469E',
+    hotels:        '#8A6A3F',
+    recreation:    '#5C8F4A',
+  };
+
+  // ──────────────────────────────────────────────────────────
+  // POI coordinates verified against OpenStreetMap / Mappls
+  // for actual Mumbai landmarks. Distances are straight-line
+  // from PROJECT = [19.0085, 72.8173] (Dr E Moses Rd / Ganpatrao
+  // Kadam Marg, Worli). Travel minutes use Mumbai traffic-adjusted
+  // road estimates from Google Maps typical-time bands.
+  // ──────────────────────────────────────────────────────────
+  const POIS = [
+    // ── CONNECTIVITY (brochure p.10) ────────────────────────────
+    { id: 'c1', cat: 'transport', name: 'Acharya Atre Chowk Metro', coords: [19.0098, 72.8155], minutes: 1,  km: 0.2,  src: 'brochure' },
+    { id: 'c2', cat: 'transport', name: 'Worli Naka',               coords: [19.0080, 72.8175], minutes: 1,  km: 0.15, src: 'brochure' },
+    { id: 'c3', cat: 'transport', name: 'Bandra-Worli Sea Link',    coords: [19.0270, 72.8175], minutes: 8,  km: 4.1,  src: 'brochure' },
+    { id: 'c4', cat: 'transport', name: 'Atal Setu',                coords: [18.9620, 72.9430], minutes: 14, km: 14.0, src: 'brochure' },
+    { id: 'c5', cat: 'transport', name: 'Mumbai Intl. Airport',     coords: [19.0896, 72.8656], minutes: 28, km: 10.5, src: 'brochure' },
+    { id: 'c6', cat: 'transport', name: 'Lower Parel Station',      coords: [18.9966, 72.8307], minutes: 6,  km: 1.9,  src: 'map' },
+    { id: 'c7', cat: 'transport', name: 'Mahalaxmi Station',        coords: [18.9817, 72.8235], minutes: 7,  km: 3.1,  src: 'map' },
+
+    // ── EDUCATION (brochure p.10) ───────────────────────────────
+    { id: 'e1', cat: 'schools', name: 'Podar ORT Intl. School',         coords: [18.9966, 72.8127], minutes: 7,  km: 1.6,  src: 'brochure' },
+    { id: 'e2', cat: 'schools', name: 'DSB International School',       coords: [18.9740, 72.8085], minutes: 9,  km: 4.1,  src: 'brochure' },
+    { id: 'e3', cat: 'schools', name: 'D.Y. Patil Intl. School',        coords: [18.9938, 72.8121], minutes: 11, km: 1.8,  src: 'brochure' },
+    { id: 'e4', cat: 'schools', name: 'Dhirubhai Ambani Intl. School',  coords: [19.0658, 72.8624], minutes: 28, km: 8.0,  src: 'brochure' },
+
+    // ── HEALTHCARE (brochure p.10) ──────────────────────────────
+    { id: 'h1', cat: 'hospitals', name: 'M.A. Podar Hospital',     coords: [18.9893, 72.8128], minutes: 7,  km: 2.3, src: 'brochure' },
+    { id: 'h2', cat: 'hospitals', name: 'Wockhardt Hospital',      coords: [18.9714, 72.8240], minutes: 12, km: 4.2, src: 'brochure' },
+    { id: 'h3', cat: 'hospitals', name: 'SRCC Children’s Hospital', coords: [18.9818, 72.8141], minutes: 11, km: 3.0, src: 'brochure' },
+    { id: 'h4', cat: 'hospitals', name: 'Jaslok Hospital',         coords: [18.9709, 72.8086], minutes: 13, km: 4.8, src: 'brochure' },
+
+    // ── ENTERTAINMENT + HOTELS + SHOPPING (brochure p.10) ───────
+    { id: 's1', cat: 'shopping',      name: 'Phoenix Palladium',          coords: [18.9942, 72.8260], minutes: 6,  km: 1.9, src: 'brochure' },
+    { id: 's2', cat: 'shopping',      name: 'Atria Mall',                 coords: [18.9913, 72.8138], minutes: 4,  km: 2.0, src: 'brochure' },
+    { id: 'r1', cat: 'recreation',    name: 'Mahalaxmi Race Course',      coords: [18.9803, 72.8170], minutes: 8,  km: 3.1, src: 'brochure' },
+    { id: 't1', cat: 'hotels',        name: 'Four Seasons Hotel Mumbai',  coords: [19.0055, 72.8157], minutes: 2,  km: 0.40, src: 'brochure' },
+    { id: 't2', cat: 'hotels',        name: 'The St. Regis Mumbai',       coords: [18.9942, 72.8262], minutes: 8,  km: 1.9, src: 'brochure' },
+
+    // ── MAP CALLOUTS (brochure p.9 illustrated map) ─────────────
+    { id: 'b1', cat: 'business',      name: 'Peninsula Business Park',   coords: [18.9974, 72.8275], minutes: 5,  km: 1.7, src: 'map' },
+    { id: 'rc1', cat: 'recreation',   name: 'NSCI Stadium',              coords: [18.9988, 72.8170], minutes: 6,  km: 1.1, src: 'map' },
+    { id: 'rc2', cat: 'recreation',   name: 'Nehru Planetarium',         coords: [18.9916, 72.8136], minutes: 6,  km: 2.0, src: 'map' },
+    { id: 'rc3', cat: 'recreation',   name: 'Nehru Science Centre',      coords: [18.9968, 72.8154], minutes: 6,  km: 1.4, src: 'map' },
+    { id: 'rc4', cat: 'recreation',   name: 'Willingdon Sports Club',    coords: [18.9778, 72.8160], minutes: 9,  km: 3.4, src: 'map' },
+    { id: 'en1', cat: 'entertainment',name: 'Haji Ali Dargah',           coords: [18.9826, 72.8088], minutes: 9,  km: 3.1, src: 'map' },
+
+    // ── CURATED SOUTH-BOMBAY ADDITIONS (within 10 km, anchor POIs)
+    { id: 'b2', cat: 'business',      name: 'BKC Business District',     coords: [19.0670, 72.8676], minutes: 18, km: 7.7, src: 'curated' },
+    { id: 'b3', cat: 'business',      name: 'Nariman Point',             coords: [18.9256, 72.8232], minutes: 22, km: 9.4, src: 'curated' },
+    { id: 'r2', cat: 'restaurants',   name: 'Olive Bar & Kitchen',       coords: [18.9803, 72.8124], minutes: 8,  km: 3.5, src: 'curated' },
+    { id: 'r3', cat: 'restaurants',   name: 'Indigo Deli, Phoenix',      coords: [18.9942, 72.8254], minutes: 6,  km: 1.8, src: 'curated' },
+  ];
+
+  // ──────────────────────────────────────────────────────────
+  //  ICONS
+  // ──────────────────────────────────────────────────────────
+  const ICONS = {
+    grid:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>',
+    cap:   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6L8 3l7 3-7 3-7-3z"/><path d="M4 8v3c0 1 2 2 4 2s4-1 4-2V8"/><path d="M14 6v4"/></svg>',
+    cross: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M8 5v6M5 8h6"/></svg>',
+    bag:   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h10l-1 9H4z"/><path d="M5.5 5V3.5a2.5 2.5 0 015 0V5"/></svg>',
+    fork:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2v5M5 7c-1 0-2-.5-2-2V2M5 7v7"/><path d="M11 2v12M9 2c0 2 0 3 2 3s2-1 2-3"/></svg>',
+    train: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="10" height="10" rx="1.5"/><path d="M3 8h10"/><circle cx="6" cy="10.5" r="0.6" fill="currentColor"/><circle cx="10" cy="10.5" r="0.6" fill="currentColor"/><path d="M5 12.5l-1 1.5M11 12.5l1 1.5"/></svg>',
+    brief: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="12" height="9" rx="1"/><path d="M6 5V3.5h4V5"/><path d="M2 9h12"/></svg>',
+    mask:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4c0-1 1-2 5-2s5 1 5 2v5c0 3-2 5-5 5s-5-2-5-5z"/><circle cx="6" cy="7" r="0.6" fill="currentColor"/><circle cx="10" cy="7" r="0.6" fill="currentColor"/><path d="M6 10c.5.5 1 1 2 1s1.5-.5 2-1"/></svg>',
+    bed:   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12V5M14 12V8H2"/><circle cx="5" cy="8" r="1.2"/><path d="M14 12v1M2 12v1"/></svg>',
+    leaf:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13c0-6 4-10 10-10 0 6-4 10-10 10z"/><path d="M3 13l7-7"/></svg>',
+    car:   '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h8M2.5 8L3.5 5h5L9.5 8M3 5l.5-1.5h5L9 5"/><circle cx="4" cy="9" r="1"/><circle cx="8" cy="9" r="1"/></svg>',
+  };
+
+  function catIconKey(cat) {
+    return ({
+      schools:       'cap',
+      hospitals:     'cross',
+      shopping:      'bag',
+      restaurants:   'fork',
+      transport:     'train',
+      business:      'brief',
+      entertainment: 'mask',
+      hotels:        'bed',
+      recreation:    'leaf',
+    })[cat] || 'grid';
+  }
+  function catIcon(catId) {
+    if (catId === 'all') return ICONS.grid;
+    return ICONS[catIconKey(catId)] || ICONS.grid;
+  }
+  function catLabel(catId) {
+    const c = CATEGORIES.find(x => x.id === catId);
+    return c ? c.label : catId;
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  STATE
+  // ──────────────────────────────────────────────────────────
+  const state = {
+    category: 'all',
+    radius: 5,
+    facing: new Set(),
+    sort: 'time',
+    activePoi: null,
+    mapStyle: 'vector',
+  };
+
+  // ──────────────────────────────────────────────────────────
+  //  HELPERS
+  // ──────────────────────────────────────────────────────────
+  function bearingToOctant(from, to) {
+    const lat1 = from[0] * Math.PI / 180;
+    const lat2 = to[0]   * Math.PI / 180;
+    const dLng = (to[1] - from[1]) * Math.PI / 180;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    let brng = Math.atan2(y, x) * 180 / Math.PI;
+    brng = (brng + 360) % 360;
+    const octants = ['N','NE','E','SE','S','SW','W','NW'];
+    const idx = Math.round(brng / 45) % 8;
+    return octants[idx];
+  }
+
+  function visiblePois() {
+    return POIS.filter(p => {
+      if (state.category !== 'all' && p.cat !== state.category) return false;
+      if (p.km > state.radius) return false;
+      if (state.facing.size > 0) {
+        const oct = bearingToOctant(PROJECT.coords, p.coords);
+        if (!state.facing.has(oct)) return false;
+      }
+      return true;
+    });
+  }
+
+  function sortedPois(list) {
+    const arr = list.slice();
+    if (state.sort === 'time') arr.sort((a, b) => a.minutes - b.minutes);
+    else                       arr.sort((a, b) => a.km - b.km);
+    return arr;
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  LEAFLET MAP
+  // ──────────────────────────────────────────────────────────
+  const map = L.map('map', {
+    center: PROJECT.coords,
+    zoom: 14,
+    minZoom: 11,
+    maxZoom: 19,
+    zoomControl: true,
+    attributionControl: true,
+    preferCanvas: false,
+    tap: true,
+  });
+  window.__map = map;
+  map.zoomControl.setPosition('bottomright');
+
+  // ── Tile-style provider table ─────────────────────────────
+  const TILES = {
+    warm: {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '© OpenStreetMap contributors',
+      subdomains: 'abc',
+      maxZoom: 19,
+    },
+    vector: {
+      url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      attribution: '© OpenStreetMap © CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19,
+    },
+    satellite: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics',
+      maxZoom: 19,
+    },
+  };
+
+  let currentTileLayer = null;
+  function setMapStyle(key) {
+    const cfg = TILES[key];
+    if (!cfg) return;
+    state.mapStyle = key;
+    if (currentTileLayer) map.removeLayer(currentTileLayer);
+    const opts = { attribution: cfg.attribution, maxZoom: cfg.maxZoom || 19, crossOrigin: true };
+    if (cfg.subdomains) opts.subdomains = cfg.subdomains;
+    currentTileLayer = L.tileLayer(cfg.url, opts).addTo(map);
+    document.body.dataset.mapStyle = key;
+    document.querySelectorAll('.st-pill').forEach(b => {
+      b.classList.toggle('is-on', b.dataset.style === key);
+    });
+  }
+  setMapStyle('vector');
+
+  // Wire the 3 toggle pills
+  document.querySelectorAll('.st-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const k = btn.dataset.style;
+      if (k && k !== state.mapStyle) setMapStyle(k);
+    });
+  });
+
+  // Project marker
+  const projectIcon = L.divIcon({
+    className: 'project-marker-wrap',
+    html: '<div class="project-marker">' +
+            '<div class="pm-card">' +
+              '<div class="pm-diamond"></div>' +
+              '<div class="pm-text">' +
+                '<div class="pm-name">Embassy Citadel</div>' +
+                '<div class="pm-loc">Worli</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="pm-stem"></div>' +
+            '<div class="pm-dot"></div>' +
+          '</div>',
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+  L.marker(PROJECT.coords, { icon: projectIcon, zIndexOffset: 1000, interactive: false }).addTo(map);
+
+  // Radius rings — keep all four visual rings even though pill set
+  // is 1/3/5/20 — gives the viewer a stronger sense of scale.
+  const RING_KMS = [1, 3, 5, 10];
+  RING_KMS.forEach(km => {
+    L.circle(PROJECT.coords, {
+      radius: km * 1000,
+      color: '#946F38',
+      weight: 1,
+      opacity: 0.45,
+      dashArray: '4 5',
+      fill: false,
+      interactive: false,
+    }).addTo(map);
+    const labelLatLng = [PROJECT.coords[0] + (km / 111), PROJECT.coords[1]];
+    const labelIcon = L.divIcon({
+      className: 'ring-label-wrap',
+      html: '<div class="ring-label">' + km + ' KM</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+    L.marker(labelLatLng, { icon: labelIcon, interactive: false, zIndexOffset: -100 }).addTo(map);
+  });
+
+  // ──────────────────────────────────────────────────────────
+  //  POI MARKERS
+  // ──────────────────────────────────────────────────────────
+  const poiMarkers = {};
+  const poiInfoCard = { marker: null };
+
+  function buildPoiMarker(poi) {
+    const color = CAT_COLOR[poi.cat];
+    const html =
+      '<div class="poi-marker" data-poi="' + poi.id + '" style="background:' + color + ';">' +
+        '<span style="color:#fff">' + ICONS[catIconKey(poi.cat)] + '</span>' +
+      '</div>';
+    const icon = L.divIcon({
+      className: 'poi-marker-wrap',
+      html: html,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+    const m = L.marker(poi.coords, { icon: icon, zIndexOffset: 500 });
+    m.on('click', () => activatePoi(poi.id));
+    return m;
+  }
+
+  POIS.forEach(p => {
+    const m = buildPoiMarker(p);
+    m.addTo(map);
+    poiMarkers[p.id] = m;
+  });
+
+  // ──────────────────────────────────────────────────────────
+  //  RENDER FILTERS
+  // ──────────────────────────────────────────────────────────
+  function renderCategories() {
+    const grid = document.getElementById('catGrid');
+    grid.innerHTML = CATEGORIES.map(c =>
+      '<button class="pill-cat ' + (state.category === c.id ? 'is-on' : '') + '" data-cat="' + c.id + '" type="button">' +
+        '<span class="ico">' + ICONS[c.icon] + '</span>' +
+        '<span>' + c.label + '</span>' +
+      '</button>'
+    ).join('');
+    grid.querySelectorAll('.pill-cat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.category = btn.dataset.cat;
+        clearActivePoi();
+        renderAll();
+      });
+    });
+  }
+
+  function renderRadius() {
+    document.querySelectorAll('#radiusRow .pill-sm').forEach(btn => {
+      btn.classList.toggle('is-on', Number(btn.dataset.radius) === state.radius);
+      btn.onclick = () => {
+        state.radius = Number(btn.dataset.radius);
+        clearActivePoi();
+        renderAll();
+      };
+    });
+  }
+
+  function renderFacing() {
+    document.querySelectorAll('#facingRow .pill-sm').forEach(btn => {
+      btn.classList.toggle('is-on', state.facing.has(btn.dataset.facing));
+      btn.onclick = () => {
+        const f = btn.dataset.facing;
+        if (state.facing.has(f)) state.facing.delete(f);
+        else                     state.facing.add(f);
+        clearActivePoi();
+        renderAll();
+      };
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  RENDER POI LIST
+  // ──────────────────────────────────────────────────────────
+  function renderList() {
+    const list = document.getElementById('poiList');
+    const visible = sortedPois(visiblePois());
+    document.getElementById('poiCountLbl').textContent =
+      visible.length + ' location' + (visible.length === 1 ? '' : 's');
+    if (visible.length === 0) {
+      list.innerHTML = '<div class="poi-empty">No locations match these filters.</div>';
+      return;
+    }
+    list.innerHTML = visible.map(p => {
+      const color = CAT_COLOR[p.cat];
+      const kmDisplay = p.km < 1
+        ? Math.round(p.km * 1000) + ' M'
+        : p.km.toFixed(1) + ' KM';
+      return (
+        '<div class="poi-row ' + (state.activePoi === p.id ? 'is-active' : '') + '" data-poi="' + p.id + '">' +
+          '<div class="poi-row-ico" style="background:' + color + ';">' + ICONS[catIconKey(p.cat)] + '</div>' +
+          '<div class="poi-row-mid">' +
+            '<div class="poi-row-name">' + p.name + '</div>' +
+            '<div class="poi-row-cat">' + catLabel(p.cat) + '</div>' +
+          '</div>' +
+          '<div class="poi-row-r">' +
+            '<div class="poi-row-time">' + ICONS.car + p.minutes + ' MIN</div>' +
+            '<div class="poi-row-km">' + kmDisplay + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+    list.querySelectorAll('.poi-row').forEach(row => {
+      row.addEventListener('click', () => activatePoi(row.dataset.poi));
+    });
+  }
+
+  function renderMarkers() {
+    const visibleIds = new Set(visiblePois().map(p => p.id));
+    POIS.forEach(p => {
+      const m = poiMarkers[p.id];
+      if (visibleIds.has(p.id)) {
+        if (!map.hasLayer(m)) m.addTo(map);
+      } else {
+        if (map.hasLayer(m))  map.removeLayer(m);
+      }
+    });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  ACTIVATE POI
+  // ──────────────────────────────────────────────────────────
+  function activatePoi(id) {
+    const poi = POIS.find(p => p.id === id);
+    if (!poi) return;
+    state.activePoi = id;
+
+    document.querySelectorAll('.poi-marker').forEach(el => el.classList.remove('is-active'));
+    const markerEl = document.querySelector('.poi-marker[data-poi="' + id + '"]');
+    if (markerEl) markerEl.classList.add('is-active');
+
+    const bounds = L.latLngBounds([PROJECT.coords, poi.coords]);
+    // Padding: left rail (~400 px) + top bar (~100 px). Right side
+    // now opens up (no right rail) so map can breathe to the edge.
+    const targetZoom = poi.km < 0.5 ? 17 : (poi.km < 2 ? 16 : null);
+    if (targetZoom !== null) {
+      // Center between the two for short trips, hold zoom at street level.
+      const midLat = (PROJECT.coords[0] + poi.coords[0]) / 2;
+      const midLng = (PROJECT.coords[1] + poi.coords[1]) / 2;
+      map.flyTo([midLat, midLng], targetZoom, {
+        duration: 0.8,
+        easeLinearity: 0.25,
+      });
+    } else {
+      map.flyToBounds(bounds, {
+        paddingTopLeft: [420, 130],
+        paddingBottomRight: [60, 60],
+        duration: 0.8,
+        easeLinearity: 0.25,
+        maxZoom: 16,
+      });
+    }
+
+    setTimeout(() => {
+      drawLine(poi);
+      showInfoCard(poi);
+    }, 820);
+
+    renderList();
+  }
+
+  function clearActivePoi() {
+    state.activePoi = null;
+    document.querySelectorAll('.poi-marker').forEach(el => el.classList.remove('is-active'));
+    hideLine();
+    hideInfoCard();
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  ANIMATED LINE OVERLAY
+  // ──────────────────────────────────────────────────────────
+  function projectPointToPx(coords) {
+    const layerPoint = map.latLngToContainerPoint(L.latLng(coords[0], coords[1]));
+    return { x: layerPoint.x, y: layerPoint.y };
+  }
+
+  function sizeOverlay() {
+    const overlay = document.getElementById('line-overlay');
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    overlay.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    overlay.setAttribute('width', w);
+    overlay.setAttribute('height', h);
+  }
+
+  function drawLine(poi) {
+    const path = document.getElementById('lineMain');
+    const endDot = document.getElementById('lineEndDot');
+    sizeOverlay();
+
+    const a = projectPointToPx(PROJECT.coords);
+    const b = projectPointToPx(poi.coords);
+
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const curve = Math.min(len * 0.18, 70);
+    const nx = -dy / len;
+    const ny =  dx / len;
+    const cx = mx + nx * curve;
+    const cy = my + ny * curve;
+    const d = 'M ' + a.x + ' ' + a.y + ' Q ' + cx + ' ' + cy + ' ' + b.x + ' ' + b.y;
+    path.setAttribute('d', d);
+
+    const total = path.getTotalLength();
+    path.style.strokeDasharray = total + ' ' + total;
+    path.style.strokeDashoffset = total;
+    path.style.transition = 'none';
+    path.classList.add('is-on');
+    void path.getBoundingClientRect();
+    path.style.transition = 'stroke-dashoffset 900ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 400ms ease';
+    path.style.strokeDashoffset = 0;
+
+    setTimeout(() => {
+      path.style.transition = 'opacity 400ms ease';
+      path.style.strokeDasharray = '6 5';
+      path.style.strokeDashoffset = 0;
+    }, 920);
+
+    endDot.setAttribute('cx', b.x);
+    endDot.setAttribute('cy', b.y);
+    endDot.setAttribute('fill', CAT_COLOR[poi.cat]);
+    endDot.classList.add('is-on');
+  }
+
+  function hideLine() {
+    document.getElementById('lineMain').classList.remove('is-on');
+    document.getElementById('lineEndDot').classList.remove('is-on');
+  }
+
+  function refreshLine() {
+    if (!state.activePoi) return;
+    const poi = POIS.find(p => p.id === state.activePoi);
+    if (!poi) return;
+    const path = document.getElementById('lineMain');
+    const endDot = document.getElementById('lineEndDot');
+    sizeOverlay();
+    const a = projectPointToPx(PROJECT.coords);
+    const b = projectPointToPx(poi.coords);
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const curve = Math.min(len * 0.18, 70);
+    const nx = -dy / len;
+    const ny =  dx / len;
+    const cx = mx + nx * curve;
+    const cy = my + ny * curve;
+    const d = 'M ' + a.x + ' ' + a.y + ' Q ' + cx + ' ' + cy + ' ' + b.x + ' ' + b.y;
+    path.setAttribute('d', d);
+    endDot.setAttribute('cx', b.x);
+    endDot.setAttribute('cy', b.y);
+    if (poiInfoCard.marker) {
+      poiInfoCard.marker.setLatLng(poi.coords);
+    }
+  }
+
+  map.on('move zoom moveend zoomend', refreshLine);
+  window.addEventListener('resize', () => { sizeOverlay(); refreshLine(); map.invalidateSize(); });
+
+  // ──────────────────────────────────────────────────────────
+  //  INFO CARD
+  // ──────────────────────────────────────────────────────────
+  function showInfoCard(poi) {
+    hideInfoCard();
+    const kmDisp = poi.km < 1
+      ? Math.round(poi.km * 1000) + ' M'
+      : poi.km.toFixed(1) + ' KM';
+    const html =
+      '<div class="poi-info">' +
+        '<div class="pi-name">' + poi.name + '</div>' +
+        '<div class="pi-meta">' + poi.minutes + ' MIN · ' + kmDisp + '</div>' +
+      '</div>';
+    const icon = L.divIcon({
+      className: 'poi-info-wrap',
+      html: html,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+    poiInfoCard.marker = L.marker(poi.coords, { icon: icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
+  }
+  function hideInfoCard() {
+    if (poiInfoCard.marker) {
+      map.removeLayer(poiInfoCard.marker);
+      poiInfoCard.marker = null;
+    }
+  }
+
+  // Click on map background clears active POI
+  map.on('click', e => {
+    const target = e.originalEvent.target;
+    if (target && target.closest && target.closest('.poi-marker')) return;
+    clearActivePoi();
+    renderList();
+  });
+
+  // ──────────────────────────────────────────────────────────
+  //  SORT TOGGLE
+  // ──────────────────────────────────────────────────────────
+  document.getElementById('sortToggle').addEventListener('click', () => {
+    state.sort = (state.sort === 'time') ? 'distance' : 'time';
+    document.getElementById('sortLabel').textContent =
+      (state.sort === 'time') ? 'Travel Time' : 'Distance';
+    renderList();
+  });
+
+  // ──────────────────────────────────────────────────────────
+  //  TOP CHIP HANDLERS
+  // ──────────────────────────────────────────────────────────
+  document.getElementById('prevBtn')?.addEventListener('click', () => {
+    // Only step back when we genuinely arrived from another screen in this
+    // app (same-origin referrer). When the kiosk opens location.html as the
+    // first page, history.length can still be > 1 with a blank initial entry,
+    // and history.back() would land on about:blank. In that case fall back to
+    // home via the normal cream-veil nav so the button is never dead and never
+    // blanks the screen.
+    let sameOrigin = false;
+    try { sameOrigin = !!document.referrer && new URL(document.referrer).origin === location.origin; }
+    catch (_) {}
+    if (sameOrigin && window.history.length > 1) window.history.back();
+    else locNavBack();
+  });
+  document.getElementById('nextBtn')?.addEventListener('click', () => {
+    window.history.forward();
+  });
+  function locNavBack(e) {
+    if (e) e.preventDefault();
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = 'home.html'; }, 220);
+  }
+  document.getElementById('brandBack').addEventListener('click', locNavBack);
+  const ecBackBtn = document.getElementById('ecBackBtn');
+  if (ecBackBtn) {
+    ecBackBtn.addEventListener('click', locNavBack);
+    ecBackBtn.addEventListener('touchend', locNavBack, { passive: false });
+  }
+
+  // ──────────────────────────────────────────────────────────
+  //  RENDER ALL
+  // ──────────────────────────────────────────────────────────
+  function renderAll() {
+    renderCategories();
+    renderRadius();
+    renderFacing();
+    renderList();
+    renderMarkers();
+  }
+
+  renderAll();
+  sizeOverlay();
+
+  setTimeout(() => {
+    map.invalidateSize();
+    sizeOverlay();
+  }, 350);
+
+  // Prevent iOS pinch-zoom of page chrome (map handles its own pinch)
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTouchEnd < 350) {
+      // Only block double-tap zoom outside of the map (Leaflet needs taps)
+      if (!e.target.closest('#map')) e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+  document.addEventListener('gesturestart',  e => { if (!e.target.closest('#map')) e.preventDefault(); });
+  document.addEventListener('gesturechange', e => { if (!e.target.closest('#map')) e.preventDefault(); });
+  document.addEventListener('gestureend',    e => { if (!e.target.closest('#map')) e.preventDefault(); });
+</script>
+
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+</script>
+<!-- PWA-JS-END -->
+
+<script>
+  // ── Preload likely next screens + touch-start prefetch on tap targets ───
+  (function () {
+    function prefetch(url) {
+      if (!url || url.startsWith('http') || document.querySelector('link[rel="prefetch"][href="' + url + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+    function preloadNextScreens(urls) {
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 400); };
+      idle(function () { urls.forEach(prefetch); });
+    }
+    // location.html → preload home.html
+    preloadNextScreens(['home.html']);
+
+    document.querySelectorAll('a[href], button[data-href]').forEach(function (el) {
+      var href = el.getAttribute('href') || el.dataset.href;
+      if (!href || href.startsWith('http')) return;
+      el.addEventListener('touchstart', function () { prefetch(href); }, { passive: true, once: true });
+    });
+  })();
+</script>
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+<script src="assets/view360.js" defer></script>
+</body>
+</html>

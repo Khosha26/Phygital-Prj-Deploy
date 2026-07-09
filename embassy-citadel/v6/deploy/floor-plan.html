@@ -1,0 +1,2585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Floor Plans</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  FLOOR-PLAN v4 — Living-Tree multi-window comparison pattern
+  ──────────────────────────────────────────────────────────────────────
+  Default: ONE full floor-plan window taking the whole stage.
+  Click "+ ADD WINDOW" → a SECOND full window appears side-by-side.
+  Click again → THIRD window. Max 3.
+  Each window is independently configurable: own plan / BHK / facing /
+  zoom. Comparison happens naturally because the user sees N plans
+  side-by-side, each with its own price sheet.
+
+  Stage: 1440 × 900 (same scaler contract as the rest of v4/).
+
+  Top bar (consistent with other inside screens):
+    LEFT  : Embassy Citadel wordmark SVG (#ec-wordmark) → home.html
+    RIGHT : "N / 3 Windows" + ‹ › + "+ ADD WINDOW" pill + BACK pill
+
+  Body: .windows-grid with data-count="1|2|3" driving grid columns and
+  a CSS custom property --base-font that scales internal type/canvas.
+
+  Removed (vs prior build):
+    · Far-right thumbnail-switcher rail
+    · PRICING COMPARISON table in the right stack
+    · The single-card layout — replaced by uniform self-contained
+      .plan-window cards, each one a complete unit detail.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+
+<!-- GOAL 2: placeholder-marker styles (.nu) -->
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --paper-2:    #F9F6EE;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+    --taupe-500:  #7E725F;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+    --copper:     #C26B2A;
+    --copper-50:  #F7EBDD;
+    --copper-100: #EDD2B6;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    --blueprint-fill:      #C5DAE8;
+    --blueprint-fill-soft: #D8E5EF;
+    --blueprint-fill-deep: #B0C8D9;
+    --blueprint-wall:      #2F5A78;
+    --blueprint-deck:      #A9C2D2;
+    --blueprint-text:      #1F3D55;
+    --blueprint-text-soft: #5B7C95;
+
+    --card-shadow:  0 14px 32px -10px rgba(80, 58, 28, 0.22),
+                    0 4px 12px  -4px  rgba(40, 28, 10, 0.10);
+    --plate-shadow: 0 30px 60px -18px rgba(80, 58, 28, 0.30),
+                    0 14px 30px -10px rgba(80, 58, 28, 0.18),
+                    0 4px 10px        rgba(40, 28, 10, 0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage scaler — paper bg fills viewport edge-to-edge ─────── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    isolation: isolate;
+    /* Flat paper — matches the stage's own paper edge exactly, so the
+       letterbox/pillarbox margins on non-16:10 screens (iPad 4:3, 65" 16:9)
+       blend seamlessly into the stage with no visible "cut". */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    z-index: 1;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+    background: transparent;
+  }
+  .stage-bg {
+    position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px;
+    z-index: 0; pointer-events: none;
+    background-color: var(--paper);
+    background-image: url('assets/bg-paper.png');
+    background-size: cover; background-position: center center; background-repeat: no-repeat;
+  }
+  .stage-grain {
+    position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    opacity: 0.022;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 5px 5px;
+    background-position: 0 0, 1px 1px;
+  }
+
+  /* ── TOP BAR (consistent with home / unit-detail) ───────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .brand-back {
+    display: inline-flex; align-items: center; gap: 14px;
+    text-decoration: none; color: var(--onyx-700);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: opacity 220ms ease;
+  }
+  .brand-back:hover { opacity: 0.82; }
+  .brand-wordmark { width: 156px; height: 43.2px; display: inline-flex; color: var(--onyx-700); }
+  .brand-wordmark svg { width: 100%; height: 100%; }
+
+  .top-chips { display: flex; align-items: center; gap: 10px; }
+  .top-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--taupe-400);
+    padding: 0 14px 0 4px;
+    user-select: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .top-eyebrow strong { color: var(--gold-500); font-weight: 600; }
+  .tc {
+    width: 44px; height: 44px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 300; font-size: 22px; line-height: 1;
+    transition: background 220ms ease, color 220ms ease, border-color 220ms ease, transform 200ms ease;
+  }
+  .tc:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .tc:active { transform: scale(0.94); }
+
+  .add-window-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--gold-100), var(--gold-300));
+    border: 1px solid var(--gold-500);
+    color: var(--onyx-700);
+    font-family: 'Lato', sans-serif;
+    font-weight: 600; font-size: 10px;
+    letter-spacing: 0.36em; text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 12px -4px rgba(148, 111, 56, 0.45);
+    transition: background 220ms ease, transform 200ms ease, opacity 240ms ease, box-shadow 220ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    margin-left: 6px;
+  }
+  .add-window-pill .plus {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400; font-size: 18px; line-height: 1;
+    letter-spacing: 0; transform: translateY(-1px);
+  }
+  .add-window-pill:hover {
+    background: linear-gradient(180deg, var(--gold-200), var(--gold-500));
+    color: var(--paper);
+    box-shadow: 0 6px 16px -4px rgba(148, 111, 56, 0.55);
+  }
+  .add-window-pill:active { transform: scale(0.96); }
+  .add-window-pill.is-hidden { opacity: 0; pointer-events: none; transform: scale(0.92); }
+
+  .ec-back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 92px; min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer;
+    transition: background 220ms ease, color 220ms ease, border-color 220ms ease, transform 200ms ease;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    margin-left: 6px;
+  }
+  .ec-back-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .ec-back-btn:active { transform: scale(0.96); }
+  .ec-back-btn .arr { font-size: 13px; line-height: 1; transform: translateY(-0.5px); letter-spacing: 0; }
+
+  /* ── BODY: windows grid (1 → 2 → 3 cols) ─────────────────────── */
+  .windows-grid {
+    position: absolute;
+    top: 86px; left: 22px; right: 22px; bottom: 22px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    z-index: 4;
+    transition: grid-template-columns 380ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .windows-grid[data-count="2"] { grid-template-columns: 1fr 1fr; }
+  .windows-grid[data-count="3"] { grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* ── PLAN WINDOW (each is a complete self-contained unit) ────── */
+  .plan-window {
+    --base-font: 14px;
+    --pad-x: 26px;
+    --pad-y: 20px;
+    --title-size: 38px;
+    --carpet-size: 26px;
+    --canvas-pad: 18px;
+    --spec-num: 26px;
+    --total-size: 28px;
+    --price-row-pad: 10px;
+    --canvas-radius: 16px;
+
+    position: relative;
+    background: var(--paper);
+    border: 1px solid var(--hair-lo);
+    border-radius: 18px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+    font-size: var(--base-font);
+    transform-origin: center top;
+    animation: pw-fade-in 380ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .plan-window.is-removing {
+    animation: pw-fade-out 280ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  @keyframes pw-fade-in {
+    from { opacity: 0; transform: translateX(24px) scale(0.96); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes pw-fade-out {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(0.94); }
+  }
+
+  /* When 2 windows: medium sizing */
+  .windows-grid[data-count="2"] .plan-window {
+    --base-font: 12px;
+    --pad-x: 22px;
+    --pad-y: 16px;
+    --title-size: 30px;
+    --carpet-size: 22px;
+    --canvas-pad: 14px;
+    --spec-num: 22px;
+    --total-size: 24px;
+    --price-row-pad: 8px;
+    --canvas-radius: 14px;
+  }
+  /* When 3 windows: compact sizing */
+  .windows-grid[data-count="3"] .plan-window {
+    --base-font: 10.5px;
+    --pad-x: 16px;
+    --pad-y: 13px;
+    --title-size: 24px;
+    --carpet-size: 18px;
+    --canvas-pad: 10px;
+    --spec-num: 18px;
+    --total-size: 20px;
+    --price-row-pad: 6px;
+    --canvas-radius: 12px;
+  }
+
+  /* ── WINDOW HEAD: title + tier + carpet + close ─────────────── */
+  .pw-head {
+    position: relative;
+    padding: var(--pad-y) var(--pad-x) calc(var(--pad-y) * 0.6);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .pw-title-row {
+    display: flex; align-items: baseline; gap: 12px;
+    min-width: 0;
+  }
+  .pw-title {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 500;
+    font-size: var(--title-size);
+    line-height: 1;
+    color: var(--onyx-700);
+    letter-spacing: 0.01em;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pw-tier-pill {
+    display: inline-flex; align-items: center;
+    height: calc(var(--base-font) * 1.55);
+    padding: 0 10px;
+    background: var(--paper-2);
+    border: 1px solid var(--gold-300);
+    border-radius: 999px;
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.68);
+    letter-spacing: 0.30em;
+    text-transform: uppercase;
+    transform: translateY(-3px);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .pw-carpet {
+    text-align: right;
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 3px;
+    margin-right: calc(var(--base-font) * 2.4);
+  }
+  .pw-carpet .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: calc(var(--base-font) * 0.68);
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--taupe-400);
+    white-space: nowrap;
+  }
+  .pw-carpet .val {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-weight: 500;
+    font-size: var(--carpet-size);
+    line-height: 1;
+    color: var(--onyx-700);
+    letter-spacing: 0.005em;
+    white-space: nowrap;
+  }
+
+  .pw-sub-row {
+    grid-column: 1 / -1;
+    display: flex; align-items: baseline; gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .pw-sub {
+    font-family: 'Lato', sans-serif;
+    font-size: calc(var(--base-font) * 0.82);
+    font-weight: 400;
+    color: var(--taupe-500);
+    letter-spacing: 0.06em;
+  }
+  .pw-sub-tag {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-weight: 500;
+    font-size: calc(var(--base-font) * 1.05);
+    color: var(--gold-500);
+    letter-spacing: 0.02em;
+  }
+
+  /* Close button — only visible when N > 1 (toggled in JS) */
+  .pw-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 30px; height: 30px;
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72);
+    border: 1px solid var(--hair-lo);
+    color: var(--taupe-400);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-weight: 300; font-size: 18px; line-height: 1;
+    transition: background 200ms ease, color 200ms ease, border-color 200ms ease, transform 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 5;
+  }
+  .pw-close:hover {
+    background: var(--paper);
+    color: var(--onyx-700);
+    border-color: var(--hair-hi);
+  }
+  .pw-close:active { transform: scale(0.92); }
+  .pw-close.is-hidden { display: none; }
+
+  /* ── TYPE SEGMENTED CONTROL (Unit · Typical · Amenity) ───────── */
+  .pw-types {
+    display: flex; align-items: stretch;
+    gap: 0;
+    margin: calc(var(--base-font) * 0.7) var(--pad-x) 0;
+    padding: calc(var(--base-font) * 0.28);
+    background: var(--paper-2);
+    border: 1px solid var(--hair-lo);
+    border-radius: 999px;
+  }
+  .pw-type {
+    flex: 1 1 0; min-width: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px;
+    height: calc(var(--base-font) * 2.3);
+    padding: 0 calc(var(--base-font) * 0.6);
+    border-radius: 999px;
+    background: transparent;
+    border: none;
+    color: var(--taupe-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.72);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 200ms ease, background 220ms ease, box-shadow 220ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pw-type:hover:not(.is-active) { color: var(--onyx-700); }
+  .pw-type.is-active {
+    background: var(--paper);
+    color: var(--gold-500);
+    box-shadow:
+      0 2px 8px -3px rgba(80, 58, 28, 0.28),
+      inset 0 0 0 1px var(--gold-300);
+  }
+  .pw-type:active { transform: translateY(0.5px); }
+
+  /* ── FILTERS ROW + plan selector ─────────────────────────────── */
+  .pw-filters {
+    display: flex; align-items: center;
+    gap: calc(var(--base-font) * 1.4);
+    padding: calc(var(--base-font) * 0.85) var(--pad-x);
+    border-bottom: 1px solid var(--hair-lo);
+    flex-wrap: wrap;
+  }
+  .pw-filter-group {
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .pw-flabel {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.68);
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--taupe-400);
+    margin-right: 3px;
+  }
+  .pw-fpill {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: calc(var(--base-font) * 2);
+    min-width: calc(var(--base-font) * 3.6);
+    padding: 0 calc(var(--base-font) * 0.85);
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: calc(var(--base-font) * 0.78);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 200ms ease, color 200ms ease, border-color 200ms ease, transform 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+  }
+  .pw-fpill.is-active {
+    background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
+    border-color: var(--gold-500);
+    color: var(--paper);
+    box-shadow: 0 4px 10px -4px rgba(148, 111, 56, 0.55);
+  }
+  .pw-fpill:hover:not(.is-active) {
+    border-color: var(--hair-hi);
+    color: var(--onyx-700);
+  }
+  .pw-fpill:active { transform: scale(0.96); }
+  .pw-fpill.is-disabled { opacity: 0.32; pointer-events: none; }
+
+  /* Plan selector — sits with filters on the right */
+  .pw-plan-select {
+    margin-left: auto;
+    position: relative;
+    display: inline-flex; align-items: center;
+  }
+  .pw-plan-select select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--paper-2);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.74);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    height: calc(var(--base-font) * 2);
+    padding: 0 calc(var(--base-font) * 2) 0 calc(var(--base-font) * 0.9);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 200ms ease, background 200ms ease, color 200ms ease;
+  }
+  .pw-plan-select select:hover {
+    border-color: var(--hair-hi);
+    color: var(--onyx-700);
+  }
+  .pw-plan-select::after {
+    content: '';
+    position: absolute;
+    right: calc(var(--base-font) * 0.85);
+    top: 50%;
+    width: 6px; height: 6px;
+    border-right: 1.2px solid var(--gold-500);
+    border-bottom: 1.2px solid var(--gold-500);
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  /* ── CONTROLS BAR (selectors row) ────────────────────────────── */
+  .pw-controls {
+    display: flex; flex-wrap: wrap; align-items: flex-end;
+    gap: calc(var(--base-font) * 0.9);
+    padding: calc(var(--base-font) * 0.85) var(--pad-x);
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .pw-ctl {
+    display: flex; flex-direction: column;
+    gap: calc(var(--base-font) * 0.34);
+    min-width: 0;
+  }
+  .pw-ctl.is-grow { flex: 1 1 40%; }
+  .pw-ctl-lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.62);
+    letter-spacing: 0.30em; text-transform: uppercase;
+    color: var(--taupe-400);
+    padding-left: 2px;
+  }
+  .pw-select {
+    position: relative;
+    display: inline-flex; align-items: center;
+  }
+  .pw-select select {
+    appearance: none; -webkit-appearance: none;
+    width: 100%;
+    background: var(--paper-2);
+    border: 1px solid var(--hair);
+    color: var(--onyx-700);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: calc(var(--base-font) * 0.82);
+    letter-spacing: 0.02em;
+    height: calc(var(--base-font) * 2.5);
+    padding: 0 calc(var(--base-font) * 2.1) 0 calc(var(--base-font) * 0.95);
+    border-radius: calc(var(--base-font) * 0.7);
+    cursor: pointer;
+    transition: border-color 200ms ease, background 200ms ease;
+  }
+  .pw-select select:hover  { border-color: var(--hair-hi); }
+  .pw-select select:focus  { outline: none; border-color: var(--gold-400); }
+  .pw-select::after {
+    content: '';
+    position: absolute;
+    right: calc(var(--base-font) * 0.95); top: 50%;
+    width: 6px; height: 6px;
+    border-right: 1.4px solid var(--gold-500);
+    border-bottom: 1.4px solid var(--gold-500);
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  /* ── FILTER BAR (Bedrooms · Wing) ────────────────────────────── */
+  .pw-filterbar {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: calc(var(--base-font) * 1.5);
+    padding: calc(var(--base-font) * 0.7) var(--pad-x);
+    border-bottom: 1px solid var(--hair-lo);
+    background: var(--paper-2);
+  }
+
+  /* ── CANVAS (floor-plan area) ────────────────────────────────── */
+  .pw-canvas-wrap {
+    position: relative;
+    flex: 1 1 auto;            /* canvas claims the flexible space */
+    margin: var(--canvas-pad) var(--canvas-pad) calc(var(--canvas-pad) * 0.7);
+    background: var(--paper-2);
+    border: 1px solid var(--hair-lo);
+    border-radius: var(--canvas-radius);
+    overflow: hidden;
+    min-height: 0;
+  }
+  .pw-canvas-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(47, 90, 120, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(47, 90, 120, 0.05) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events: none;
+  }
+  .pw-zoom-stage {
+    position: absolute; inset: 0;
+    transform-origin: center center;
+    transform: translate(0, 0) scale(1);
+    transition: transform 200ms ease;
+    /* will-change only during active pan/pinch — lets the browser re-rasterize
+       the HD plan at the zoomed scale when idle, so it stays crisp (no blur). */
+    cursor: grab;
+    touch-action: none;
+  }
+  .pw-zoom-stage.is-zoomed { cursor: grab; }
+  .pw-zoom-stage.is-panning { cursor: grabbing; transition: none; will-change: transform; }
+  .pw-blueprint {
+    position: absolute;
+    inset: 5% 5% 5% 5%;
+    width: 90%;
+    height: 90%;
+  }
+  /* Clean paper backing card so white-interior line-art reads as a
+     complete sheet and never blends into the blueprint background. */
+  .pw-sheet {
+    position: absolute; inset: 0;
+    background: #FCFAF4;
+    border: 1px solid var(--hair-lo);
+    border-radius: calc(var(--canvas-radius) * 0.55);
+    box-shadow:
+      0 18px 40px -16px rgba(80, 58, 28, 0.30),
+      0 6px 16px  -8px  rgba(40, 28, 10, 0.16);
+    padding: calc(var(--base-font) * 1.1);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .pw-plan-img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .pw-compass {
+    position: absolute;
+    top: calc(var(--base-font) * 1); left: calc(var(--base-font) * 1.1);
+    width: calc(var(--base-font) * 3.6);
+    height: calc(var(--base-font) * 3.6);
+    z-index: 4;
+    color: var(--blueprint-wall);
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.04));
+  }
+
+  .pw-zoom-stack {
+    position: absolute;
+    top: calc(var(--base-font) * 1); right: calc(var(--base-font) * 1.1);
+    display: flex; flex-direction: column;
+    gap: calc(var(--base-font) * 0.45);
+    z-index: 4;
+  }
+  .pw-zoom-btn {
+    width: calc(var(--base-font) * 2.6);
+    height: calc(var(--base-font) * 2.6);
+    border-radius: 999px;
+    background: rgba(252, 250, 244, 0.92);
+    border: 1px solid var(--hair);
+    color: var(--gold-500);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: calc(var(--base-font) * 1.4);
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(40, 28, 10, 0.08);
+    transition: background 200ms ease, color 200ms ease, border-color 200ms ease, transform 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pw-zoom-btn:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .pw-zoom-btn:active { transform: scale(0.92); }
+  .pw-zoom-btn.pw-zoom-fit {
+    font-size: calc(var(--base-font) * 0.66);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--taupe-400);
+  }
+
+  .pw-zoom-indicator {
+    position: absolute;
+    bottom: calc(var(--base-font) * 1); left: calc(var(--base-font) * 1.2);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: calc(var(--base-font) * 0.66);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    background: rgba(252, 250, 244, 0.78);
+    border: 1px solid var(--hair-lo);
+    padding: 4px 10px;
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: 4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── SPECS row ───────────────────────────────────────────────── */
+  .pw-specs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: calc(var(--base-font) * 0.9) var(--pad-x) calc(var(--base-font) * 0.9);
+    border-top: 1px solid var(--hair-lo);
+  }
+  .pw-spec {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    position: relative;
+  }
+  .pw-spec + .pw-spec::before {
+    content: '';
+    position: absolute;
+    left: -3px; top: 14%; bottom: 14%;
+    width: 1px;
+    background: var(--hair-lo);
+  }
+  .pw-spec .ico {
+    width: calc(var(--base-font) * 1.55);
+    height: calc(var(--base-font) * 1.55);
+    color: var(--gold-500);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .pw-spec .ico svg { width: 100%; height: 100%; }
+  .pw-spec .num {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-weight: 500;
+    font-size: var(--spec-num);
+    line-height: 1;
+    color: var(--onyx-700);
+  }
+  .pw-spec .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.60);
+    letter-spacing: 0.30em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    white-space: nowrap;
+  }
+
+  /* ── PRICE SHEET ─────────────────────────────────────────────── */
+  .pw-price {
+    padding: calc(var(--base-font) * 0.8) var(--pad-x) calc(var(--base-font) * 1.1);
+    border-top: 1px solid var(--hair-lo);
+    background: var(--paper-2);
+  }
+  .pw-price h4 {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.72);
+    letter-spacing: 0.36em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    margin: 0 0 calc(var(--base-font) * 0.5);
+  }
+  .pw-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: var(--price-row-pad) 0;
+    border-bottom: 1px dashed var(--hair-lo);
+  }
+  .pw-row:last-of-type { border-bottom: none; }
+  .pw-row .k {
+    font-family: 'Lato', sans-serif;
+    font-size: calc(var(--base-font) * 0.82);
+    color: var(--taupe-500);
+    letter-spacing: 0.02em;
+  }
+  .pw-row .v {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: calc(var(--base-font) * 0.88);
+    color: var(--onyx-700);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .pw-total {
+    margin-top: 4px;
+    padding: calc(var(--base-font) * 0.9) 0 0;
+    border-top: 1px solid var(--hair);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .pw-total .k {
+    font-family: 'Lato', sans-serif;
+    font-weight: 600;
+    font-size: calc(var(--base-font) * 0.74);
+    letter-spacing: 0.36em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+  }
+  .pw-total .v {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-weight: 500;
+    font-size: var(--total-size);
+    color: var(--gold-500);
+    line-height: 1;
+    letter-spacing: 0.005em;
+  }
+  .pw-rera {
+    margin: calc(var(--base-font) * 0.5) 0 0;
+    font-family: 'Lato', sans-serif;
+    font-size: calc(var(--base-font) * 0.60);
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+
+  /* ── TOAST ───────────────────────────────────────────────────── */
+  .toast {
+    position: absolute;
+    bottom: 36px; left: 50%;
+    transform: translate(-50%, 12px);
+    background: rgba(26, 24, 20, 0.92);
+    color: var(--paper);
+    font-family: 'Lato', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 10px 18px;
+    border-radius: 999px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease, transform 220ms ease;
+    box-shadow: 0 10px 30px rgba(20, 14, 6, 0.30);
+  }
+  .toast.is-on {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  /* ── CREAM VEIL (page-exit transition) ───────────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; pointer-events: auto; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  }
+  /* fabricated pricing hidden until client provides real figures */
+  .pw-price{display:none !important;}
+  /* full-sheet plans carry their own title/area/specs — hide window duplicates */
+  .pw-carpet, .pw-specs, .pw-tier-pill, .pw-sub-row { display:none !important; }
+
+  /* ══════════════════════════════════════════════════════════════
+     COMPARE FLOW — pre-comparison picker, in-comparison switch drawer,
+     and the lightweight per-panel switch bar.
+     ══════════════════════════════════════════════════════════════ */
+
+  /* shared overlay surface — reads as a full, native screen (not a sheet):
+     same paper-texture + grain treatment the real screens use via .stage-bg
+     / .stage-grain, layered as pseudo-elements so no markup/JS changes. */
+  .fp-overlay {
+    position: absolute; inset: 0; z-index: 30;
+    display: flex; flex-direction: column;
+    background: transparent;
+    opacity: 0; visibility: hidden;
+    transition: opacity 420ms ease, visibility 0s linear 420ms;
+  }
+  /* paper layer — mirrors .stage-bg */
+  .fp-overlay::before {
+    content: ''; position: absolute; inset: -2px; z-index: 0; pointer-events: none;
+    background-color: var(--paper);
+    background-image: url('assets/bg-paper.png');
+    background-size: cover; background-position: center center; background-repeat: no-repeat;
+  }
+  /* grain layer — mirrors .stage-grain */
+  .fp-overlay::after {
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    opacity: 0.022;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.6) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px);
+    background-size: 3px 3px, 5px 5px;
+    background-position: 0 0, 1px 1px;
+  }
+  /* keep all picker content above the texture layers */
+  .fp-overlay > * { position: relative; z-index: 2; }
+  .fp-overlay.is-open { opacity: 1; visibility: visible; transition: opacity 420ms ease; }
+
+  /* picker header — editorial, integrated (matches screen headers,
+     not a boxed modal title): gold Lato eyebrow + Cinzel title + a
+     thin centered gold hairline divider underneath. */
+  .fp-head {
+    flex: 0 0 auto;
+    padding: 56px 56px 18px;
+    text-align: center;
+  }
+  .fp-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500); margin-bottom: 14px;
+  }
+  .fp-title {
+    font-family: 'Cinzel', Georgia, serif;
+    font-weight: 600; font-size: 40px; line-height: 1.04;
+    letter-spacing: 0.03em; text-transform: uppercase;
+    color: var(--onyx-700); margin: 0 0 16px;
+  }
+  /* thin gold hairline under the title, centered like other screens */
+  .fp-head::after {
+    content: ''; display: block; width: 64px; height: 1px;
+    margin: 0 auto 16px;
+    background: var(--gold-500); opacity: 0.55;
+  }
+  .fp-sub {
+    font-family: 'Lato', sans-serif; font-weight: 300;
+    font-size: 14.5px; color: var(--taupe-500);
+    max-width: 560px; margin: 0 auto;
+  }
+
+  /* type tabs */
+  .fp-tabs {
+    flex: 0 0 auto;
+    display: flex; justify-content: center; gap: 6px;
+    padding: 14px 0 6px;
+  }
+  .fp-tab {
+    font-family: 'Lato', sans-serif; font-weight: 600;
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--taupe-500);
+    padding: 11px 26px; border-radius: 999px;
+    background: transparent; border: 1px solid transparent;
+    cursor: pointer; transition: all 220ms ease;
+    -webkit-appearance: none; appearance: none;
+  }
+  .fp-tab:hover { color: var(--onyx-700); border-color: var(--hair); }
+  .fp-tab.is-active {
+    color: var(--paper); background: var(--gold-500);
+    border-color: var(--gold-500);
+    box-shadow: 0 6px 16px -8px rgba(148,111,56,0.7);
+  }
+
+  /* catalog (scrollable) */
+  .fp-catalog {
+    flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;
+    padding: 18px 56px 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .fp-catalog::-webkit-scrollbar { width: 8px; }
+  .fp-catalog::-webkit-scrollbar-thumb { background: var(--hair); border-radius: 8px; }
+
+  .fp-sec { margin-bottom: 30px; }
+  .fp-sec-head {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+  }
+  .fp-sec-name {
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--gold-600); white-space: nowrap;
+  }
+  .fp-sec-rule { flex: 1 1 auto; height: 1px; background: var(--hair-lo); }
+
+  .fp-cards {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(208px, 1fr));
+  }
+
+  /* a plan card */
+  .fp-card {
+    position: relative; text-align: left;
+    background: var(--paper);
+    border: 1px solid var(--hair-lo); border-radius: 12px;
+    padding: 12px; cursor: pointer; overflow: hidden;
+    transition: transform 220ms cubic-bezier(.2,.7,.3,1), box-shadow 240ms ease, border-color 220ms ease;
+    -webkit-appearance: none; appearance: none;
+  }
+  .fp-card:hover { transform: translateY(-3px); box-shadow: var(--card-shadow); border-color: var(--hair); }
+  .fp-card.is-selected { border-color: var(--gold-400); box-shadow: 0 0 0 2px var(--gold-300) inset, var(--card-shadow); }
+  .fp-card-thumb {
+    position: relative; width: 100%; aspect-ratio: 4 / 3;
+    border-radius: 8px; overflow: hidden;
+    background: var(--bone-50);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fp-card-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .fp-card-title {
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: 13.5px; color: var(--onyx-700);
+    margin: 11px 2px 3px; line-height: 1.25;
+  }
+  .fp-card-sub {
+    font-family: 'Lato', sans-serif; font-weight: 400;
+    font-size: 11.5px; color: var(--taupe-500); margin: 0 2px;
+  }
+  .fp-card-badge {
+    position: absolute; top: 18px; right: 18px;
+    width: 26px; height: 26px; border-radius: 999px;
+    background: var(--gold-500); color: var(--paper);
+    display: none; align-items: center; justify-content: center;
+    font-family: 'Lato', sans-serif; font-weight: 700; font-size: 13px;
+    box-shadow: 0 4px 10px -3px rgba(148,111,56,0.8);
+  }
+  .fp-card.is-selected .fp-card-badge { display: inline-flex; }
+  .fp-card-pick {
+    position: absolute; top: 18px; right: 18px;
+    width: 26px; height: 26px; border-radius: 999px;
+    background: rgba(252,250,244,0.9); border: 1px solid var(--hair);
+    color: var(--gold-500); display: inline-flex; align-items:center; justify-content:center;
+    font-size: 15px; opacity: 0; transition: opacity 200ms ease;
+  }
+  .fp-card:hover .fp-card-pick { opacity: 1; }
+  .fp-card.is-selected .fp-card-pick { display: none; }
+
+  /* comparison tray (picker only) — a footer bar of the screen, not a
+     modal footer: hairline top edge + translucent paper wash that lets
+     the page texture read through, echoing the topbar treatment. */
+  .fp-tray {
+    flex: 0 0 auto;
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 56px 24px;
+    border-top: 1px solid var(--hair-lo);
+    background: linear-gradient(180deg, rgba(252,250,244,0) 0%, rgba(252,250,244,0.72) 32%, var(--paper-2) 100%);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .fp-tray-label {
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--taupe-400); white-space: nowrap;
+  }
+  .fp-slots { display: flex; gap: 10px; flex: 1 1 auto; }
+  .fp-slot {
+    flex: 0 0 auto; min-width: 168px; max-width: 220px;
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 12px; border-radius: 10px;
+    background: var(--bone-50); border: 1px dashed var(--hair);
+    font-family: 'Lato', sans-serif;
+  }
+  .fp-slot.is-empty { color: var(--taupe-400); font-size: 12px; font-style: italic; border-style: dashed; }
+  .fp-slot.is-filled { border-style: solid; border-color: var(--hair); background: var(--paper); }
+  .fp-slot .n {
+    width: 20px; height: 20px; border-radius: 999px; flex: 0 0 auto;
+    background: var(--gold-500); color: var(--paper);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 11px;
+  }
+  .fp-slot .t { flex: 1 1 auto; font-size: 12px; font-weight: 600; color: var(--onyx-700);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fp-slot .x { flex: 0 0 auto; cursor: pointer; color: var(--taupe-400); font-size: 15px;
+    background: none; border: none; padding: 0 2px; }
+  .fp-slot .x:hover { color: var(--copper); }
+  .fp-compare {
+    flex: 0 0 auto;
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: 13px; letter-spacing: 0.08em;
+    padding: 14px 30px; border-radius: 999px;
+    background: var(--onyx-700); color: var(--paper);
+    border: none; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 9px;
+    transition: transform 180ms ease, opacity 220ms ease, background 220ms ease;
+  }
+  .fp-compare:hover:not(:disabled) { transform: translateX(2px); background: var(--onyx-500); }
+  .fp-compare:disabled { opacity: 0.34; cursor: not-allowed; }
+  /* close — echoes the topbar circular control (.tc) so it reads as a
+     native screen control, not a modal dismiss. Sits above texture. */
+  .fp-close {
+    position: absolute; top: 30px; right: 40px; z-index: 6;
+    width: 44px; height: 44px; border-radius: 999px;
+    background: rgba(252, 250, 244, 0.72); border: 1px solid var(--hair);
+    color: var(--gold-500); font-weight: 300; font-size: 22px; line-height: 1;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 220ms ease, color 220ms ease, border-color 220ms ease, transform 200ms ease;
+  }
+  .fp-close:hover { background: var(--paper); color: var(--onyx-700); border-color: var(--hair-hi); }
+  .fp-close:active { transform: scale(0.94); }
+
+  /* slide-in drawer (in-comparison change) */
+  .fp-drawer {
+    position: absolute; top: 0; right: 0; bottom: 0; z-index: 40;
+    width: min(560px, 64%);
+    display: flex; flex-direction: column;
+    background: var(--paper);
+    box-shadow: -30px 0 80px -30px rgba(40,28,10,0.4);
+    transform: translateX(102%);
+    transition: transform 420ms cubic-bezier(.2,.8,.2,1);
+  }
+  .fp-drawer.is-open { transform: translateX(0); }
+  .fp-scrim {
+    position: absolute; inset: 0; z-index: 39;
+    background: rgba(26,24,20,0.32);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+    opacity: 0; visibility: hidden;
+    transition: opacity 380ms ease, visibility 0s linear 380ms;
+  }
+  .fp-scrim.is-open { opacity: 1; visibility: visible; transition: opacity 380ms ease; }
+  .fp-drawer-head {
+    flex: 0 0 auto; padding: 26px 30px 12px;
+    display: flex; align-items: flex-start; justify-content: space-between;
+    border-bottom: 1px solid var(--hair-lo);
+  }
+  .fp-drawer-head .ttl {
+    font-family: 'Cinzel', Georgia, serif; font-weight: 600;
+    font-size: 22px; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--onyx-700); margin: 0;
+  }
+  .fp-drawer-head .sub {
+    font-family: 'Lato', sans-serif; font-weight: 400; font-size: 12px;
+    color: var(--taupe-500); margin-top: 4px;
+  }
+  .fp-drawer .fp-tabs { padding: 14px 24px 4px; justify-content: flex-start; flex-wrap: wrap; }
+  .fp-drawer .fp-catalog { padding: 14px 24px 28px; }
+  .fp-drawer .fp-cards { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .fp-drawer-close {
+    width: 36px; height: 36px; border-radius: 999px; flex: 0 0 auto;
+    background: var(--bone-50); border: 1px solid var(--hair-lo);
+    color: var(--taupe-500); font-size: 18px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .fp-drawer-close:hover { color: var(--onyx-700); }
+
+  /* lightweight per-panel switch bar (replaces the old type/filter/dropdown stack) */
+  .pw-switch {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 4px 4px;
+  }
+  .pw-step {
+    width: 38px; height: 38px; flex: 0 0 auto; border-radius: 999px;
+    background: var(--paper); border: 1px solid var(--hair);
+    color: var(--gold-500); font-size: 18px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 180ms ease; -webkit-appearance: none; appearance: none;
+  }
+  .pw-step:hover { background: var(--bone-50); border-color: var(--hair-hi); color: var(--onyx-700); }
+  .pw-step:active { transform: scale(0.92); }
+  .pw-change {
+    flex: 1 1 auto;
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    font-size: 12.5px; letter-spacing: 0.06em;
+    padding: 11px 18px; border-radius: 999px;
+    background: var(--bone-50); border: 1px solid var(--hair);
+    color: var(--onyx-700); cursor: pointer;
+    transition: all 200ms ease; -webkit-appearance: none; appearance: none;
+  }
+  .pw-change:hover { background: var(--paper); border-color: var(--gold-400); box-shadow: var(--card-shadow); }
+  .pw-change svg { width: 15px; height: 15px; stroke: var(--gold-500); }
+</style>
+
+<script>
+  // ── Stage scaler — scale-to-fit (contain). Fixes iPad13 side overflow.
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel wordmark — same SVG symbol as home -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+
+  <!-- bedroom icon -->
+  <symbol id="ic-bed" viewBox="0 0 24 24">
+    <path d="M3 18V10a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8M3 18h18M3 18v2M21 18v2M7 12h4v-2H7v2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <!-- bath icon -->
+  <symbol id="ic-bath" viewBox="0 0 24 24">
+    <path d="M4 12V6a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v0M3 12h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3zM6 19l-1 2M18 19l1 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <!-- car icon -->
+  <symbol id="ic-car" viewBox="0 0 24 24">
+    <path d="M5 17v-3l2-5h10l2 5v3M3 14h18M7 17h2M15 17h2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="7.5" cy="17" r="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <circle cx="16.5" cy="17" r="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  </symbol>
+  <!-- person icon (servant) -->
+  <symbol id="ic-person" viewBox="0 0 24 24">
+    <circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M5 20v-1.5a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5V20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+
+    <div class="stage-bg" aria-hidden="true"></div>
+    <div class="stage-grain" aria-hidden="true"></div>
+
+    <!-- ── TOP BAR ───────────────────────────────────────────── -->
+    <header class="topbar">
+      <a class="brand-back" href="home.html" id="brandBack" aria-label="Return to home">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500" aria-label="Embassy Citadel"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+
+      <div class="top-chips">
+        <span class="top-eyebrow"><span id="winCounter">1</span> / <strong>3</strong> Windows</span>
+        <button class="add-window-pill" id="addWinBtn" type="button" aria-label="Add window">
+          <span class="plus" aria-hidden="true">+</span>
+          <span>Add Window</span>
+        </button>
+        <button class="ec-360-btn" data-ec360 type="button" aria-label="Open 360 degree view"><span class="ec360-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="9.6" ry="4"/><path d="M12 3.1a8.9 8.9 0 0 1 0 17.8 8.9 8.9 0 0 1 0-17.8"/><path d="M9.6 2.3 12 3.1l-.8 2.4"/></svg></span><span>360&deg;</span></button>
+        <a class="ec-back-btn" id="ecBackBtn" href="home.html" aria-label="Back to home">
+          <span class="arr" aria-hidden="true">←</span>
+          <span>Back</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- ── WINDOWS GRID (1 → 2 → 3 columns) ───────────────────── -->
+    <main class="windows-grid" id="windowsGrid" data-count="1">
+      <!-- .plan-window articles injected by render() -->
+    </main>
+
+    <!-- toast -->
+    <div class="toast" id="toast">Maximum 3 windows.</div>
+
+    <!-- cream veil for page exits -->
+    <div class="veil" aria-hidden="true"></div>
+
+
+    <!-- ══ PRE-COMPARISON PICKER ══ -->
+    <section class="fp-overlay" id="planPicker" aria-label="Choose plans to compare">
+      <button class="fp-close" id="pickerClose" type="button" aria-label="Close">×</button>
+      <div class="fp-head">
+        <div class="fp-eyebrow">Plans · Compare</div>
+        <h2 class="fp-title">Choose Plans to Compare</h2>
+        <p class="fp-sub">Browse residences, typical floors and amenity levels. Pick two or three plans to set side by side.</p>
+      </div>
+      <div class="fp-tabs" id="pickerTabs"></div>
+      <div class="fp-catalog" id="pickerGrid"></div>
+      <div class="fp-tray">
+        <span class="fp-tray-label">Comparing</span>
+        <div class="fp-slots" id="pickerSlots"></div>
+        <button class="fp-compare" id="pickerCompare" type="button" disabled>
+          <span>Compare</span><span aria-hidden="true">&rarr;</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ══ IN-COMPARISON CHANGE DRAWER ══ -->
+    <div class="fp-scrim" id="drawerScrim" aria-hidden="true"></div>
+    <aside class="fp-drawer" id="planDrawer" aria-label="Change plan">
+      <div class="fp-drawer-head">
+        <div>
+          <h3 class="ttl">Change Plan</h3>
+          <div class="sub" id="drawerSub">Pick a plan for this panel</div>
+        </div>
+        <button class="fp-drawer-close" id="drawerClose" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="fp-tabs" id="drawerTabs"></div>
+      <div class="fp-catalog" id="drawerGrid"></div>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+  // ──────────────────────────────────────────────────────────────
+  // PLAN DATA — 3 plan datasets (Plan 01 / 02 / 03)
+  //   Plan 01 = 3 BHK Compact
+  //   Plan 02 = 5 BHK Grand
+  //   Plan 03 = 4 BHK Classic (default)
+  // Each plan carries its own metadata + a builder for the SVG.
+  // ──────────────────────────────────────────────────────────────
+
+  function room(x, y, w, h, name, dim, fill) {
+    fill = fill || '#D8E5EF';
+    const cx = x + w/2, cy = y + h/2;
+    const nameY = dim ? cy - 4 : cy + 4;
+    const dimY = cy + 12;
+    let svg = '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+fill+'" stroke="#2F5A78" stroke-width="2"/>';
+    svg += '<text x="'+cx+'" y="'+nameY+'" text-anchor="middle" font-family="Inter, sans-serif" font-size="9.5" font-weight="600" letter-spacing="0.18em" fill="#1F3D55">'+name+'</text>';
+    if (dim) {
+      svg += '<text x="'+cx+'" y="'+dimY+'" text-anchor="middle" font-family="Inter, sans-serif" font-size="7.5" font-weight="500" letter-spacing="0.12em" fill="#5B7C95">'+dim+'</text>';
+    }
+    return svg;
+  }
+  function smallRoom(x, y, w, h, name, fill) {
+    fill = fill || '#D8E5EF';
+    const cx = x + w/2, cy = y + h/2 + 3;
+    let svg = '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+fill+'" stroke="#2F5A78" stroke-width="1.6"/>';
+    svg += '<text x="'+cx+'" y="'+cy+'" text-anchor="middle" font-family="Inter, sans-serif" font-size="7" font-weight="600" letter-spacing="0.14em" fill="#1F3D55">'+name+'</text>';
+    return svg;
+  }
+
+  const BG = `
+    <defs>
+      <pattern id="bp-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2F5A78" stroke-width="0.15" opacity="0.25"/>
+      </pattern>
+      <linearGradient id="bp-fill-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#D8E5EF" />
+        <stop offset="100%" stop-color="#C0D5E4" />
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="880" height="600" fill="url(#bp-grid)" />
+    <rect x="40" y="32" width="800" height="536" fill="none" stroke="#2F5A78" stroke-width="3" opacity="0.55"/>
+  `;
+
+  // ── PLAN 03 — 4 BHK Classic ──────────────────────────────────
+  function plan03Svg() {
+    return BG + [
+      room(60, 50, 200, 150, 'MASTER SUITE', '15\'2" X 14\'0"', 'url(#bp-fill-grad)'),
+      '<rect x="80" y="135" width="80" height="50" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="92" y="142" width="26" height="20" fill="none" stroke="#2F5A78" stroke-width="0.7"/>',
+      smallRoom(260, 50, 90, 70, 'M. ENSUITE'),
+      smallRoom(260, 120, 90, 80, 'DRESS'),
+      room(360, 50, 170, 150, 'BEDROOM 2', '12\'8" X 12\'0"', 'url(#bp-fill-grad)'),
+      '<rect x="376" y="135" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="382" y="140" width="22" height="14" fill="none" stroke="#2F5A78" stroke-width="0.7"/>',
+      smallRoom(530, 50, 80, 70, 'ENSUITE 2'),
+      smallRoom(530, 120, 80, 80, 'DRESS'),
+      room(610, 50, 220, 150, 'KITCHEN', '11\'0" X 10\'5"', '#D8E5EF'),
+      '<rect x="630" y="155" width="180" height="14" fill="none" stroke="#2F5A78" stroke-width="0.8"/>',
+      '<rect x="630" y="175" width="80" height="14" fill="none" stroke="#2F5A78" stroke-width="0.8"/>',
+
+      room(60, 200, 300, 200, 'LIVING', '17\'2" X 23\'5"', '#CFDEE9'),
+      '<rect x="80" y="315" width="120" height="26" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="80" y="345" width="56" height="44" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="140" y="345" width="56" height="44" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="220" y="320" width="100" height="50" fill="none" stroke="#2F5A78" stroke-width="0.8"/>',
+
+      room(360, 200, 220, 200, 'DINING', '24\'7" X 12\'5"', '#CFDEE9'),
+      '<rect x="380" y="285" width="180" height="80" fill="none" stroke="#2F5A78" stroke-width="1"/>',
+      '<line x1="402" y1="285" x2="402" y2="365" stroke="#2F5A78" stroke-width="0.5"/>',
+      '<line x1="430" y1="285" x2="430" y2="365" stroke="#2F5A78" stroke-width="0.5"/>',
+      '<line x1="460" y1="285" x2="460" y2="365" stroke="#2F5A78" stroke-width="0.5"/>',
+      '<line x1="490" y1="285" x2="490" y2="365" stroke="#2F5A78" stroke-width="0.5"/>',
+      '<line x1="520" y1="285" x2="520" y2="365" stroke="#2F5A78" stroke-width="0.5"/>',
+
+      smallRoom(580, 200, 130, 70, 'TOILET'),
+      smallRoom(710, 200, 120, 70, 'DRY AREA', '#B9CEDE'),
+      room(580, 270, 250, 130, 'FOYER', '14\'X10\'', 'url(#bp-fill-grad)'),
+      '<line x1="700" y1="385" x2="700" y2="398" stroke="#2F5A78" stroke-width="1.4" stroke-linecap="round"/>',
+
+      room(60, 400, 290, 150, 'BEDROOM 3', '13\'0" X 12\'6"', 'url(#bp-fill-grad)'),
+      '<rect x="78" y="490" width="62" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="84" y="495" width="22" height="14" fill="none" stroke="#2F5A78" stroke-width="0.7"/>',
+      smallRoom(350, 400, 90, 80, 'ENSUITE 3'),
+      smallRoom(350, 480, 90, 70, 'DRESS'),
+      room(440, 400, 180, 150, 'BEDROOM 4', '12\'6" X 12\'0"', 'url(#bp-fill-grad)'),
+      '<rect x="456" y="485" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="462" y="490" width="22" height="14" fill="none" stroke="#2F5A78" stroke-width="0.7"/>',
+      smallRoom(620, 400, 90, 70, 'ENSUITE 4'),
+      smallRoom(620, 470, 90, 80, 'S. ROOM'),
+
+      room(710, 400, 120, 150, 'DECK', '12\'10" / 285 sq.ft.', '#A9C2D2'),
+      '<line x1="720" y1="430" x2="820" y2="430" stroke="#2F5A78" stroke-width="0.4" stroke-dasharray="3,2"/>',
+      '<line x1="720" y1="470" x2="820" y2="470" stroke="#2F5A78" stroke-width="0.4" stroke-dasharray="3,2"/>',
+      '<line x1="720" y1="510" x2="820" y2="510" stroke="#2F5A78" stroke-width="0.4" stroke-dasharray="3,2"/>',
+
+      '<path d="M 360 200 a 30 30 0 0 1 30 -30" fill="none" stroke="#2F5A78" stroke-width="0.6" opacity="0.6"/>',
+      '<path d="M 580 270 a 28 28 0 0 0 28 28" fill="none" stroke="#2F5A78" stroke-width="0.6" opacity="0.6"/>',
+    ].join('');
+  }
+
+  // ── PLAN 02 — 5 BHK Grand ────────────────────────────────────
+  function plan02Svg() {
+    return BG + [
+      room(60, 50, 200, 150, 'MASTER SUITE', '16\'0" X 15\'0"', 'url(#bp-fill-grad)'),
+      '<rect x="80" y="135" width="80" height="50" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      smallRoom(260, 50, 90, 70, 'M. ENSUITE'),
+      smallRoom(260, 120, 90, 80, 'DRESS'),
+      room(360, 50, 160, 150, 'BEDROOM 2', '13\'X12\'', 'url(#bp-fill-grad)'),
+      '<rect x="376" y="135" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      smallRoom(520, 50, 80, 70, 'ENSUITE'),
+      smallRoom(520, 120, 80, 80, 'STUDY'),
+      room(600, 50, 230, 150, 'BEDROOM 5', '12\'X11\'', 'url(#bp-fill-grad)'),
+      '<rect x="616" y="135" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+
+      room(60, 200, 380, 200, 'LIVING / DINING', '32\'0" X 14\'2"', '#CFDEE9'),
+      '<rect x="80" y="315" width="120" height="26" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="80" y="345" width="56" height="44" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="140" y="345" width="56" height="44" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="240" y="305" width="180" height="80" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      room(440, 200, 160, 130, 'KITCHEN', '13\'X11\'', '#D8E5EF'),
+      '<rect x="455" y="280" width="130" height="14" fill="none" stroke="#2F5A78" stroke-width="0.8"/>',
+      smallRoom(440, 330, 80, 70, 'UTILITY'),
+      smallRoom(520, 330, 80, 70, 'POWDER'),
+      smallRoom(600, 200, 100, 80, 'BAR'),
+      room(600, 280, 230, 120, 'FOYER', '15\'X10\'', 'url(#bp-fill-grad)'),
+      smallRoom(700, 200, 130, 80, 'DRY AREA', '#B9CEDE'),
+
+      room(60, 400, 220, 150, 'BEDROOM 3', '13\'X12\'', 'url(#bp-fill-grad)'),
+      smallRoom(280, 400, 90, 70, 'ENSUITE'),
+      smallRoom(280, 470, 90, 80, 'DRESS'),
+      room(370, 400, 220, 150, 'BEDROOM 4', '13\'X12\'', 'url(#bp-fill-grad)'),
+      smallRoom(590, 400, 100, 70, 'ENSUITE'),
+      smallRoom(590, 470, 100, 80, 'S. ROOM'),
+      room(690, 400, 140, 150, 'DECK', '320 sq.ft.', '#A9C2D2'),
+    ].join('');
+  }
+
+  // ── PLAN 01 — 3 BHK Compact ──────────────────────────────────
+  function plan01Svg() {
+    return BG + [
+      room(60, 50, 230, 160, 'MASTER SUITE', '14\'X12\'', 'url(#bp-fill-grad)'),
+      '<rect x="80" y="145" width="80" height="50" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      smallRoom(290, 50, 100, 80, 'M. ENSUITE'),
+      smallRoom(290, 130, 100, 80, 'DRESS'),
+      room(390, 50, 200, 160, 'BEDROOM 2', '12\'X11\'', 'url(#bp-fill-grad)'),
+      '<rect x="410" y="145" width="60" height="40" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      smallRoom(590, 50, 100, 80, 'ENSUITE'),
+      smallRoom(590, 130, 100, 80, 'STORE'),
+      room(690, 50, 140, 160, 'KITCHEN', '10\'X12\'', '#D8E5EF'),
+      '<rect x="700" y="160" width="120" height="14" fill="none" stroke="#2F5A78" stroke-width="0.8"/>',
+
+      room(60, 210, 380, 200, 'LIVING / DINING', '28\'X13\'', '#CFDEE9'),
+      '<rect x="80" y="320" width="120" height="26" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="80" y="350" width="56" height="44" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="140" y="350" width="56" height="44" rx="3" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      '<rect x="240" y="320" width="180" height="80" fill="none" stroke="#2F5A78" stroke-width="0.9"/>',
+      smallRoom(440, 210, 100, 90, 'POWDER'),
+      smallRoom(540, 210, 90, 90, 'STORE'),
+      smallRoom(440, 300, 190, 110, 'UTILITY'),
+      room(630, 210, 200, 200, 'FOYER', '13\'X14\'', 'url(#bp-fill-grad)'),
+
+      room(60, 410, 240, 140, 'BEDROOM 3', '13\'X12\'', 'url(#bp-fill-grad)'),
+      smallRoom(300, 410, 100, 70, 'ENSUITE'),
+      smallRoom(300, 480, 100, 70, 'DRESS'),
+      room(400, 410, 280, 140, 'DECK', '210 sq.ft.', '#A9C2D2'),
+      smallRoom(680, 410, 150, 140, 'GARDEN', '#B9CEDE'),
+    ].join('');
+  }
+
+  const PLANS = {
+    1: {
+      title: 'Plan 01',
+      tier: 'Classic',
+      carpet: '1,640 sq.ft.',
+      band: 'North & South Towers · Stack 01',
+      bhkName: '3 BHK · East',
+      bhk: 3, facing: 'E',
+      bhkAllowed: [3, 4], facingAllowed: ['E', 'W'],
+      bed: 3, bath: 3, car: 1, serv: 1,
+      basic: '₹ 5.40 Cr', plc: '₹ 0.60 Cr', other: '₹ 0.55 Cr',
+      gst: '₹ 0.65 Cr', total: '₹ 7.20 Cr',
+      svg: plan01Svg,
+    },
+    2: {
+      title: 'Plan 02',
+      tier: 'Grand',
+      carpet: '3,160 sq.ft.',
+      band: 'North & South Towers · Upper Stack',
+      bhkName: '4 BHK · South',
+      bhk: 5, facing: 'S',
+      bhkAllowed: [3, 4], facingAllowed: ['N', 'S'],
+      bed: 5, bath: 5, car: 3, serv: 2,
+      basic: '₹ 13.80 Cr', plc: '₹ 2.10 Cr', other: '₹ 1.20 Cr',
+      gst: '₹ 1.65 Cr', total: '₹ 18.75 Cr',
+      svg: plan02Svg,
+    },
+    3: {
+      title: 'Plan 03',
+      tier: 'Premium',
+      carpet: '2,135 sq.ft.',
+      band: 'North & South Towers · Stack 03',
+      bhkName: '4 BHK · North',
+      bhk: 4, facing: 'N',
+      bhkAllowed: [3, 4], facingAllowed: ['N', 'S'],
+      bed: 4, bath: 4, car: 2, serv: 1,
+      basic: '₹ 8.50 Cr', plc: '₹ 1.20 Cr', other: '₹ 0.80 Cr',
+      gst: '₹ 1.02 Cr', total: '₹ 11.52 Cr',
+      svg: plan03Svg,
+    },
+  };
+
+  const FACING_FULL = { N: 'North', S: 'South', E: 'East', W: 'West' };
+
+  // ──────────────────────────────────────────────────────────────
+  // REAL PLANS — inlined from assets/floorplans/manifest.json
+  // Grouped <optgroup>s drive the plan <select>. Each entry carries the
+  // real transparent floor-plan asset shown via <img object-fit:contain>.
+  //   Residential Units → 11 residential items whose name starts "unit-"
+  //   Mansion           → all 7 mansion items
+  //   Typical Floors    → 6 residential items: "typical-*" or "service-floor"
+  // Default selection = unit-S01-stack01 (the 4 BHK).
+  // ──────────────────────────────────────────────────────────────
+  const REAL_PLAN_GROUPS = [
+    { group: 'North · Unit 01 (4 Bed)', items: [
+      { name: 'unit-N01-lvl-17-18', label: 'Floors 17–18 · 3,072 sqft', title: 'North · Unit 01 · Floors 17–18', file: 'assets/floorplans-final/units/unit-N01-lvl-17-18.webp', carpet: '3,072 sq.ft.', beds: 4 },
+      { name: 'unit-N01-lvl-20-25', label: 'Floors 20–25 · 3,202 sqft', title: 'North · Unit 01 · Floors 20–25', file: 'assets/floorplans-final/units/unit-N01-lvl-20-25.webp', carpet: '3,202 sq.ft.', beds: 4 },
+      { name: 'unit-N01-lvl-28-33', label: 'Floors 28–33, 42 · 3,078 sqft', title: 'North · Unit 01 · Floors 28–33, 42', file: 'assets/floorplans-final/units/unit-N01-lvl-28-33.webp', carpet: '3,078 sq.ft.', beds: 4 },
+      { name: 'unit-N01-lvl-35-40', label: 'Floors 35–40 · 3,238 sqft', title: 'North · Unit 01 · Floors 35–40', file: 'assets/floorplans-final/units/unit-N01-lvl-35-40.webp', carpet: '3,238 sq.ft.', beds: 4 },
+      { name: 'unit-N01-lvl-43-47', label: 'Floors 43–47 · 3,087 sqft', title: 'North · Unit 01 · Floors 43–47', file: 'assets/floorplans-final/units/unit-N01-lvl-43-47.webp', carpet: '3,087 sq.ft.', beds: 4 },
+      { name: 'unit-N01-lvl-49-54', label: 'Floors 49–54, 64–69 · 3,247 sqft', title: 'North · Unit 01 · Floors 49–54, 64–69', file: 'assets/floorplans-final/units/unit-N01-lvl-49-54.webp', carpet: '3,247 sq.ft.', beds: 4 },
+      { name: 'unit-N01-lvl-57-62', label: 'Floors 57–62, 72–76 · 3,087 sqft', title: 'North · Unit 01 · Floors 57–62, 72–76', file: 'assets/floorplans-final/units/unit-N01-lvl-57-62.webp', carpet: '3,087 sq.ft.', beds: 4 },
+      { name: 'unit-N01-lvl-71', label: 'Floor 71 · 3,101 sqft', title: 'North · Unit 01 · Floor 71', file: 'assets/floorplans-final/units/unit-N01-lvl-71.webp', carpet: '3,101 sq.ft.', beds: 4 },
+    ]},
+    { group: 'North · Unit 02 (4–5 Bed)', items: [
+      { name: 'unit-N02-lvl-17-25', label: 'Floors 17–25 · 3,538 sqft', title: 'North · Unit 02 · Floors 17–25', file: 'assets/floorplans-final/units/unit-N02-lvl-17-25.webp', carpet: '3,538 sq.ft.', beds: 4 },
+      { name: 'unit-N02-lvl-26', label: 'Floor 26 · Refuge · 5,387 sqft', title: 'North · Unit 02 · Floor 26 · Refuge', file: 'assets/floorplans-final/units/unit-N02-lvl-26.webp', carpet: '5,387 sq.ft.', beds: 5 },
+      { name: 'unit-N02-lvl-28-33', label: 'Floors 28–40 · 3,594 sqft', title: 'North · Unit 02 · Floors 28–40', file: 'assets/floorplans-final/units/unit-N02-lvl-28-33.webp', carpet: '3,594 sq.ft.', beds: 4 },
+      { name: 'unit-N02-lvl-41', label: 'Floor 41 · Refuge · 5,465 sqft', title: 'North · Unit 02 · Floor 41 · Refuge', file: 'assets/floorplans-final/units/unit-N02-lvl-41.webp', carpet: '5,465 sq.ft.', beds: 5 },
+      { name: 'unit-N02-lvl-42', label: 'Floor 42 · 3,556 sqft', title: 'North · Unit 02 · Floor 42', file: 'assets/floorplans-final/units/unit-N02-lvl-42.webp', carpet: '3,556 sq.ft.', beds: 4 },
+      { name: 'unit-N02-lvl-43-47', label: 'Floors 43–54, 57–63 · 3,611 sqft', title: 'North · Unit 02 · Floors 43–54, 57–63', file: 'assets/floorplans-final/units/unit-N02-lvl-43-47.webp', carpet: '3,611 sq.ft.', beds: 4 },
+      { name: 'unit-N02-lvl-55', label: 'Floor 55 · Refuge · 5,534 sqft', title: 'North · Unit 02 · Floor 55 · Refuge', file: 'assets/floorplans-final/units/unit-N02-lvl-55.webp', carpet: '5,534 sq.ft.', beds: 5 },
+      { name: 'unit-N02-lvl-64-69', label: 'Floors 64–69 · 3,624 sqft', title: 'North · Unit 02 · Floors 64–69', file: 'assets/floorplans-final/units/unit-N02-lvl-64-69.webp', carpet: '3,624 sq.ft.', beds: 4 },
+      { name: 'unit-N02-lvl-70', label: 'Floor 70 · Refuge · 5,497 sqft', title: 'North · Unit 02 · Floor 70 · Refuge', file: 'assets/floorplans-final/units/unit-N02-lvl-70.webp', carpet: '5,497 sq.ft.', beds: 5 },
+      { name: 'unit-N02-lvl-71', label: 'Floor 71 · 5,497 sqft', title: 'North · Unit 02 · Floor 71', file: 'assets/floorplans-final/units/unit-N02-lvl-71.webp', carpet: '5,497 sq.ft.', beds: 5 },
+      { name: 'unit-N02-lvl-72-76', label: 'Floors 72–76 · 5,560 sqft', title: 'North · Unit 02 · Floors 72–76', file: 'assets/floorplans-final/units/unit-N02-lvl-72-76.webp', carpet: '5,560 sq.ft.', beds: 5 },
+    ]},
+    { group: 'North · Unit 03 (3 Bed)', items: [
+      { name: 'unit-N03-lvl-17-25', label: 'Floors 17–25 · 1,843 sqft', title: 'North · Unit 03 · Floors 17–25', file: 'assets/floorplans-final/units/unit-N03-lvl-17-25.webp', carpet: '1,843 sq.ft.', beds: 3 },
+      { name: 'unit-N03-lvl-28-33', label: 'Floors 28–40 · 1,884 sqft', title: 'North · Unit 03 · Floors 28–40', file: 'assets/floorplans-final/units/unit-N03-lvl-28-33.webp', carpet: '1,884 sq.ft.', beds: 3 },
+      { name: 'unit-N03-lvl-43-47', label: 'Floors 43–54, 57–69 · 1,901 sqft', title: 'North · Unit 03 · Floors 43–54, 57–69', file: 'assets/floorplans-final/units/unit-N03-lvl-43-47.webp', carpet: '1,901 sq.ft.', beds: 3 },
+    ]},
+    { group: 'South · Unit 01 (4 Bed)', items: [
+      { name: 'unit-S01-lvl-17-18+20-25', label: 'Floors 17–18, 20–25 · 3,075 sqft', title: 'South · Unit 01 · Floors 17–18, 20–25', file: 'assets/floorplans-final/units/unit-S01-lvl-17-18+20-25.webp', carpet: '3,075 sq.ft.', beds: 4 },
+      { name: 'unit-S01-lvl-28-33', label: 'Floors 28–33, 42 · 3,234 sqft', title: 'South · Unit 01 · Floors 28–33, 42', file: 'assets/floorplans-final/units/unit-S01-lvl-28-33.webp', carpet: '3,234 sq.ft.', beds: 4 },
+      { name: 'unit-S01-lvl-35-40', label: 'Floors 35–40 · 3,074 sqft', title: 'South · Unit 01 · Floors 35–40', file: 'assets/floorplans-final/units/unit-S01-lvl-35-40.webp', carpet: '3,074 sq.ft.', beds: 4 },
+      { name: 'unit-S01-lvl-43-47', label: 'Floors 43–47 · 3,246 sqft', title: 'South · Unit 01 · Floors 43–47', file: 'assets/floorplans-final/units/unit-S01-lvl-43-47.webp', carpet: '3,246 sq.ft.', beds: 4 },
+      { name: 'unit-S01-lvl-49-54', label: 'Floors 49–54, 64–69 · 3,086 sqft', title: 'South · Unit 01 · Floors 49–54, 64–69', file: 'assets/floorplans-final/units/unit-S01-lvl-49-54.webp', carpet: '3,086 sq.ft.', beds: 4 },
+      { name: 'unit-S01-lvl-57-62', label: 'Floors 57–62, 72–76 · 3,246 sqft', title: 'South · Unit 01 · Floors 57–62, 72–76', file: 'assets/floorplans-final/units/unit-S01-lvl-57-62.webp', carpet: '3,246 sq.ft.', beds: 4 },
+      { name: 'unit-S01-lvl-71', label: 'Floor 71 · 3,262 sqft', title: 'South · Unit 01 · Floor 71', file: 'assets/floorplans-final/units/unit-S01-lvl-71.webp', carpet: '3,262 sq.ft.', beds: 4 },
+    ]},
+    { group: 'South · Unit 02 (4–5 Bed)', items: [
+      { name: 'unit-S02-lvl-17-25', label: 'Floors 17–25 · 3,325 sqft', title: 'South · Unit 02 · Floors 17–25', file: 'assets/floorplans-final/units/unit-S02-lvl-17-25.webp', carpet: '3,325 sq.ft.', beds: 4 },
+      { name: 'unit-S02-lvl-26', label: 'Floor 26 · Refuge · 5,401 sqft', title: 'South · Unit 02 · Floor 26 · Refuge', file: 'assets/floorplans-final/units/unit-S02-lvl-26.webp', carpet: '5,401 sq.ft.', beds: 5 },
+      { name: 'unit-S02-lvl-28-33', label: 'Floors 28–40 · 3,355 sqft', title: 'South · Unit 02 · Floors 28–40', file: 'assets/floorplans-final/units/unit-S02-lvl-28-33.webp', carpet: '3,355 sq.ft.', beds: 4 },
+      { name: 'unit-S02-lvl-41', label: 'Floor 41 · Refuge · 5,479 sqft', title: 'South · Unit 02 · Floor 41 · Refuge', file: 'assets/floorplans-final/units/unit-S02-lvl-41.webp', carpet: '5,479 sq.ft.', beds: 5 },
+      { name: 'unit-S02-lvl-42', label: 'Floor 42 · 3,318 sqft', title: 'South · Unit 02 · Floor 42', file: 'assets/floorplans-final/units/unit-S02-lvl-42.webp', carpet: '3,318 sq.ft.', beds: 4 },
+      { name: 'unit-S02-lvl-43-47', label: 'Floors 43–54, 57–63 · 3,372 sqft', title: 'South · Unit 02 · Floors 43–54, 57–63', file: 'assets/floorplans-final/units/unit-S02-lvl-43-47.webp', carpet: '3,372 sq.ft.', beds: 4 },
+      { name: 'unit-S02-lvl-55', label: 'Floor 55 · Refuge · 5,556 sqft', title: 'South · Unit 02 · Floor 55 · Refuge', file: 'assets/floorplans-final/units/unit-S02-lvl-55.webp', carpet: '5,556 sq.ft.', beds: 5 },
+      { name: 'unit-S02-lvl-64-69', label: 'Floors 64–69 · 3,386 sqft', title: 'South · Unit 02 · Floors 64–69', file: 'assets/floorplans-final/units/unit-S02-lvl-64-69.webp', carpet: '3,386 sq.ft.', beds: 4 },
+      { name: 'unit-S02-lvl-70', label: 'Floor 70 · Refuge · 5,513 sqft', title: 'South · Unit 02 · Floor 70 · Refuge', file: 'assets/floorplans-final/units/unit-S02-lvl-70.webp', carpet: '5,513 sq.ft.', beds: 5 },
+      { name: 'unit-S02-lvl-71', label: 'Floor 71 · 5,510 sqft', title: 'South · Unit 02 · Floor 71', file: 'assets/floorplans-final/units/unit-S02-lvl-71.webp', carpet: '5,510 sq.ft.', beds: 5 },
+      { name: 'unit-S02-lvl-72-76', label: 'Floors 72–76 · 5,548 sqft', title: 'South · Unit 02 · Floors 72–76', file: 'assets/floorplans-final/units/unit-S02-lvl-72-76.webp', carpet: '5,548 sq.ft.', beds: 5 },
+    ]},
+    { group: 'South · Unit 03 (4 Bed)', items: [
+      { name: 'unit-S03-lvl-17-25', label: 'Floors 17–25 · 2,089 sqft', title: 'South · Unit 03 · Floors 17–25', file: 'assets/floorplans-final/units/unit-S03-lvl-17-25.webp', carpet: '2,089 sq.ft.', beds: 4 },
+      { name: 'unit-S03-lvl-28-33', label: 'Floors 28–40, 42 · 2,131 sqft', title: 'South · Unit 03 · Floors 28–40, 42', file: 'assets/floorplans-final/units/unit-S03-lvl-28-33.webp', carpet: '2,131 sq.ft.', beds: 4 },
+      { name: 'unit-S03-lvl-43-47', label: 'Floors 43–54, 57–69 · 2,148 sqft', title: 'South · Unit 03 · Floors 43–54, 57–69', file: 'assets/floorplans-final/units/unit-S03-lvl-43-47.webp', carpet: '2,148 sq.ft.', beds: 4 },
+    ]},
+    { group: 'Typical & Refuge Floors', items: [
+      { name: 'typical-lvl-17-18', label: 'Typical · Floors 17–18', title: 'Typical · Floors 17–18', file: 'assets/floorplans-final/typical/typical-lvl-17-18.webp' },
+      { name: 'refuge-lvl-19', label: 'Refuge · Floor 19', title: 'Refuge · Floor 19', file: 'assets/floorplans-final/typical/refuge-lvl-19.webp' },
+      { name: 'typical-lvl-20-25', label: 'Typical · Floors 20–25', title: 'Typical · Floors 20–25', file: 'assets/floorplans-final/typical/typical-lvl-20-25.webp' },
+      { name: 'refuge-lvl-26', label: 'Refuge · Floor 26', title: 'Refuge · Floor 26', file: 'assets/floorplans-final/typical/refuge-lvl-26.webp' },
+      { name: 'typical-lvl-28-33', label: 'Typical · Floors 28–33', title: 'Typical · Floors 28–33', file: 'assets/floorplans-final/typical/typical-lvl-28-33.webp' },
+      { name: 'refuge-lvl-34', label: 'Refuge · Floor 34', title: 'Refuge · Floor 34', file: 'assets/floorplans-final/typical/refuge-lvl-34.webp' },
+      { name: 'typical-lvl-35-40', label: 'Typical · Floors 35–40', title: 'Typical · Floors 35–40', file: 'assets/floorplans-final/typical/typical-lvl-35-40.webp' },
+      { name: 'refuge-lvl-41', label: 'Refuge · Floor 41', title: 'Refuge · Floor 41', file: 'assets/floorplans-final/typical/refuge-lvl-41.webp' },
+      { name: 'floor-lvl-42', label: 'Floor 42', title: 'Floor 42', file: 'assets/floorplans-final/typical/floor-lvl-42.webp' },
+      { name: 'typical-lvl-43-47', label: 'Typical · Floors 43–47', title: 'Typical · Floors 43–47', file: 'assets/floorplans-final/typical/typical-lvl-43-47.webp' },
+      { name: 'refuge-lvl-48', label: 'Refuge · Floor 48', title: 'Refuge · Floor 48', file: 'assets/floorplans-final/typical/refuge-lvl-48.webp' },
+      { name: 'typical-lvl-49-54', label: 'Typical · Floors 49–54', title: 'Typical · Floors 49–54', file: 'assets/floorplans-final/typical/typical-lvl-49-54.webp' },
+      { name: 'refuge-lvl-55', label: 'Refuge · Floor 55', title: 'Refuge · Floor 55', file: 'assets/floorplans-final/typical/refuge-lvl-55.webp' },
+      { name: 'typical-lvl-57-62', label: 'Typical · Floors 57–62', title: 'Typical · Floors 57–62', file: 'assets/floorplans-final/typical/typical-lvl-57-62.webp' },
+      { name: 'refuge-lvl-63', label: 'Refuge · Floor 63', title: 'Refuge · Floor 63', file: 'assets/floorplans-final/typical/refuge-lvl-63.webp' },
+      { name: 'typical-lvl-64-69', label: 'Typical · Floors 64–69', title: 'Typical · Floors 64–69', file: 'assets/floorplans-final/typical/typical-lvl-64-69.webp' },
+      { name: 'refuge-lvl-70', label: 'Refuge · Floor 70', title: 'Refuge · Floor 70', file: 'assets/floorplans-final/typical/refuge-lvl-70.webp' },
+      { name: 'floor-lvl-71', label: 'Floor 71', title: 'Floor 71', file: 'assets/floorplans-final/typical/floor-lvl-71.webp' },
+      { name: 'typical-lvl-72-76', label: 'Typical · Floors 72–76', title: 'Typical · Floors 72–76', file: 'assets/floorplans-final/typical/typical-lvl-72-76.webp' },
+      { name: 'refuge-lvl-77', label: 'Refuge · Floor 77', title: 'Refuge · Floor 77', file: 'assets/floorplans-final/typical/refuge-lvl-77.webp' },
+    ]},
+    { group: 'Amenity Floors', items: [
+      { name: 'amenity-ground-floor', label: 'Amenity · Ground Floor', title: 'Amenity · Ground Floor', file: 'assets/floorplans-final/amenity/amenity-ground-floor.webp' },
+      { name: 'amenity-lvl-10', label: 'Amenity · Level 10', title: 'Amenity · Level 10', file: 'assets/floorplans-final/amenity/amenity-lvl-10.webp' },
+      { name: 'amenity-lvl-12', label: 'Amenity · Level 12', title: 'Amenity · Level 12', file: 'assets/floorplans-final/amenity/amenity-lvl-12.webp' },
+      { name: 'amenity-lvl-13', label: 'Amenity · Level 13', title: 'Amenity · Level 13', file: 'assets/floorplans-final/amenity/amenity-lvl-13.webp' },
+      { name: 'amenity-lvl-14', label: 'Amenity · Level 14', title: 'Amenity · Level 14', file: 'assets/floorplans-final/amenity/amenity-lvl-14.webp' },
+      { name: 'amenity-lvl-15', label: 'Amenity · Level 15', title: 'Amenity · Level 15', file: 'assets/floorplans-final/amenity/amenity-lvl-15.webp' },
+      { name: 'amenity-lvl-79', label: 'Amenity · Level 79', title: 'Amenity · Level 79', file: 'assets/floorplans-final/amenity/amenity-lvl-79.webp' },
+    ]},
+  ];
+
+  // Flat lookup name → {name,label,file}
+  const REAL_PLAN_BY_NAME = {};
+  REAL_PLAN_GROUPS.forEach(g => g.items.forEach(it => { REAL_PLAN_BY_NAME[it.name] = it; }));
+
+  const DEFAULT_REAL_PLAN = 'unit-S01-lvl-43-47';
+
+  // ──────────────────────────────────────────────────────────────
+  // TYPE MODEL — three plan TYPES the segmented control switches between.
+  //   unit    → the 6 unit groups (North/South · 01/02/03)
+  //   typical → the "Typical & Refuge Floors" group
+  //   amenity → the "Amenity Floors" group
+  // For "unit" we further index every item by wing (N/S) + unit (01/02/03)
+  // so the Wing / Unit / Floor-band selectors + Bed filter can narrow it.
+  // ──────────────────────────────────────────────────────────────
+  const TYPICAL_GROUP = REAL_PLAN_GROUPS.find(g => g.group === 'Typical & Refuge Floors');
+  const AMENITY_GROUP = REAL_PLAN_GROUPS.find(g => g.group === 'Amenity Floors');
+
+  // Unit catalogue: list of {wing,unit,beds,name,label,...} from every unit group.
+  const UNIT_ITEMS = [];
+  REAL_PLAN_GROUPS.forEach(g => {
+    g.items.forEach(it => {
+      const m = it.name.match(/^unit-([NS])(\d{2})-/);
+      if (!m) return;
+      UNIT_ITEMS.push(Object.assign({ wing: m[1], unit: m[2] }, it));
+    });
+  });
+
+  const WING_FULL = { N: 'North', S: 'South' };
+
+  function planType(name) {
+    if (!name) return 'unit';
+    if (/^unit-/.test(name)) return 'unit';
+    if (/^amenity-/.test(name)) return 'amenity';
+    return 'typical';
+  }
+
+  // Available bed counts present in the unit catalogue (for the Bed filter).
+  const UNIT_BEDS = Array.from(new Set(UNIT_ITEMS.map(i => i.beds))).sort((a, b) => a - b);
+
+  // Given a wing+unit+bedFilter, return the matching unit items (the floor bands).
+  function unitBandsFor(wing, unit, bedFilter) {
+    return UNIT_ITEMS.filter(i =>
+      i.wing === wing && i.unit === unit &&
+      (bedFilter === 'all' || i.beds === bedFilter));
+  }
+  // Units (01/02/03) available within a wing under the active bed filter.
+  function unitsForWing(wing, bedFilter) {
+    const set = new Set(UNIT_ITEMS
+      .filter(i => i.wing === wing && (bedFilter === 'all' || i.beds === bedFilter))
+      .map(i => i.unit));
+    return Array.from(set).sort();
+  }
+  function wingsForBed(bedFilter) {
+    const set = new Set(UNIT_ITEMS
+      .filter(i => bedFilter === 'all' || i.beds === bedFilter)
+      .map(i => i.wing));
+    return ['N', 'S'].filter(w => set.has(w));
+  }
+
+  // <option> list helper for a plain (non-grouped) select.
+  function optionsMarkup(items, selectedName) {
+    return items.map(it =>
+      `<option value="${it.name}" ${it.name === selectedName ? 'selected' : ''}>${it.label}</option>`
+    ).join('');
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // WINDOW STATE — array of { id, planId, bhk, facing, scale, tx, ty }
+  // Each window is independent.
+  // ──────────────────────────────────────────────────────────────
+  let nextWinId = 1;
+  let focusedWinId = null;
+
+  function makeWindowState(planId, realName) {
+    const p = PLANS[planId];
+    const name = realName || DEFAULT_REAL_PLAN;
+    const st = {
+      id: nextWinId++,
+      planId,
+      realName: name,
+      type: planType(name),       // 'unit' | 'typical' | 'amenity'
+      bedFilter: 'all',           // 'all' | 3 | 4 | 5
+      wing: 'S', unit: '01',      // active wing / unit (unit type only)
+      bhk: p.bhk,
+      facing: p.facing,
+      scale: 1, tx: 0, ty: 0,
+    };
+    syncUnitSelectorsToName(st);
+    return st;
+  }
+
+  // Keep wing/unit in sync with the active unit plan name.
+  function syncUnitSelectorsToName(st) {
+    if (st.type !== 'unit') return;
+    const it = UNIT_ITEMS.find(i => i.name === st.realName);
+    if (it) { st.wing = it.wing; st.unit = it.unit; }
+  }
+
+  // Default: open TWO windows for instant comparison.
+  // Window 1 = the 4 BHK default (unit-S01-stack01); window 2 = a contrasting unit.
+  // User can add a 3rd via ADD WINDOW pill (max 3) or close to drop back to 1.
+  const windows = [
+    makeWindowState(3, 'unit-S01-lvl-43-47'),
+    makeWindowState(1, 'unit-N02-lvl-43-47'),
+  ];
+  focusedWinId = windows[0].id;
+
+  // ──────────────────────────────────────────────────────────────
+  // BUILD A SINGLE .plan-window ELEMENT (per state)
+  // ──────────────────────────────────────────────────────────────
+  // Build the selector row markup for the active type.
+  function buildControlsMarkup(state) {
+    if (state.type === 'unit') {
+      const wings = wingsForBed(state.bedFilter);
+      if (!wings.includes(state.wing)) state.wing = wings[0] || 'S';
+      const units = unitsForWing(state.wing, state.bedFilter);
+      if (!units.includes(state.unit)) state.unit = units[0] || '01';
+      const bands = unitBandsFor(state.wing, state.unit, state.bedFilter);
+      if (!bands.find(b => b.name === state.realName) && bands[0]) {
+        state.realName = bands[0].name;
+      }
+      const unitOpts = units.map(u =>
+        `<option value="${u}" ${u === state.unit ? 'selected' : ''}>Unit ${u}</option>`
+      ).join('');
+      return `
+        <div class="pw-ctl">
+          <span class="pw-ctl-lbl">Unit</span>
+          <div class="pw-select">
+            <select class="pw-unit-dd" aria-label="Select unit">${unitOpts}</select>
+          </div>
+        </div>
+        <div class="pw-ctl is-grow">
+          <span class="pw-ctl-lbl">Floor Band</span>
+          <div class="pw-select">
+            <select class="pw-band-dd" aria-label="Select floor band">${optionsMarkup(bands, state.realName)}</select>
+          </div>
+        </div>
+      `;
+    }
+    if (state.type === 'amenity') {
+      const items = AMENITY_GROUP.items;
+      if (!items.find(i => i.name === state.realName)) state.realName = items[0].name;
+      return `
+        <div class="pw-ctl is-grow">
+          <span class="pw-ctl-lbl">Amenity Level</span>
+          <div class="pw-select">
+            <select class="pw-band-dd" aria-label="Select amenity level">${optionsMarkup(items, state.realName)}</select>
+          </div>
+        </div>
+      `;
+    }
+    // typical
+    const items = TYPICAL_GROUP.items;
+    if (!items.find(i => i.name === state.realName)) state.realName = items[0].name;
+    return `
+      <div class="pw-ctl is-grow">
+        <span class="pw-ctl-lbl">Floor Band</span>
+        <div class="pw-select">
+          <select class="pw-band-dd" aria-label="Select floor">${optionsMarkup(items, state.realName)}</select>
+        </div>
+      </div>
+    `;
+  }
+
+  // Default the realName when switching TYPE so the frame loads a valid plan.
+  function defaultNameForType(state, type) {
+    if (type === 'unit') {
+      const bands = unitBandsFor(state.wing, state.unit, state.bedFilter);
+      if (bands[0]) return bands[0].name;
+      // fall back to any unit
+      return UNIT_ITEMS[0].name;
+    }
+    if (type === 'amenity') return AMENITY_GROUP.items[0].name;
+    return TYPICAL_GROUP.items[0].name;
+  }
+
+  function buildWindow(state) {
+    const p = PLANS[state.planId];
+    const rp = REAL_PLAN_BY_NAME[state.realName] || REAL_PLAN_BY_NAME[DEFAULT_REAL_PLAN];
+    // RealDesk — rank which floor-plan asset is viewed most
+    try { if (window.RDA) RDA.track('floorplan_view', rp.name, 1, { title: rp.title || rp.label, file: rp.file, wing: state.wing, unit: state.unit }); } catch(e){}
+    const facingFull = FACING_FULL[state.facing] || state.facing;
+    const liveBhkName = state.bhk + ' BHK ' + p.tier + ' · ' + facingFull;
+
+    const el = document.createElement('article');
+    el.className = 'plan-window';
+    el.setAttribute('data-window-id', state.id);
+
+    const typeLabel = state.type === 'unit' ? 'Residence'
+                    : state.type === 'amenity' ? 'Amenity Floor' : 'Typical Floor';
+
+    // Head — title · type eyebrow · carpet · close
+    const head = document.createElement('header');
+    head.className = 'pw-head';
+    head.innerHTML = `
+      <div class="pw-title-row">
+        <h3 class="pw-title">${rp.title || rp.label}</h3>
+        ${rp.beds ? `<span class="pw-tier-pill">${rp.beds} Bed</span>` : ''}
+      </div>
+      ${rp.carpet ? `<div class="pw-carpet">
+        <span class="lbl">Usable&nbsp;Carpet&nbsp;Area</span>
+        <span class="val">${rp.carpet}</span>
+      </div>` : ''}
+      <div class="pw-sub-row">
+        <span class="pw-sub-tag">${typeLabel}</span>
+        ${rp.beds ? `<span class="pw-sub">${WING_FULL[state.wing] || ''} Wing · Unit ${state.unit}</span>` : ''}
+      </div>
+      <button class="pw-close" type="button" aria-label="Close window">×</button>
+    `;
+    el.appendChild(head);
+
+    // Lightweight switch bar — step ‹ › within the group, or open the catalog drawer
+    const sw = document.createElement('div');
+    sw.className = 'pw-switch';
+    sw.innerHTML = `
+      <button class="pw-step pw-prev" type="button" aria-label="Previous plan">‹</button>
+      <button class="pw-change" type="button" aria-label="Change plan">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M7 7h11l-3-3" /><path d="M17 17H6l3 3" /></svg>
+        <span>Change plan</span>
+      </button>
+      <button class="pw-step pw-next" type="button" aria-label="Next plan">›</button>
+    `;
+    el.appendChild(sw);
+
+    // Canvas
+    const canvas = document.createElement('div');
+    canvas.className = 'pw-canvas-wrap';
+    canvas.innerHTML = `
+      <div class="pw-canvas-bg"></div>
+      <svg class="pw-compass" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="29" fill="none" stroke="currentColor" stroke-width="1"/>
+        <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.5"/>
+        <polygon points="32,8 36,32 32,56 28,32" fill="currentColor" opacity="0.85"/>
+        <polygon points="8,32 32,28 56,32 32,36" fill="currentColor" opacity="0.45"/>
+        <circle cx="32" cy="8" r="2.4" fill="currentColor"/>
+        <text x="32" y="4" text-anchor="middle" font-family="Inter, sans-serif" font-size="6" font-weight="700" letter-spacing="0.18em" fill="currentColor">N</text>
+        <text x="32" y="63" text-anchor="middle" font-family="Inter, sans-serif" font-size="5" font-weight="600" letter-spacing="0.18em" fill="currentColor" opacity="0.6">S</text>
+        <text x="3" y="34" text-anchor="middle" font-family="Inter, sans-serif" font-size="5" font-weight="600" letter-spacing="0.18em" fill="currentColor" opacity="0.6">W</text>
+        <text x="61" y="34" text-anchor="middle" font-family="Inter, sans-serif" font-size="5" font-weight="600" letter-spacing="0.18em" fill="currentColor" opacity="0.6">E</text>
+      </svg>
+      <div class="pw-zoom-stack">
+        <button class="pw-zoom-btn pw-zoom-in" type="button" aria-label="Zoom in">+</button>
+        <button class="pw-zoom-btn pw-zoom-out" type="button" aria-label="Zoom out">−</button>
+        <button class="pw-zoom-btn pw-zoom-fit" type="button" aria-label="Reset zoom">Fit</button>
+      </div>
+      <div class="pw-zoom-stage">
+        <div class="pw-blueprint">
+          <div class="pw-sheet">
+            <img class="pw-plan-img" src="${rp.file}" alt="${rp.label}">
+          </div>
+        </div>
+      </div>
+      <div class="pw-zoom-indicator">100%</div>
+    `;
+    el.appendChild(canvas);
+
+    // Specs — real bedroom / bathroom counts (Unit plans only)
+    if (rp.beds) {
+      const specs = document.createElement('div');
+      specs.className = 'pw-specs';
+      specs.innerHTML = `
+      <div class="pw-spec">
+        <span class="ico"><svg><use href="#ic-bed"/></svg></span>
+        <span class="num pw-bed">${rp.beds}</span>
+        <span class="lbl">Bedrooms</span>
+      </div>
+      <div class="pw-spec">
+        <span class="ico"><svg><use href="#ic-bath"/></svg></span>
+        <span class="num pw-bath">${rp.beds}</span>
+        <span class="lbl">Bathrooms</span>
+      </div>
+    `;
+      el.appendChild(specs);
+    }
+
+    // Price sheet — indicative numbers pending final pricing
+    const price = document.createElement('section');
+    price.className = 'pw-price';
+    price.setAttribute('data-', 'Pricing — not final');
+    price.innerHTML = `
+      <h4>Price Sheet</h4>
+      <div class="pw-row"><span class="k">Basic Price</span><span class="v">${p.basic}</span></div>
+      <div class="pw-row"><span class="k">PLC (Preferential Location)</span><span class="v">${p.plc}</span></div>
+      <div class="pw-row"><span class="k">Other Charges</span><span class="v">${p.other}</span></div>
+      <div class="pw-row"><span class="k">GST &amp; Taxes</span><span class="v">${p.gst}</span></div>
+      <div class="pw-total">
+        <span class="k">Total Price</span>
+        <span class="v">${p.total}<span style="font-size:0.55em;color:var(--taupe-400);">*</span></span>
+      </div>
+      <p class="pw-rera">* Indicative · RERA PR1170002501931</p>
+    `;
+    el.appendChild(price);
+
+    return el;
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // MAIN RENDER — rebuild the grid + counter + ADD button vis
+  // ──────────────────────────────────────────────────────────────
+  const grid = document.getElementById('windowsGrid');
+  const winCounterEl = document.getElementById('winCounter');
+  const addBtn = document.getElementById('addWinBtn');
+  const toast = document.getElementById('toast');
+
+  function render() {
+    grid.setAttribute('data-count', String(windows.length));
+    winCounterEl.textContent = String(windows.length);
+
+    // Rebuild children
+    grid.innerHTML = '';
+    windows.forEach(state => {
+      const el = buildWindow(state);
+      grid.appendChild(el);
+      wireWindow(el, state);
+      applyTransform(el, state);
+    });
+
+    // Toggle close-button visibility
+    const showClose = windows.length > 1;
+    grid.querySelectorAll('.pw-close').forEach(btn => {
+      btn.classList.toggle('is-hidden', !showClose);
+    });
+
+    // Toggle ADD WINDOW pill visibility
+    addBtn.classList.toggle('is-hidden', windows.length >= 3);
+
+    // Make sure focusedWinId is still valid
+    if (!windows.find(w => w.id === focusedWinId)) {
+      focusedWinId = windows[0]?.id ?? null;
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // WIRE A SINGLE WINDOW (event handlers)
+  // ──────────────────────────────────────────────────────────────
+  function wireWindow(el, state) {
+    // Close
+    const closeBtn = el.querySelector('.pw-close');
+    closeBtn.addEventListener('click', () => {
+      if (windows.length <= 1) return;
+      el.classList.add('is-removing');
+      setTimeout(() => {
+        const idx = windows.findIndex(w => w.id === state.id);
+        if (idx !== -1) windows.splice(idx, 1);
+        render();
+      }, 200);
+    });
+
+    // Helper — rebuild this window in place after a state change.
+    function rebuild() {
+      state.scale = 1; state.tx = 0; state.ty = 0;
+      const fresh = buildWindow(state);
+      el.replaceWith(fresh);
+      wireWindow(fresh, state);
+      applyTransform(fresh, state);
+    }
+
+    // Per-panel: step within the plan's group, or open the change drawer
+    const prevB = el.querySelector('.pw-prev');
+    const nextB = el.querySelector('.pw-next');
+    if (prevB) prevB.addEventListener('click', () => { focusedWinId = state.id; stepInGroup(state, -1); rebuild(); });
+    if (nextB) nextB.addEventListener('click', () => { focusedWinId = state.id; stepInGroup(state, 1); rebuild(); });
+    const changeB = el.querySelector('.pw-change');
+    if (changeB) changeB.addEventListener('click', () => { focusedWinId = state.id; openDrawer(state); });
+
+    // Type segmented control — Unit · Typical · Amenity
+    el.querySelectorAll('[data-type]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.type;
+        if (t === state.type) return;
+        state.type = t;
+        state.realName = defaultNameForType(state, t);
+        rebuild();
+      });
+    });
+
+    // Bedroom filter pills (Unit only)
+    el.querySelectorAll('[data-bed]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const raw = btn.dataset.bed;
+        state.bedFilter = raw === 'all' ? 'all' : parseInt(raw, 10);
+        // narrow wing/unit/band; buildControlsMarkup resolves a valid plan
+        const wings = wingsForBed(state.bedFilter);
+        if (!wings.includes(state.wing)) state.wing = wings[0] || 'S';
+        const units = unitsForWing(state.wing, state.bedFilter);
+        if (!units.includes(state.unit)) state.unit = units[0] || '01';
+        const bands = unitBandsFor(state.wing, state.unit, state.bedFilter);
+        state.realName = (bands[0] || UNIT_ITEMS[0]).name;
+        rebuild();
+      });
+    });
+
+    // Wing filter pills (Unit only)
+    el.querySelectorAll('[data-wing]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.wing = btn.dataset.wing;
+        const units = unitsForWing(state.wing, state.bedFilter);
+        if (!units.includes(state.unit)) state.unit = units[0] || '01';
+        const bands = unitBandsFor(state.wing, state.unit, state.bedFilter);
+        state.realName = (bands[0] || UNIT_ITEMS[0]).name;
+        rebuild();
+      });
+    });
+
+    // Unit selector (Unit only)
+    const unitDd = el.querySelector('.pw-unit-dd');
+    if (unitDd) unitDd.addEventListener('change', () => {
+      state.unit = unitDd.value;
+      const bands = unitBandsFor(state.wing, state.unit, state.bedFilter);
+      state.realName = (bands[0] || UNIT_ITEMS[0]).name;
+      rebuild();
+    });
+
+    // Floor-band / level selector — loads the plan into the frame
+    const bandDd = el.querySelector('.pw-band-dd');
+    if (bandDd) bandDd.addEventListener('change', () => {
+      if (bandDd.value === state.realName) return;
+      state.realName = bandDd.value;
+      syncUnitSelectorsToName(state);
+      rebuild();
+    });
+
+    // Zoom buttons
+    el.querySelector('.pw-zoom-in').addEventListener('click', () => {
+      setScale(state, el, state.scale + 0.25);
+    });
+    el.querySelector('.pw-zoom-out').addEventListener('click', () => {
+      setScale(state, el, state.scale - 0.25);
+    });
+    el.querySelector('.pw-zoom-fit').addEventListener('click', () => {
+      state.scale = 1; state.tx = 0; state.ty = 0;
+      applyTransform(el, state);
+    });
+
+    // Wheel + pinch + pan on the canvas
+    const canvasWrap = el.querySelector('.pw-canvas-wrap');
+    canvasWrap.addEventListener('wheel', e => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.12 : 0.12;
+      setScale(state, el, state.scale + delta);
+    }, { passive: false });
+
+    canvasWrap.addEventListener('dblclick', () => {
+      state.scale = 1; state.tx = 0; state.ty = 0;
+      applyTransform(el, state);
+    });
+
+    // Pointer pan + pinch
+    const zoomStage = el.querySelector('.pw-zoom-stage');
+    const pointers = new Map();
+    let panning = false, panSx = 0, panSy = 0, panTx0 = 0, panTy0 = 0;
+    let pinchStart = null;
+
+    canvasWrap.addEventListener('pointerdown', e => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // Mark this window focused on any interaction
+      focusedWinId = state.id;
+      if (pointers.size === 1 && state.scale > 1.01) {
+        panning = true;
+        panSx = e.clientX; panSy = e.clientY;
+        panTx0 = state.tx; panTy0 = state.ty;
+        zoomStage.classList.add('is-panning');
+        try { canvasWrap.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    });
+    canvasWrap.addEventListener('pointermove', e => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointers.size === 2) {
+        panning = false;
+        const pts = Array.from(pointers.values());
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (pinchStart == null) {
+          pinchStart = { dist, scale: state.scale };
+        } else {
+          const ratio = dist / pinchStart.dist;
+          setScale(state, el, pinchStart.scale * ratio);
+        }
+        return;
+      }
+
+      if (panning && state.scale > 1.01) {
+        const dx = e.clientX - panSx;
+        const dy = e.clientY - panSy;
+        state.tx = panTx0 + dx;
+        state.ty = panTy0 + dy;
+        zoomStage.style.transition = 'none';
+        zoomStage.style.transform = `translate(${state.tx}px, ${state.ty}px) scale(${state.scale})`;
+      }
+    });
+    const onUp = e => {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinchStart = null;
+      if (pointers.size === 0) {
+        panning = false;
+        zoomStage.classList.remove('is-panning');
+        zoomStage.style.transition = '';
+        try { canvasWrap.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+    };
+    canvasWrap.addEventListener('pointerup', onUp);
+    canvasWrap.addEventListener('pointercancel', onUp);
+    canvasWrap.addEventListener('pointerleave', onUp);
+
+    // Focus tracking on any click within window
+    el.addEventListener('mousedown', () => { focusedWinId = state.id; });
+  }
+
+  function setScale(state, el, next) {
+    state.scale = Math.max(0.7, Math.min(3, next));
+    if (state.scale <= 1.01) { state.tx = 0; state.ty = 0; }
+    applyTransform(el, state);
+  }
+
+  function applyTransform(el, state) {
+    const zoomStage = el.querySelector('.pw-zoom-stage');
+    const indicator = el.querySelector('.pw-zoom-indicator');
+    zoomStage.style.transform = `translate(${state.tx}px, ${state.ty}px) scale(${state.scale})`;
+    zoomStage.classList.toggle('is-zoomed', state.scale > 1.01);
+    indicator.textContent = Math.round(state.scale * 100) + '%';
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // TOP BAR HANDLERS
+  // ──────────────────────────────────────────────────────────────
+  addBtn.addEventListener('click', () => {
+    if (windows.length >= 3) {
+      flashToast('Maximum 3 windows.');
+      return;
+    }
+    // Spawn a new window. Default to a different plan than the focused
+    // one when possible, so the comparison feels meaningful.
+    const focused = windows.find(w => w.id === focusedWinId) || windows[0];
+    const usedPlans = windows.map(w => w.planId);
+    let newPlanId = focused.planId;
+    for (let pid = 1; pid <= 3; pid++) {
+      if (!usedPlans.includes(pid)) { newPlanId = pid; break; }
+    }
+    windows.push(makeWindowState(newPlanId));
+    focusedWinId = windows[windows.length - 1].id;
+    render();
+  });
+
+  // Chevron prev/next — step through the focused window's current plan list
+  // (the floor-band / level options for the active type + filters).
+  function currentPlanList(w) {
+    if (w.type === 'unit') return unitBandsFor(w.wing, w.unit, w.bedFilter);
+    if (w.type === 'amenity') return AMENITY_GROUP.items;
+    return TYPICAL_GROUP.items;
+  }
+  function stepFocusedPlan(dir) {
+    const w = windows.find(w => w.id === focusedWinId) || windows[0];
+    const list = currentPlanList(w);
+    if (!list.length) return;
+    let idx = list.findIndex(it => it.name === w.realName);
+    if (idx === -1) idx = 0;
+    idx = (idx + dir + list.length) % list.length;
+    w.realName = list[idx].name;
+    syncUnitSelectorsToName(w);
+    w.scale = 1; w.tx = 0; w.ty = 0;
+    render();
+  }
+  document.getElementById('prevBtn')?.addEventListener('click', () => stepFocusedPlan(-1));
+  document.getElementById('nextBtn')?.addEventListener('click', () => stepFocusedPlan(1));
+
+  // ──────────────────────────────────────────────────────────────
+  // TOAST
+  // ──────────────────────────────────────────────────────────────
+  function flashToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('is-on');
+    clearTimeout(window.__toastT);
+    window.__toastT = setTimeout(() => toast.classList.remove('is-on'), 1800);
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  // CREAM-VEIL EXIT NAV
+  // ──────────────────────────────────────────────────────────────
+  function fadeTo(href) {
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = href; }, 220);
+  }
+  document.getElementById('brandBack').addEventListener('click', e => {
+    e.preventDefault();
+    fadeTo('home.html');
+  });
+  document.getElementById('ecBackBtn').addEventListener('click', e => {
+    e.preventDefault();
+    fadeTo('home.html');
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  // COMPARE FLOW — pre-comparison picker + in-comparison change drawer
+  //   Shared plan catalog rendered from REAL_PLAN_GROUPS.
+  // ══════════════════════════════════════════════════════════════
+  const TYPE_TABS = [
+    { key: 'residences', label: 'Residences' },
+    { key: 'typical',    label: 'Typical Floors' },
+    { key: 'amenity',    label: 'Amenities' },
+  ];
+  function sectionsForTab(tabKey) {
+    if (tabKey === 'typical') return [TYPICAL_GROUP];
+    if (tabKey === 'amenity') return [AMENITY_GROUP];
+    return REAL_PLAN_GROUPS.filter(g => /Unit/.test(g.group));
+  }
+  function tabForName(name) {
+    const t = planType(name);
+    return t === 'unit' ? 'residences' : (t === 'amenity' ? 'amenity' : 'typical');
+  }
+  function groupItemsOf(name) {
+    for (const g of REAL_PLAN_GROUPS) { if (g.items.some(i => i.name === name)) return g.items; }
+    return [];
+  }
+  function stepInGroup(state, dir) {
+    const list = groupItemsOf(state.realName);
+    if (!list.length) return;
+    let idx = list.findIndex(i => i.name === state.realName);
+    if (idx === -1) idx = 0;
+    idx = (idx + dir + list.length) % list.length;
+    state.realName = list[idx].name;
+    state.type = planType(state.realName);
+    syncUnitSelectorsToName(state);
+    state.scale = 1; state.tx = 0; state.ty = 0;
+  }
+  function planSubLabel(it) {
+    if (it.carpet) return it.carpet;
+    if (it.label && it.label.indexOf('·') >= 0) return it.label.split('·').slice(1).join(' · ').trim();
+    return '';
+  }
+  function cardHTML(it, badge) {
+    const sub = planSubLabel(it);
+    return '<button class="fp-card" type="button" data-name="' + it.name + '">' +
+      '<span class="fp-card-badge">' + (badge || '') + '</span>' +
+      '<span class="fp-card-pick">+</span>' +
+      '<span class="fp-card-thumb"><img loading="lazy" src="' + it.file + '" alt="' + (it.title || it.label) + '"></span>' +
+      '<div class="fp-card-title">' + (it.title || it.label) + '</div>' +
+      (sub ? '<div class="fp-card-sub">' + sub + '</div>' : '') +
+      '</button>';
+  }
+  function renderCatalog(gridEl, tabKey, selectedNames) {
+    let html = '';
+    sectionsForTab(tabKey).forEach(g => {
+      html += '<div class="fp-sec"><div class="fp-sec-head"><span class="fp-sec-name">' +
+        g.group + '</span><span class="fp-sec-rule"></span></div><div class="fp-cards">';
+      g.items.forEach(it => {
+        const bi = selectedNames ? selectedNames.indexOf(it.name) : -1;
+        html += cardHTML(it, bi >= 0 ? (bi + 1) : '');
+      });
+      html += '</div></div>';
+    });
+    gridEl.innerHTML = html;
+  }
+  function renderTabs(tabsEl, activeKey, onPick) {
+    tabsEl.innerHTML = TYPE_TABS.map(t =>
+      '<button class="fp-tab' + (t.key === activeKey ? ' is-active' : '') + '" data-tab="' + t.key + '" type="button">' + t.label + '</button>'
+    ).join('');
+    tabsEl.querySelectorAll('.fp-tab').forEach(b => b.addEventListener('click', () => onPick(b.dataset.tab)));
+  }
+
+  // ── PICKER ──
+  const picker        = document.getElementById('planPicker');
+  const pickerTabs    = document.getElementById('pickerTabs');
+  const pickerGrid    = document.getElementById('pickerGrid');
+  const pickerSlots   = document.getElementById('pickerSlots');
+  const pickerCompare = document.getElementById('pickerCompare');
+  let pickerTab = 'residences';
+  let pickerSel = [];
+
+  function renderPickerTray() {
+    let html = '';
+    for (let i = 0; i < 3; i++) {
+      const nm = pickerSel[i];
+      if (nm) {
+        const it = REAL_PLAN_BY_NAME[nm];
+        html += '<div class="fp-slot is-filled"><span class="n">' + (i + 1) + '</span>' +
+          '<span class="t">' + (it.title || it.label) + '</span>' +
+          '<button class="x" type="button" data-rm="' + nm + '" aria-label="Remove">×</button></div>';
+      } else if (i < 2 || pickerSel.length >= 2) {
+        html += '<div class="fp-slot is-empty">Slot ' + (i + 1) + (i < 2 ? '' : ' · optional') + '</div>';
+      }
+    }
+    pickerSlots.innerHTML = html;
+    pickerSlots.querySelectorAll('[data-rm]').forEach(b =>
+      b.addEventListener('click', () => { pickerSel = pickerSel.filter(n => n !== b.dataset.rm); renderPicker(); }));
+    pickerCompare.disabled = pickerSel.length < 2;
+  }
+  function renderPicker() {
+    renderTabs(pickerTabs, pickerTab, k => { pickerTab = k; renderPicker(); });
+    renderCatalog(pickerGrid, pickerTab, pickerSel);
+    pickerGrid.querySelectorAll('.fp-card').forEach(c => {
+      if (pickerSel.indexOf(c.dataset.name) >= 0) c.classList.add('is-selected');
+      c.addEventListener('click', () => {
+        const nm = c.dataset.name;
+        const i = pickerSel.indexOf(nm);
+        if (i >= 0) pickerSel.splice(i, 1);
+        else { if (pickerSel.length >= 3) { flashToast('Compare up to 3 plans.'); return; } pickerSel.push(nm); }
+        renderPicker();
+      });
+    });
+    renderPickerTray();
+  }
+  function openPicker() { renderPicker(); picker.classList.add('is-open'); }
+  function closePicker() { picker.classList.remove('is-open'); }
+  function startComparison(names) {
+    windows.length = 0;
+    names.forEach((nm, i) => windows.push(makeWindowState((i % 3) + 1, nm)));
+    focusedWinId = windows[0].id;
+    render();
+    closePicker();
+  }
+  pickerCompare.addEventListener('click', () => { if (pickerSel.length >= 2) startComparison(pickerSel.slice()); });
+  document.getElementById('pickerClose').addEventListener('click', () => {
+    if (windows.length) closePicker(); else fadeTo('home.html');
+  });
+
+  // ── DRAWER ──
+  const drawer      = document.getElementById('planDrawer');
+  const drawerScrim = document.getElementById('drawerScrim');
+  const drawerTabs  = document.getElementById('drawerTabs');
+  const drawerGrid  = document.getElementById('drawerGrid');
+  const drawerSub   = document.getElementById('drawerSub');
+  let drawerWin = null;
+  let drawerTab = 'residences';
+
+  function renderDrawer() {
+    renderTabs(drawerTabs, drawerTab, k => { drawerTab = k; renderDrawer(); });
+    renderCatalog(drawerGrid, drawerTab, null);
+    drawerGrid.querySelectorAll('.fp-card').forEach(c => {
+      if (drawerWin && c.dataset.name === drawerWin.realName) c.classList.add('is-selected');
+      c.addEventListener('click', () => {
+        if (!drawerWin) return;
+        drawerWin.realName = c.dataset.name;
+        drawerWin.type = planType(c.dataset.name);
+        syncUnitSelectorsToName(drawerWin);
+        drawerWin.scale = 1; drawerWin.tx = 0; drawerWin.ty = 0;
+        render();
+        closeDrawer();
+      });
+    });
+  }
+  function openDrawer(state) {
+    drawerWin = state;
+    drawerTab = tabForName(state.realName);
+    const rp = REAL_PLAN_BY_NAME[state.realName];
+    drawerSub.textContent = 'Currently · ' + (rp ? (rp.title || rp.label) : '');
+    renderDrawer();
+    drawerScrim.classList.add('is-open');
+    drawer.classList.add('is-open');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('is-open');
+    drawerScrim.classList.remove('is-open');
+    drawerWin = null;
+  }
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  drawerScrim.addEventListener('click', closeDrawer);
+
+  // ──────────────────────────────────────────────────────────────
+  // INITIAL RENDER
+  // ──────────────────────────────────────────────────────────────
+  render();
+
+  // ── DEEP-LINK from Inventory → Choose-Floors ──────────────────
+  // If the user arrived via a section/level selection, preselect the
+  // matching plan in the focused window.
+  (function () {
+    var lvl = null, sec = null;
+    try { lvl = sessionStorage.getItem('ec.floor'); sec = sessionStorage.getItem('ec.section'); } catch (e) {}
+    if (!lvl && !sec) return;
+    try { sessionStorage.removeItem('ec.floor'); sessionStorage.removeItem('ec.section'); } catch (e) {}
+    function rangeOf(name) {
+      var m = name.match(/lvl-([\d+\-]+)/); if (!m) return null;
+      var nums = m[1].split(/[-+]/).map(Number).filter(function (n){return !isNaN(n);});
+      return nums.length ? [Math.min.apply(null,nums), Math.max.apply(null,nums)] : null;
+    }
+    var amenityHint = sec != null && /amenit/i.test(String(sec));
+    var target = null;
+    var n = lvl != null ? parseInt(lvl, 10) : NaN;
+    if (amenityHint) {
+      // Arrived from an amenity section → prefer an amenity plan.
+      if (!isNaN(n) && REAL_PLAN_BY_NAME['amenity-lvl-'+n]) target = 'amenity-lvl-'+n;
+      else target = AMENITY_GROUP.items[0].name;
+    }
+    if (!target && !isNaN(n)) {
+      // 1) exact refuge / amenity level, else 2) a typical band containing it, else 3) any plan whose range covers it
+      var pref = ['refuge-lvl-'+n, 'amenity-lvl-'+n];
+      for (var i=0;i<pref.length;i++){ if (REAL_PLAN_BY_NAME[pref[i]]) { target = pref[i]; break; } }
+      if (!target) {
+        var names = Object.keys(REAL_PLAN_BY_NAME);
+        // prefer a typical-floor band, then any unit/plan band
+        var order = names.filter(function(k){return k.indexOf('typical')===0;}).concat(names);
+        for (var j=0;j<order.length;j++){ var r=rangeOf(order[j]); if (r && n>=r[0] && n<=r[1]) { target = order[j]; break; } }
+      }
+    }
+    if (target && REAL_PLAN_BY_NAME[target] && windows[0]) {
+      windows[0].realName = target;
+      windows[0].type = planType(target);
+      syncUnitSelectorsToName(windows[0]);
+      windows[0].scale = 1; windows[0].tx = 0; windows[0].ty = 0;
+      window.__ecDeepLinked = true;
+      render();
+    }
+  })();
+
+  // Show the picker first unless we deep-linked straight to a plan.
+  if (!window.__ecDeepLinked) { openPicker(); }
+</script>
+
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+
+  // ── Prefetch next-screen on touchstart for faster transitions ───
+  (function() {
+    function wirePrefetch() {
+      document.querySelectorAll('a[href], button[data-href]').forEach(function(el) {
+        var href = el.getAttribute('href') || el.dataset.href;
+        if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('javascript:')) return;
+        el.addEventListener('touchstart', function() {
+          if (!document.querySelector('link[rel="prefetch"][href="' + href + '"]')) {
+            var link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = href;
+            document.head.appendChild(link);
+          }
+        }, { passive: true, once: true });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wirePrefetch);
+    } else {
+      wirePrefetch();
+    }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(function() {
+        if (location.pathname.indexOf('home.html') !== -1) return;
+        if (document.querySelector('link[rel="prefetch"][href="home.html"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = 'home.html';
+        document.head.appendChild(link);
+      });
+    }
+  })();
+</script>
+<!-- PWA-JS-END -->
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+<script src="assets/view360.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,2041 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Embassy Citadel — Index</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  HOME v14 — constellation of separate floating tiles
+  ──────────────────────────────────────────────────────────────────────
+  Concept
+  · Each chapter is its OWN floating button — eight onyx squircles
+    with a thin gold border, spaced generously in a clock arrangement
+    around a circular centerpiece. No grouping, no shared chrome.
+  · Centerpiece = a dark gold-ringed circle holding the Embassy
+    identity (mark + wordmark). It is the gravitational anchor.
+  · Each tile and the centerpiece floats independently with its own
+    phase-offset bob and depth shadow. Hovering a tile reveals the
+    chapter's status as a separate floating italic line below the
+    centerpiece.
+  · Light theme (paper / bone / gold / "little black") with a 4-layer
+    parallax depth background drifting on pointer move.
+
+  Visual reference
+  · User-provided petal-tile reference: gold border + dark fill +
+    gold number + gold icon + cream serif title + cream sans
+    description. We adopt the visual language but use a clean 1:1
+    squircle (the user's explicit shape) instead of the joined
+    flower.
+
+  Interactions
+  · pointerenter on a tile → tile lifts 6px, gold border brightens,
+    soft gold glow appears, status line under centerpiece swaps in
+    italic Cormorant, footer dot fills.
+  · pointermove anywhere → parallax layers drift inversely with
+    depth-weighted lerp.
+  · click on a tile → gold radial veil sweeps from the tile center
+    → window.location.href to the sibling screen.
+
+  Nav table
+    01 Gallery     → gallery.html
+    02 Masterplan  → masterplan.html
+    03 Inventory   → inventory.html
+    04 Floor Plans → floor-plan.html
+    05 Amenities   → amenities.html
+    06 Location    → location.html
+    07 Tools       → tools.html
+    08 About       → about.html
+
+  Tile placement (clock positions around centerpiece at radius 320)
+    N   720, 130   →  01 Gallery
+    NE  946, 224   →  02 Masterplan
+    E  1040, 450   →  03 Inventory
+    SE  946, 676   →  04 Floor Plans
+    S   720, 770   →  05 Amenities
+    SW  494, 676   →  06 Location
+    W   400, 450   →  07 Tools
+    NW  494, 224   →  08 About
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #FCFAF4;
+    --bone:       #F4F2ED;
+    --bone-50:    #F7F5EF;
+    --bone-200:   #E8E2D6;
+    --warm-grey:  #DAD5CD;
+    --taupe-300:  #C2B5A3;
+    --taupe-400:  #A89B86;
+
+    --gold-100:   #E8CFA1;
+    --gold-200:   #D9B97A;
+    --gold-300:   #C9A567;
+    --gold-400:   #B89968;
+    --gold-500:   #946F38;
+    --gold-600:   #6E5A37;
+
+    --onyx-100:   #3A332A;
+    --onyx-300:   #2A2620;
+    --onyx-500:   #1F1B15;
+    --onyx-700:   #1A1814;
+    --onyx-900:   #0E0C09;
+
+    --hair-lo:    rgba(148, 111, 56, 0.16);
+    --hair:       rgba(148, 111, 56, 0.32);
+    --hair-hi:    rgba(148, 111, 56, 0.58);
+
+    /* Tile shadows */
+    --tile-shadow:   0 18px 38px rgba(20, 14, 6, 0.16),
+                     0 6px 14px  rgba(20, 14, 6, 0.10);
+    --tile-shadow-h: 0 28px 52px rgba(20, 14, 6, 0.22),
+                     0 10px 22px rgba(20, 14, 6, 0.14),
+                     0 0 24px    rgba(217, 185, 122, 0.18);
+    --core-shadow:   0 28px 70px rgba(20, 14, 6, 0.22),
+                     0 12px 30px rgba(20, 14, 6, 0.14);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: var(--paper);
+    color: var(--onyx-700);
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    touch-action: none;
+    overscroll-behavior: none;
+    overflow: hidden;
+    position: fixed; inset: 0;
+  }
+
+  img, svg { -webkit-user-drag: none; -webkit-touch-callout: none; }
+
+  /* ── Stage scaler — flex-center letterbox, paper bg continues past edges ── */
+  #stage-wrap {
+    position: fixed; inset: 0; overflow: hidden;
+    padding: 0;   /* edge-to-edge — stage fills the whole viewport */
+    display: flex; align-items: center; justify-content: center;
+    isolation: isolate;
+    /* Flat paper — matches the stage's own paper edge exactly so the
+       letterbox/pillarbox margins (iPad 4:3, 65" 16:9) blend with no "cut". */
+    background: url('assets/bg-paper.png') center/cover no-repeat, var(--paper);
+  }
+  #stage, .stage-inner {
+    position: relative;
+    width: 1440px; height: 900px;
+    flex-shrink: 0;
+    z-index: 1;
+    transform-origin: center center;
+    transform: scale(1);
+    overflow: hidden;
+  }
+
+  /* ── PAPER BACKGROUND (user-supplied artwork) ──────────────────── */
+  .stage-bg {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url('assets/bg-paper.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  /* ── TOWER BACKDROP (ambient warm-sepia, centered to stage) ────── */
+  .tower-bg {
+    position: absolute;
+    left: 50%; top: -40px;
+    width: 640px; height: 980px;
+    margin-left: -320px;
+    z-index: 1;
+    pointer-events: none;
+    background-image: url('assets/tower.png');
+    background-size: cover;
+    background-position: 50% 28%;
+    background-repeat: no-repeat;
+    /* Warm sepia conversion to match cream/gold palette */
+    filter:
+      sepia(1)
+      hue-rotate(-10deg)
+      saturate(0.55)
+      brightness(1.05)
+      contrast(0.94);
+    opacity: 0.42;
+    mix-blend-mode: multiply;
+    /* Vertical-elliptical fade — wider this pass for more visible tower */
+    -webkit-mask-image:
+      radial-gradient(ellipse 44% 84% at 50% 42%,
+        rgba(0,0,0,1)   12%,
+        rgba(0,0,0,0.85) 40%,
+        rgba(0,0,0,0.42) 68%,
+        transparent 92%);
+            mask-image:
+      radial-gradient(ellipse 44% 84% at 50% 42%,
+        rgba(0,0,0,1)   12%,
+        rgba(0,0,0,0.85) 40%,
+        rgba(0,0,0,0.42) 68%,
+        transparent 92%);
+    animation: towerDrift 36s ease-in-out infinite;
+    transform-origin: 50% 40%;
+  }
+  @keyframes towerDrift {
+    0%, 100% { transform: scale(1)    translate(0, 0); }
+    50%      { transform: scale(1.03) translate(0, -3px); }
+  }
+
+  /* ── TOWER SPINE SHINE (vertical gold light down the building) ─ */
+  .tower-shine {
+    position: absolute;
+    left: 50%; top: -10px; bottom: -10px;
+    width: 140px;
+    margin-left: -70px;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(255, 230, 170, 0.18) 12%,
+      rgba(255, 230, 170, 0.55) 32%,
+      rgba(255, 240, 200, 0.85) 50%,
+      rgba(255, 230, 170, 0.55) 68%,
+      rgba(255, 230, 170, 0.18) 88%,
+      transparent 100%);
+    filter: blur(22px);
+    mix-blend-mode: screen;
+    animation: shineBreath 4.6s ease-in-out infinite;
+    overflow: visible;
+  }
+  /* Thin bright fiber down the center — architectural lit seam */
+  .tower-shine::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 0; bottom: 0;
+    width: 2.5px;
+    margin-left: -1.25px;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(255, 230, 170, 0.0) 10%,
+      rgba(255, 240, 200, 0.95) 38%,
+      rgba(255, 250, 220, 1)    50%,
+      rgba(255, 240, 200, 0.85) 62%,
+      rgba(255, 230, 170, 0.0)  90%,
+      transparent 100%);
+    filter: blur(0.8px);
+    box-shadow:
+      0 0 10px rgba(255, 240, 200, 1),
+      0 0 22px rgba(255, 230, 170, 0.85),
+      0 0 40px rgba(232, 207, 161, 0.55);
+    animation: shineFiber 4.6s ease-in-out infinite;
+  }
+  /* Vertical light pulse — sweeps down the tower like a passing reflection */
+  .tower-shine::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 0;
+    width: 120px; height: 240px;
+    margin-left: -60px;
+    background: radial-gradient(ellipse 100% 55% at 50% 50%,
+      rgba(255, 250, 220, 0.85) 0%,
+      rgba(255, 240, 200, 0.45) 30%,
+      transparent 70%);
+    filter: blur(8px);
+    mix-blend-mode: screen;
+    opacity: 0;
+    animation: shineSweep 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes shineBreath {
+    0%, 100% { opacity: 0.80; transform: scaleY(1); }
+    50%      { opacity: 1;    transform: scaleY(1.04); }
+  }
+  @keyframes shineFiber {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1; }
+  }
+  @keyframes shineSweep {
+    0%   { top: -240px; opacity: 0; }
+    15%  { opacity: 1; }
+    85%  { opacity: 1; }
+    100% { top: calc(100% + 60px); opacity: 0; }
+  }
+
+  /* ── GOLD LEAF FLAKES (ambient drift) ──────────────────────────── */
+  .flake-stage {
+    position: absolute; inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .flake-outer {
+    position: absolute;
+    bottom: -40px;
+    width: 0; height: 0;
+    animation: flakeRise var(--dur, 26s) linear infinite;
+    will-change: transform, opacity;
+  }
+  .flake-shape {
+    position: relative;
+    width: var(--size, 16px);
+    height: calc(var(--size, 16px) * 0.72);
+    margin: calc(var(--size, 16px) * -0.36) 0 0 calc(var(--size, 16px) * -0.5);
+    background:
+      /* Specular highlight at upper-left corner — polished metal "shine spot" */
+      radial-gradient(circle at 28% 22%,
+        rgba(255, 255, 255, 0.85) 0%,
+        rgba(255, 248, 220, 0.55) 18%,
+        transparent 45%),
+      /* Diagonal sheen band */
+      linear-gradient(125deg,
+        transparent 32%,
+        rgba(255, 250, 230, 0.55) 46%,
+        rgba(255, 255, 255, 0.85) 50%,
+        rgba(255, 250, 230, 0.55) 54%,
+        transparent 68%),
+      /* Base reflective gold gradient — brighter highlight stops */
+      linear-gradient(135deg,
+        #FFF8E4 0%,
+        #FFEAB0 16%,
+        #FFD680 30%,
+        #E8C588 48%,
+        #D9B97A 62%,
+        #B89968 80%,
+        #946F38 100%);
+    /* Irregular soft corners — each flake gets unique values via JS */
+    border-radius: 20% 32% 18% 28% / 22% 28% 18% 32%;
+    /* Gold glow halo + warm contact shadow */
+    box-shadow:
+      0 0  4px rgba(255, 240, 200, 0.85),
+      0 0 10px rgba(255, 230, 170, 0.55),
+      0 0 18px rgba(217, 185, 122, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    filter: drop-shadow(0 1.5px 3px rgba(60, 45, 20, 0.32));
+    /* 3D spin gives the "catching light" effect via natural foreshortening */
+    animation: flakeSpin var(--spin-dur, 4.2s) linear infinite,
+               flakeGlint var(--glint-dur, 6s) ease-in-out infinite;
+    transform-origin: 50% 50%;
+  }
+  /* Periodic bright twinkle — the flake "catches sun" briefly */
+  @keyframes flakeGlint {
+    0%, 88%, 100% { box-shadow:
+      0 0  4px rgba(255, 240, 200, 0.85),
+      0 0 10px rgba(255, 230, 170, 0.55),
+      0 0 18px rgba(217, 185, 122, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55); }
+    94%           { box-shadow:
+      0 0  8px rgba(255, 250, 220, 1),
+      0 0 18px rgba(255, 240, 200, 0.85),
+      0 0 32px rgba(255, 220, 150, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85); }
+  }
+  @keyframes flakeRise {
+    0%   { transform: translate(0, 0); opacity: 0; }
+    6%   { opacity: var(--op, 0.6); }
+    94%  { opacity: var(--op, 0.6); }
+    100% { transform: translate(var(--drift, 30px), calc(-100vh - 80px)); opacity: 0; }
+  }
+  @keyframes flakeSpin {
+    0%   { transform: perspective(60px) rotateY(0deg)   rotate(var(--tilt, 12deg)); }
+    100% { transform: perspective(60px) rotateY(360deg) rotate(var(--tilt, 12deg)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tower-shine, .tower-shine::after { animation: none; }
+    .flake-outer, .flake-shape { animation: none; opacity: 0; }
+  }
+
+  /* ── TOUCH / KIOSK DEVICES (Tab S7, iPad Pro) — GPU relief ──────────
+     Tablet browsers have far less compositor headroom than desktop. The
+     most repaint-heavy ambient effects (the per-flake box-shadow "glint"
+     and the big-blur light sweep down the tower) can drop frames there and
+     read as flicker. On coarse-pointer devices we keep the motion but drop
+     those two specific repaint storms — the look stays the same, the GPU
+     stops choking. (Flake count is also halved in JS for coarse pointers.) */
+  @media (pointer: coarse) {
+    .flake-shape { animation: flakeSpin var(--spin-dur, 4.2s) linear infinite; } /* no box-shadow glint */
+    .tower-shine::before { display: none; }                                       /* no big-blur sweep */
+  }
+
+  /* ── TINY BIRDS (ambient flock) ────────────────────────────────── */
+  .bird-stage {
+    position: absolute; inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .bird {
+    position: absolute;
+    width: 18px; height: 6px;
+    color: var(--onyx-300);
+    opacity: 0;
+    will-change: transform, opacity;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
+  }
+  .bird svg {
+    width: 100%; height: 100%; display: block; overflow: visible;
+    animation: birdFlap var(--flap, 0.32s) ease-in-out infinite alternate;
+    transform-origin: 50% 50%;
+  }
+  @keyframes birdFlap {
+    from { transform: scaleY(1); }
+    to   { transform: scaleY(0.55); }
+  }
+  .bird.b1 { animation: birdFly1 28s linear -2s infinite; }
+  .bird.b2 { animation: birdFly2 34s linear -10s infinite; }
+  .bird.b3 { animation: birdFly3 24s linear -16s infinite; }
+  .bird.b4 { animation: birdFly4 38s linear -5s infinite; }
+  .bird.b5 { animation: birdFly5 30s linear -22s infinite; }
+  @keyframes birdFly1 {
+    0%   { transform: translate(-40px, 180px); opacity: 0; }
+    8%   { opacity: 0.22; }
+    50%  { transform: translate(720px, 110px); opacity: 0.22; }
+    92%  { opacity: 0.18; }
+    100% { transform: translate(1500px, 80px); opacity: 0; }
+  }
+  @keyframes birdFly2 {
+    0%   { transform: translate(1490px, 260px); opacity: 0; }
+    10%  { opacity: 0.18; }
+    50%  { transform: translate(740px, 180px); opacity: 0.20; }
+    90%  { opacity: 0.16; }
+    100% { transform: translate(-50px, 140px); opacity: 0; }
+  }
+  @keyframes birdFly3 {
+    0%   { transform: translate(-40px, 540px); opacity: 0; }
+    10%  { opacity: 0.20; }
+    50%  { transform: translate(700px, 420px); opacity: 0.20; }
+    90%  { opacity: 0.16; }
+    100% { transform: translate(1500px, 360px); opacity: 0; }
+  }
+  @keyframes birdFly4 {
+    0%   { transform: translate(1490px, 80px); opacity: 0; }
+    12%  { opacity: 0.16; }
+    50%  { transform: translate(720px, 320px); opacity: 0.18; }
+    90%  { opacity: 0.14; }
+    100% { transform: translate(-40px, 580px); opacity: 0; }
+  }
+  @keyframes birdFly5 {
+    0%   { transform: translate(-30px, 420px); opacity: 0; }
+    10%  { opacity: 0.18; }
+    50%  { transform: translate(740px, 240px); opacity: 0.20; }
+    90%  { opacity: 0.14; }
+    100% { transform: translate(1500px, 140px); opacity: 0; }
+  }
+
+  /* ── FAST-ENTRY MODE — when arriving from intro (?from=intro) ──── */
+  /* Centerpiece skips its entry animation (already in position,
+     matching where intro's wordmark morphed to). Other elements
+     start slightly later so the centerpiece reads as a continuation
+     of the intro wordmark, then the home "assembles" around it. */
+  body.fast-entry .core {
+    animation: coreSettleIn 480ms cubic-bezier(0.22, 1, 0.36, 1) 0s both,
+               floatBob 9s ease-in-out 1.6s infinite;
+  }
+  @keyframes coreSettleIn {
+    from { opacity: 0.85; transform: scale(1.05); }
+    to   { opacity: 1;    transform: scale(1); }
+  }
+  /* Hide concentric rings + halo at first, then fade them in around the core */
+  body.fast-entry .core-halo,
+  body.fast-entry .ring {
+    animation: ringIn 700ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both;
+    opacity: 0;
+  }
+  @keyframes ringIn { from { opacity: 0; } to { opacity: 1; } }
+  /* Delay all chapter tiles so they "assemble in" after the centerpiece settles */
+  body.fast-entry .tile { animation-delay: 0ms, 0ms; }
+  body.fast-entry .tile.bob {
+    animation: tileFlyIn 1100ms cubic-bezier(0.34, 1.2, 0.4, 1) calc(var(--entry-delay, 0ms) + 380ms) both,
+               floatBob var(--bob-dur, 9s) ease-in-out var(--bob-delay, 0s) infinite;
+  }
+  @keyframes tileFastIn {
+    from { opacity: 0; transform: scale(0.6) translateY(20px); }
+    to   { opacity: 1; transform: scale(1)   translateY(0); }
+  }
+  body.fast-entry .editorial   { animation-delay: 380ms; }
+  body.fast-entry .manifesto   { animation-delay: 320ms; }
+  body.fast-entry .cta-wrap    { animation-delay: 520ms; }
+  body.fast-entry .status-line { animation-delay: 480ms; }
+  body.fast-entry .edge        { animation-delay: 600ms; }
+  .stage-ground {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    /* Very faint vignette only — paper artwork already carries light + texture */
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 100%, rgba(110,90,55,0.05), transparent 60%);
+  }
+  .stage-grain {
+    position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.35 0 0 0 0 0.22 0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    opacity: 0.025;
+    mix-blend-mode: multiply;
+  }
+
+  /* ── PARALLAX BG LAYERS (≤50% opacity) ─────────────────────────── */
+  .px-stack { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+  .px-layer {
+    position: absolute; inset: 0;
+    will-change: transform;
+    transform: translate3d(calc(var(--mx, 0) * var(--depth, 0) * -1px),
+                           calc(var(--my, 0) * var(--depth, 0) * -1px), 0);
+    transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .px-l1 { --depth: 18; opacity: 0.50; }
+  .px-l1::before {
+    content: ''; position: absolute;
+    right: -8%; bottom: -14%;
+    width: 70%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle, rgba(217,185,122,0.42) 0%, rgba(217,185,122,0.08) 55%, transparent 75%);
+    filter: blur(8px);
+  }
+  .px-l1::after {
+    content: ''; position: absolute;
+    left: -10%; top: -12%;
+    width: 52%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle, rgba(252,250,244,0.65) 0%, rgba(252,250,244,0.10) 55%, transparent 75%);
+    filter: blur(6px);
+  }
+  .px-l2 { --depth: 32; opacity: 0.30; }
+  .px-l2 .line {
+    position: absolute; left: -10%; right: -10%; height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--hair-hi) 15%, var(--hair-hi) 85%, transparent 100%);
+  }
+  .px-l3 { --depth: 50; opacity: 0.10; }
+  .px-l3 .mark {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 1100px; height: 550px;
+    margin: -275px 0 0 -550px;
+    color: var(--taupe-400);
+  }
+  .px-l3 svg { width: 100%; height: 100%; }
+  .px-l4 { --depth: 78; opacity: 0.45; }
+  .px-l4 .tick {
+    position: absolute; width: 6px; height: 6px;
+    border: 1px solid var(--gold-500);
+    transform: rotate(45deg);
+    border-right: none; border-bottom: none;
+  }
+  .px-l4 .dash { position: absolute; width: 14px; height: 1px; background: var(--gold-500); }
+  .px-l4 .ring { position: absolute; width: 8px; height: 8px; border: 1px solid var(--gold-400); border-radius: 50%; }
+
+  /* ── TOP BAR (seamless — no border line) ──────────────────────── */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 76px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(180deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: opacity 240ms ease, transform 240ms ease;
+    position: relative;
+  }
+  .brand:hover { opacity: 0.72; transform: translateX(-1px); }
+  .brand:focus-visible { outline: none; opacity: 0.72; }
+  /* Tiny "back" hint that fades in on hover */
+  .brand::after {
+    content: '← Threshold';
+    position: absolute;
+    left: 100%; top: 50%;
+    transform: translate(8px, -50%);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0;
+    white-space: nowrap;
+    transition: opacity 260ms ease, transform 260ms ease;
+    pointer-events: none;
+  }
+  .brand:hover::after, .brand:focus-visible::after {
+    opacity: 0.85;
+    transform: translate(12px, -50%);
+  }
+  .brand-wordmark {
+    width: 156px; height: 43.2px;
+    color: var(--onyx-700);
+  }
+  .brand-wordmark svg { width: 100%; height: 100%; display: block; }
+  .top-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 9px;
+    letter-spacing: 0.55em; text-transform: uppercase;
+    color: var(--gold-500); opacity: 0.78;
+  }
+  .top-right {
+    display: flex; align-items: center; gap: 14px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 10px;
+    letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--onyx-100); opacity: 0.78;
+    font-variant-numeric: tabular-nums;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gold-300);
+    box-shadow: 0 0 8px rgba(217,185,122,0.6);
+    animation: livePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes livePulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 1;    transform: scale(1.18); }
+  }
+
+  /* ── FOOTER BAR (seamless — no border line) ───────────────────── */
+  .footer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 44px;
+    z-index: 8;
+    background: linear-gradient(0deg, rgba(252,250,244,0.55), rgba(252,250,244,0) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .footer-left {
+    display: flex; align-items: center; gap: 22px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 9px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--onyx-100); opacity: 0.60;
+  }
+  .footer-left .pip {
+    width: 3px; height: 3px;
+    background: var(--gold-500);
+    transform: rotate(45deg);
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .footer-left .em { color: var(--gold-500); opacity: 1; }
+  .footer-center {
+    display: flex; align-items: center; gap: 18px;
+  }
+  .footer-back {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--gold-500); text-decoration: none;
+    opacity: 0.78;
+    transition: opacity 200ms ease;
+  }
+  .footer-back:hover { opacity: 1; }
+  .footer-dots { display: flex; gap: 10px; align-items: center; }
+  .footer-dots .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--hair);
+    transition: background 240ms ease, transform 240ms ease;
+  }
+  .footer-dots .dot.is-active {
+    background: var(--gold-400);
+    transform: scale(1.45);
+    box-shadow: 0 0 10px rgba(201,165,103,0.55);
+  }
+
+  /* ── CONSTELLATION STAGE (absolute layer for all floating chips) ─ */
+  .const-stage { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+  .const-stage > * { pointer-events: auto; }
+
+  /* ── CENTERPIECE (cream · embossed disc with prominent gold rim) ─ */
+  .core {
+    position: absolute;
+    left: 1050px; top: 450px;
+    width: 210px; height: 210px;
+    margin: -105px 0 0 -105px;
+    border-radius: 50%;
+    background:
+      /* Top inner light catch */
+      radial-gradient(ellipse 85% 55% at 50% -8%, rgba(255,255,255,0.85), transparent 65%),
+      /* Bottom warm falloff (dome) */
+      radial-gradient(ellipse 80% 50% at 50% 108%, rgba(180, 158, 115, 0.28), transparent 70%),
+      /* Soft side highlights */
+      radial-gradient(circle at 35% 25%, rgba(255,255,255,0.55), transparent 60%),
+      /* Base material */
+      linear-gradient(160deg, var(--paper) 0%, var(--bone-50) 55%, var(--bone-200) 100%);
+    border: 1.5px solid rgba(180, 145, 80, 0.55);
+    box-shadow:
+      /* Large soft outer halo */
+      24px 44px 96px -22px rgba(120, 95, 55, 0.26),
+      /* Mid lift */
+      12px 26px 50px -12px rgba(120, 95, 55, 0.20),
+      /* Contact shadow — fixes the disc to the paper */
+       4px  8px 16px        rgba(70,  50, 22, 0.12),
+      /* Inner top highlight (the dome catches light) */
+      inset 0  3px 0        rgba(255, 255, 255, 0.95),
+      inset 0  8px 18px     rgba(255, 255, 255, 0.55),
+      /* Inner side highlight */
+      inset 3px 0 0         rgba(255, 255, 255, 0.45),
+      /* Inner bottom dome shading */
+      inset 0 -22px 40px    rgba(190, 168, 130, 0.50),
+      inset 0 -3px 0        rgba(148, 111, 56, 0.30),
+      /* Inner right side shading */
+      inset -3px 0 6px      rgba(148, 111, 56, 0.14);
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--onyx-700);
+    animation: coreIn 1100ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both,
+               floatBob 9s ease-in-out 1.6s infinite;
+    overflow: hidden;
+  }
+  /* Soft warm halo behind the centerpiece */
+  .core-halo {
+    position: absolute;
+    left: 1050px; top: 450px;
+    width: 460px; height: 460px;
+    margin: -230px 0 0 -230px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(217, 185, 122, 0.16) 0%, rgba(217, 185, 122, 0.06) 35%, transparent 65%);
+    z-index: 4;
+    pointer-events: none;
+    animation: coreIn 1600ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+    filter: blur(2px);
+  }
+
+  /* ── CONCENTRIC RINGS around centerpiece (compass-rose feel) ──── */
+  .ring {
+    position: absolute;
+    left: 1050px; top: 450px;
+    border-radius: 50%;
+    border: 1px solid rgba(148, 111, 56, 0.16);
+    pointer-events: none;
+    z-index: 4;
+    animation: coreIn 1700ms cubic-bezier(0.22, 1, 0.36, 1) 300ms both;
+  }
+  .ring.r1 { width: 280px; height: 280px; margin: -140px 0 0 -140px; border-color: rgba(148, 111, 56, 0.22); }
+  .ring.r2 { width: 380px; height: 380px; margin: -190px 0 0 -190px; border-color: rgba(148, 111, 56, 0.15); border-style: solid; }
+  .ring.r3 { width: 480px; height: 480px; margin: -240px 0 0 -240px; border-color: rgba(148, 111, 56, 0.10); }
+  .ring.r1::before, .ring.r1::after,
+  .ring.r2::before, .ring.r2::after {
+    content: '';
+    position: absolute;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--gold-400);
+    box-shadow: 0 0 6px rgba(217, 185, 122, 0.6);
+  }
+  /* Outer compass dots on r2 (NE/SE/SW/NW) */
+  .ring.r1::before { top: -2px; left: 50%; transform: translateX(-50%); }
+  .ring.r1::after  { bottom: -2px; left: 50%; transform: translateX(-50%); }
+  .ring.r2::before { left: -2px; top: 50%; transform: translateY(-50%); }
+  .ring.r2::after  { right: -2px; top: 50%; transform: translateY(-50%); }
+  @keyframes coreIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  /* Outer thin gold ring (concentric — extra delicacy) */
+  .core::before {
+    content: ''; position: absolute; inset: -12px;
+    border-radius: 50%;
+    border: 1px solid rgba(148, 111, 56, 0.38);
+    pointer-events: none;
+  }
+  /* Inner concentric ring */
+  .core::after {
+    content: ''; position: absolute; inset: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(148, 111, 56, 0.28);
+    pointer-events: none;
+  }
+  .core-inner {
+    position: relative;
+    z-index: 2;
+    padding: 0 16px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .core-wordmark {
+    width: 140px; height: 70px;
+    color: var(--onyx-700);
+    filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.4));
+    margin: 0 auto;
+  }
+  .core-wordmark svg { width: 100%; height: 100%; display: block; }
+  .core-tag {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 7px;
+    letter-spacing: 0.45em;
+    text-transform: uppercase;
+    color: var(--gold-500);
+    opacity: 0.85;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(148, 111, 56, 0.28);
+    width: 72%;
+    text-align: center;
+  }
+
+  /* ── FLOATING STATUS LINE (separate, below centerpiece) ────────── */
+  .status-line {
+    position: absolute;
+    left: 1050px; top: 588px;
+    transform: translateX(-50%);
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--gold-500);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 320ms ease, transform 320ms ease;
+    pointer-events: none;
+    text-align: center;
+  }
+  .status-line.is-on { opacity: 1; transform: translate(-50%, -2px); }
+
+  /* ── CHAPTER TILES (cream / ivory · embossed / anchored) ───────── */
+  .tile {
+    position: absolute;
+    width: 112px; height: 112px;
+    margin: -56px 0 0 -56px;
+    border-radius: 22px;
+    padding: 10px 10px 11px;
+    background:
+      /* Top inner light catch (rounded dome) */
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(255,255,255,0.92), transparent 65%),
+      /* Subtle warm shading at bottom for the dome falloff */
+      radial-gradient(ellipse 90% 55% at 50% 110%, rgba(180, 158, 115, 0.25), transparent 70%),
+      /* Base material — warm paper gradient */
+      linear-gradient(165deg, var(--paper) 0%, var(--bone-50) 48%, var(--bone-200) 100%);
+    border: 1px solid rgba(180, 145, 80, 0.32);
+    box-shadow:
+      /* Big soft outer halo on the paper (offset toward bottom-right to match
+         the upper-left light source in the bg artwork) */
+      14px 28px 56px -14px rgba(120, 95, 55, 0.22),
+      /* Mid lift shadow */
+       6px 16px 28px  -6px rgba(120, 95, 55, 0.18),
+      /* Tight contact shadow that "fixes" the tile to the paper */
+       2px  5px 10px       rgba(70,  50, 22, 0.10),
+      /* Inner top highlight — the rim catches overhead light */
+      inset 0  2px 0       rgba(255, 255, 255, 0.95),
+      inset 0  6px 12px    rgba(255, 255, 255, 0.55),
+      /* Inner left light edge */
+      inset 1.5px 0 0      rgba(255, 255, 255, 0.55),
+      /* Inner bottom dome shading */
+      inset 0 -14px 26px   rgba(190, 168, 130, 0.42),
+      inset 0 -2px 0       rgba(148, 111, 56, 0.18),
+      /* Inner right shading edge */
+      inset -1.5px 0 4px   rgba(148, 111, 56, 0.10);
+    color: var(--onyx-700);
+    display: grid;
+    grid-template-rows: 11px 28px 1fr;
+    gap: 4px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 320ms ease,
+                border-color 280ms ease;
+    will-change: transform;
+    /* overflow visible so icons can rise above tile during pop peak */
+    overflow: visible;
+    appearance: none;
+    -webkit-appearance: none;
+    font-family: inherit;
+    animation: tileIn 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes tileIn {
+    from { opacity: 0; transform: scale(0.85) translateY(6px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0); }
+  }
+  /* Hover lift + ring intensify + glow */
+  .tile:hover, .tile:focus-visible {
+    transform: translateY(-5px) scale(1.04);
+    box-shadow:
+      20px 40px 72px -16px rgba(120, 95, 55, 0.28),
+       8px 22px 36px  -8px rgba(120, 95, 55, 0.22),
+       2px  6px 12px       rgba(70,  50, 22, 0.12),
+      /* Hover-only gold halo */
+       0  0  32px           rgba(217, 185, 122, 0.30),
+      inset 0  2px 0        rgba(255, 255, 255, 1),
+      inset 0  6px 12px     rgba(255, 255, 255, 0.65),
+      inset 1.5px 0 0       rgba(255, 255, 255, 0.60),
+      inset 0 -14px 26px    rgba(190, 168, 130, 0.42),
+      inset 0 -2px 0        rgba(148, 111, 56, 0.28),
+      inset -1.5px 0 4px    rgba(148, 111, 56, 0.12);
+    border-color: rgba(180, 145, 80, 0.60);
+    outline: none;
+  }
+  .tile-num {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: italic; font-weight: 400;
+    font-size: 9.5px;
+    letter-spacing: 0.32em;
+    color: var(--gold-500);
+    opacity: 0.85;
+    line-height: 1;
+  }
+  .tile-icon {
+    width: 26px; height: 26px;
+    margin: 0 auto;
+    color: var(--gold-500);
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0);
+    transform-origin: 50% 100%;
+    /* Reset transition (when .is-popped is removed, icon shrinks back) */
+    transition: opacity 380ms ease-out, transform 380ms ease-out;
+    -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+  }
+  /* Pop animation — icon rises above the divider line, peaks ~half the
+     tile-height up (translateY -42px, scaled bigger to 1.35), HOLDS the
+     peak briefly so the rise is visible, then drops into its final spot. */
+  .tile-icon.is-popped {
+    opacity: 0.92;
+    transform: translate3d(0, 0, 0) scale(1);
+    animation: iconPopUp 1100ms cubic-bezier(0.34, 0.6, 0.4, 1) both;
+    transition: none;
+  }
+  @keyframes iconPopUp {
+    0%   { opacity: 0;    transform: translate3d(0, 18px, 0)  scale(0); }
+    18%  { opacity: 1;    transform: translate3d(0, 6px, 0)   scale(0.45); }
+    44%  { opacity: 1;    transform: translate3d(0, -42px, 0) scale(1.35); }
+    56%  { opacity: 1;    transform: translate3d(0, -42px, 0) scale(1.35); }  /* HOLD peak ~120ms */
+    78%  { opacity: 1;    transform: translate3d(0, 5px, 0)   scale(0.94); }
+    92%  { opacity: 0.92; transform: translate3d(0, -2px, 0)  scale(1.03); }
+    100% { opacity: 0.92; transform: translate3d(0, 0, 0)     scale(1); }
+  }
+  /* Hover keeps the icon visible during interaction even if cycle is mid-reset */
+  .tile:hover .tile-icon,
+  .tile:focus-visible .tile-icon {
+    opacity: 0.92;
+    transform: translate3d(0, 0, 0) scale(1);
+    animation: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tile-icon { opacity: 0.92; transform: none; transition: none; animation: none; }
+  }
+  .tile-icon svg { width: 100%; height: 100%; display: block; }
+  .tile-body {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    gap: 3px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(148, 111, 56, 0.22);
+  }
+  .tile-title {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--onyx-700);
+    line-height: 1.05;
+    margin: 0;
+    white-space: nowrap;
+  }
+  /* Long labels (e.g. "Project Overview") wrap to two tidy lines, sized down a
+     touch and tightened so they sit cleanly inside the squircle like the rest. */
+  .tile--long .tile-title {
+    white-space: normal;
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    line-height: 1.04;
+    max-width: 86px;
+  }
+  .tile-floor {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500;
+    font-size: 7.5px;
+    letter-spacing: 0.22em;
+    color: var(--gold-500);
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Subtle veil flash on click — kept on tile so it tints from that tile out */
+  .tile.is-firing {
+    transform: translateY(-10px) scale(1.10);
+    transition: transform 380ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── MANIFESTO LINE (above centerpiece, centered to right side) ─ */
+  .manifesto {
+    position: absolute;
+    top: 110px; left: 1050px;
+    transform: translateX(-50%);
+    z-index: 6;
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400; font-style: italic;
+    font-size: 17px;
+    color: var(--onyx-100);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    opacity: 0;
+    animation: textIn 900ms cubic-bezier(0.22, 1, 0.36, 1) 900ms forwards;
+    display: flex; align-items: center; gap: 16px;
+    white-space: nowrap;
+  }
+  .manifesto::before, .manifesto::after {
+    content: ''; width: 28px; height: 1px;
+    background: var(--gold-500); opacity: 0.55;
+  }
+  .manifesto .sep { color: var(--gold-500); margin: 0 6px; opacity: 0.55; }
+  .manifesto .em  { color: var(--gold-500); }
+  @keyframes textIn {
+    from { opacity: 0; transform: translate(-50%, 6px); }
+    to   { opacity: 0.85; transform: translate(-50%, 0); }
+  }
+
+  /* ── CTA: BEGIN THE TOUR (centered under constellation) ──────── */
+  .cta-wrap {
+    position: absolute;
+    bottom: 90px; left: 1050px;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 14px;
+    opacity: 0;
+    animation: ctaIn 900ms cubic-bezier(0.22, 1, 0.36, 1) 1100ms forwards;
+  }
+  @keyframes ctaIn {
+    from { opacity: 0; transform: translate(-50%, 8px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  /* ── LEFT EDITORIAL PANEL ──────────────────────────────────────── */
+  .editorial {
+    position: absolute;
+    left: 80px; top: 200px;
+    width: 580px;
+    z-index: 6;
+    opacity: 0;
+    animation: edIn 1100ms cubic-bezier(0.22, 1, 0.36, 1) 500ms forwards;
+  }
+  @keyframes edIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .ed-eyebrow {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.5em; text-transform: uppercase;
+    color: var(--gold-500);
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 30px;
+  }
+  .ed-eyebrow::before {
+    content: ''; width: 28px; height: 1px;
+    background: var(--gold-500); opacity: 0.7;
+  }
+  .ed-headline {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 92px;
+    line-height: 0.95;
+    color: var(--onyx-700);
+    margin: 0 0 6px 0;
+    letter-spacing: 0.02em;
+  }
+  .ed-headline-italic {
+    font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+    font-weight: 400; 
+    font-size: 92px;
+    line-height: 0.95;
+    color: var(--gold-500);
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .ed-divider {
+    width: 60px; height: 1px;
+    background: var(--gold-500);
+    opacity: 0.7;
+    margin: 36px 0 26px 0;
+  }
+  .ed-para {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-size: 14.95px;
+    line-height: 1.65;
+    color: var(--onyx-100);
+    opacity: 0.82;
+    max-width: 360px;
+    margin: 0 0 16px 0;
+  }
+  .ed-stats {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    gap: 0 38px;
+    margin-top: 40px;
+    align-items: end;
+  }
+  .ed-stat {
+    display: flex; flex-direction: column;
+    gap: 6px;
+    padding-right: 6px;
+  }
+  .ed-stat .num {
+    font-family: 'Lato', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-weight: 400; font-style: italic;
+    font-size: 36px;
+    line-height: 1;
+    color: var(--onyx-700);
+    font-variant-numeric: tabular-nums;
+  }
+  .ed-stat .num .u {
+    font-family: 'Lato', sans-serif;
+    font-weight: 400; font-style: normal;
+    font-size: 13px;
+    color: var(--taupe-400);
+    margin-left: 4px;
+    letter-spacing: 0.06em;
+  }
+  .ed-stat .lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 8.5px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .cta-pills {
+    display: flex; align-items: center; gap: 14px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9px;
+    letter-spacing: 0.36em; text-transform: uppercase;
+    color: var(--taupe-400);
+  }
+  .cta-pills .pill {
+    color: var(--gold-500);
+    font-variant-numeric: tabular-nums;
+  }
+  .cta-pills .pip {
+    width: 4px; height: 4px;
+    background: var(--gold-500);
+    transform: rotate(45deg);
+    opacity: 0.6;
+  }
+  .cta {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 12px 26px;
+    border: 1px solid var(--gold-500);
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(252,250,244,0.7), rgba(217,185,122,0.10));
+    color: var(--onyx-700);
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 10px;
+    letter-spacing: 0.42em; text-transform: uppercase;
+    cursor: pointer; text-decoration: none;
+    box-shadow: 0 10px 28px rgba(110,90,55,0.16),
+                0 3px 8px rgba(110,90,55,0.10);
+    transition: transform 280ms ease, background 280ms ease, box-shadow 280ms ease, border-color 280ms ease;
+  }
+  .cta:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(180deg, rgba(217,185,122,0.22), rgba(217,185,122,0.36));
+    border-color: var(--gold-600);
+    box-shadow: 0 16px 36px rgba(110,90,55,0.24),
+                0 5px 12px rgba(110,90,55,0.14);
+  }
+  .cta .arrow {
+    display: inline-block;
+    color: var(--gold-500);
+    font-size: 12px;
+    letter-spacing: 0;
+    transition: transform 300ms ease;
+  }
+  .cta:hover .arrow { transform: translateX(4px); }
+
+  /* ── VERTICAL EDGE ORNAMENTS ───────────────────────────────────── */
+  .edge {
+    position: absolute;
+    top: 50%;
+    z-index: 4;
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    font-size: 8.5px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--taupe-400);
+    opacity: 0.62;
+    writing-mode: vertical-rl;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .edge.left  { left: 22px;  transform: translateY(-50%) rotate(180deg); }
+  .edge.right { right: 22px; transform: translateY(-50%); }
+  .edge .em { color: var(--gold-500); }
+
+  /* ── Bob (very subtle — tiles read as embossed, not floating) ─── */
+  @keyframes floatBob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-2px); }
+  }
+  /* Fly-in: tiles arrive from outside the stage along their outer-radial axis
+     and land with a spring overshoot. Per-tile direction/delay set inline via
+     --fly-x / --fly-y / --entry-delay. */
+  @keyframes tileFlyIn {
+    0%   { opacity: 0; transform: translate(var(--fly-x, 0px), var(--fly-y, 0px)) scale(0.45); }
+    30%  { opacity: 1; }
+    100% { opacity: 1; transform: translate(0, 0) scale(1); }
+  }
+  /* Tiles fly in radially with stagger; bob is tiny (2px) and slow so they feel anchored */
+  .bob { animation: tileFlyIn 1100ms cubic-bezier(0.34, 1.2, 0.4, 1) var(--entry-delay, 0ms) both,
+                    floatBob var(--bob-dur, 9s) ease-in-out var(--bob-delay, 0s) infinite; }
+  .bob:hover, .bob:focus-visible { animation: tileFlyIn 1100ms cubic-bezier(0.34, 1.2, 0.4, 1) var(--entry-delay, 0ms) both; }
+
+  /* ── Dust motes ─────────────────────────────────────────────────── */
+  .motes { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+  .mote {
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--gold-400);
+    opacity: 0.16;
+    bottom: -10px;
+    animation: moteRise linear infinite;
+    filter: blur(0.6px);
+  }
+  @keyframes moteRise {
+    0%   { transform: translate(0, 0); opacity: 0; }
+    8%   { opacity: 0.16; }
+    92%  { opacity: 0.08; }
+    100% { transform: translate(var(--drift, 20px), calc(-100vh - 80px)); opacity: 0; }
+  }
+
+  /* ── Veil (soft cream fade — matches paper bg) ─────────────────── */
+  .veil {
+    position: absolute; inset: 0;
+    background: var(--bone);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99;
+    transition: opacity 220ms ease-in-out;
+  }
+  body.is-leaving .veil { opacity: 1; }
+
+  /* When arriving from intro, the veil starts opaque (continuing the cream
+     wash from intro's exit) and fades out, revealing the home that's already
+     beginning to assemble underneath. */
+  body.fast-entry .veil {
+    opacity: 1;
+    animation: veilWakeOut 700ms cubic-bezier(0.4, 0, 0.2, 1) 150ms forwards;
+  }
+  @keyframes veilWakeOut {
+    to { opacity: 0; }
+  }
+
+  /* ── FLOATING TOOLS SHORTCUT (bottom-right radial fan) ─────────────
+     A small circular FAB anchored bottom-right of the stage. Tapping it
+     fans three option chips out radially (arc up + left). Sits above the
+     tiles (z-index 7) but below the veil (z-index 99) so the cream-veil
+     transition still washes over it on navigate. Clip-safe: anchored with
+     enough inset that the 96px fan-radius stays inside the 1440×900 stage. */
+  .fab-tools {
+    position: absolute;
+    right: 38px; bottom: 80px;
+    width: 184px; height: 184px;
+    z-index: 7;
+    pointer-events: none;          /* only children take pointer events */
+  }
+  /* Main circular trigger — sits at the bottom-right corner of the wrapper */
+  .fab-btn {
+    position: absolute;
+    right: 0; bottom: 0;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    padding: 0;
+    pointer-events: auto;
+    cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    font-family: inherit;
+    display: grid; place-items: center;
+    color: var(--onyx-700);
+    background:
+      radial-gradient(ellipse 85% 60% at 50% -10%, rgba(255,255,255,0.9), transparent 65%),
+      linear-gradient(160deg, var(--paper) 0%, var(--bone-50) 55%, var(--bone-200) 100%);
+    border: 1.5px solid rgba(180, 145, 80, 0.55);
+    box-shadow:
+      10px 18px 34px -12px rgba(120, 95, 55, 0.26),
+       4px  8px 14px       rgba(70,  50, 22, 0.12),
+      inset 0  2px 0       rgba(255, 255, 255, 0.95),
+      inset 0 -10px 18px   rgba(190, 168, 130, 0.40);
+    transition: transform 320ms cubic-bezier(0.34, 1.4, 0.4, 1),
+                box-shadow 280ms ease, border-color 260ms ease;
+  }
+  .fab-btn:hover, .fab-btn:focus-visible {
+    border-color: rgba(180, 145, 80, 0.85);
+    box-shadow:
+      12px 22px 40px -12px rgba(120, 95, 55, 0.32),
+       4px  8px 14px       rgba(70,  50, 22, 0.14),
+       0 0 26px            rgba(217, 185, 122, 0.32),
+      inset 0  2px 0       rgba(255, 255, 255, 1),
+      inset 0 -10px 18px   rgba(190, 168, 130, 0.42);
+    outline: none;
+  }
+  .fab-btn .fab-icon {
+    width: 24px; height: 24px;
+    color: var(--gold-500);
+    transition: transform 380ms cubic-bezier(0.34, 1.4, 0.4, 1);
+  }
+  .fab-btn .fab-icon svg { width: 100%; height: 100%; display: block; }
+  /* When open, the wrench rotates a touch to signal active state */
+  .fab-tools.is-open .fab-btn .fab-icon { transform: rotate(135deg); }
+  .fab-tools.is-open .fab-btn {
+    border-color: rgba(180, 145, 80, 0.9);
+    box-shadow:
+      12px 22px 40px -12px rgba(120, 95, 55, 0.34),
+       0 0 30px            rgba(217, 185, 122, 0.40),
+      inset 0  2px 0       rgba(255, 255, 255, 1),
+      inset 0 -10px 18px   rgba(190, 168, 130, 0.44);
+  }
+
+  /* Radial option chips — positioned at the FAB centre, translated out on open */
+  .fab-opt {
+    position: absolute;
+    right: 6px; bottom: 6px;       /* anchored to the FAB centre (52/2 - chip/2 ≈) */
+    display: inline-flex; align-items: center; gap: 9px;
+    height: 40px; padding: 0 16px 0 13px;
+    border-radius: 999px;
+    pointer-events: none;          /* enabled only when open */
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--onyx-700);
+    background:
+      radial-gradient(ellipse 90% 60% at 50% -20%, rgba(255,255,255,0.92), transparent 70%),
+      linear-gradient(165deg, var(--paper) 0%, var(--bone-50) 52%, var(--bone-200) 100%);
+    border: 1px solid rgba(180, 145, 80, 0.38);
+    box-shadow:
+      8px 14px 26px -10px rgba(120, 95, 55, 0.24),
+      3px  6px 10px       rgba(70,  50, 22, 0.10),
+      inset 0 1.5px 0     rgba(255, 255, 255, 0.9);
+    /* Closed: collapsed onto the FAB, invisible */
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+    transform-origin: calc(100% - 20px) calc(100% - 20px);
+    transition: transform 420ms cubic-bezier(0.34, 1.5, 0.4, 1),
+                opacity 240ms ease;
+  }
+  .fab-opt .fab-opt-ic {
+    width: 18px; height: 18px;
+    color: var(--gold-500);
+    flex-shrink: 0;
+  }
+  .fab-opt .fab-opt-ic svg { width: 100%; height: 100%; display: block; }
+  .fab-opt .fab-opt-lbl {
+    font-family: 'Lato', sans-serif;
+    font-weight: 500; font-size: 9.5px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--onyx-700);
+  }
+  .fab-opt:hover, .fab-opt:focus-visible {
+    border-color: rgba(180, 145, 80, 0.7);
+    box-shadow:
+      8px 16px 30px -10px rgba(120, 95, 55, 0.30),
+      0 0 20px            rgba(217, 185, 122, 0.30),
+      inset 0 1.5px 0     rgba(255, 255, 255, 1);
+    outline: none;
+  }
+  /* Open state: each chip springs out to its radial slot (set per-chip via --tx/--ty),
+     staggered via --d. Arc fans up + left from the corner anchor. */
+  .fab-tools.is-open .fab-opt {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(1);
+    transition: transform 460ms cubic-bezier(0.34, 1.5, 0.4, 1) var(--d, 0ms),
+                opacity 260ms ease var(--d, 0ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fab-btn, .fab-btn .fab-icon, .fab-opt { transition: none; }
+    .fab-tools.is-open .fab-opt { transition: opacity 1ms; }
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .core, .bob, .mote { animation: none; }
+    .px-layer, .tile { transition: none; }
+  }
+
+  #fabTools{display:none !important;}
+</style>
+
+<script>
+  // Stage scaler — fit-to-viewport (letterbox on either axis as needed).
+  (function () {
+    const W = 1440, H = 900;
+    function scale() {
+      const stage = document.querySelector('.stage-inner') || document.getElementById('stage');
+      if (!stage) return;
+      let vw = window.innerWidth, vh = window.innerHeight;
+      if (window.visualViewport) {
+        vw = Math.min(vw, window.visualViewport.width);
+        vh = Math.min(vh, window.visualViewport.height);
+      }
+      const s = Math.min(vw / W, vh / H);
+      // FULL-SCREEN FILL: grow the stage to exactly cover the viewport. Uniform
+      // scale (no distortion); design dims stay >= 1440x900 so no content is
+      // cropped; the surplus is breathing room around the anchored chrome.
+      stage.style.width  = Math.ceil(vw / s) + 'px';
+      stage.style.height = Math.ceil(vh / s) + 'px';
+      const t = 'scale(' + s + ')';
+      stage.style.transform = t;
+      stage.style.webkitTransform = t;
+      document.documentElement.style.setProperty('--vh', (vh * 0.01) + 'px');
+    }
+    window.__scale = scale;
+    window.addEventListener('resize', scale);
+    window.addEventListener('orientationchange', scale);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scale);
+      window.visualViewport.addEventListener('scroll', scale);
+    }
+    document.addEventListener('DOMContentLoaded', scale);
+    window.addEventListener('load', scale);
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('gesturestart',  e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('gestureend',    e => e.preventDefault());
+  })();
+</script>
+<!-- PWA-BLOCK-START -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#FCFAF4">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Citadel">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="assets/icon-512.png">
+<meta name="format-detection" content="telephone=no">
+<!-- PWA-BLOCK-END -->
+</head>
+<body>
+<script>
+  /* LOCAL PREVIEW GUARD — on localhost, never let a stale service worker /
+     cache mask live edits. Production (real domain) is unaffected. */
+  (function () {
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '') {
+      window.__EC_LOCAL = true;
+      try {
+        if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+          navigator.serviceWorker.getRegistrations().then(function (rs) {
+            rs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+        }
+      } catch (e) {}
+    }
+  })();
+</script>
+
+<!-- Embassy Citadel original wordmark — defined once, referenced everywhere via <use> -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="ec-wordmark" viewBox="0 0 1000 500">
+    <path fill="currentColor" d="M159.33,281.18c21.84,0,39.83,9.17,51.2,29.73l-8.99,8.81c-8.24-15.96-20.37-26.61-41.1-26.61-26.42,0-45.88,19.83-45.88,54.32s21.84,53.77,45.88,53.77c20,0,32.48-9.35,41.29-26.79l8.99,6.24c-11.57,22.39-29.18,32.67-51.93,32.67-35.62,0-64.79-26.06-64.79-65.15s29-66.98,65.33-66.98M263,411.47h-17.99v-128.46h17.99v128.46ZM344.76,293.84h-49.36v-10.83h116.71v10.83h-49.37v117.63h-17.98v-117.63ZM489.38,371.47h-53.22l-16.89,40.01h-13.03l55.6-129.56h8.63l55.42,129.56h-19.45l-17.07-40.01ZM440.38,361.2h44.59l-22.39-52.86-22.21,52.86ZM548.47,411.47v-128.46h39.27c44.59,0,71.75,24.59,71.75,63.87s-27.71,64.59-70.47,64.59h-40.55ZM586.26,293.48h-19.82v107.54h20.73c33.77,0,52.5-19.64,52.5-54.13s-18.73-53.41-53.42-53.41M696.09,283.02h88.46v11.01h-70.48v45.88h52.5v11.01h-52.5v49.55h72.87v11.01h-90.85v-128.46ZM820.48,283.02h17.98v117.45h67.54v11.01h-85.52v-128.46ZM165.15,163.71h44.47l-12.19-21.11h-32.29v9.3h-37.64l-6.82,11.81h44.46ZM165.15,137.95h29.6l-12.19-21.11h-17.42v9.3h-22.78l-6.81,11.8h29.59ZM212.31,168.35h-47.16v9.3h-52.52l-6.81,11.81h118.67l-12.18-21.11ZM165.15,86.69l-14.73,25.51h29.46l-14.73-25.51ZM598.55,95.83h-8.85l-39.44,93.24-.16.39h9.98l11.29-26.45h41.86l12.33,26.45h16.59l-43.52-93.47-.08-.16ZM575.43,153.48l15.96-37.36,17.4,37.36h-33.36ZM703.89,140.44c-4.09-2.31-8.58-4.3-13.35-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.8-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.42,1.14-4.94.76-1.52,1.92-2.88,3.43-4.03,1.58-1.19,3.58-2.17,5.94-2.92,2.38-.75,5.17-1.13,8.3-1.13,5.2,0,9.65,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.99,9.75l.21,1.62h12.59l-.35-2.18c-.56-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.03-7.33-6.91-2.89-1.86-6.22-3.26-9.86-4.22-3.61-.94-7.43-1.41-11.34-1.41s-8.06.55-11.78,1.61c-3.73,1.09-7.09,2.7-9.96,4.78-2.92,2.13-5.28,4.86-6.99,8.09-1.72,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.29,13.4,2.72,3.26,6.17,6.01,10.25,8.17,3.99,2.1,8.34,3.91,12.95,5.38,4.44,1.43,8.62,3.06,12.41,4.86,3.69,1.74,6.76,3.88,9.16,6.36,2.23,2.3,3.32,5.37,3.32,9.34,0,4.92-1.72,8.39-5.23,10.61-3.73,2.36-8.86,3.56-15.23,3.56-5.1,0-9.23-.67-12.22-1.97-2.98-1.29-5.27-2.83-6.78-4.58-1.53-1.75-2.57-3.56-3.08-5.38-.56-1.96-.87-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.97,1.23,7.64,3.15,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.94,11.3,5.14,4.27,1.2,8.98,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.85-5.46,3.03-2.39,5.41-5.33,7.09-8.73,1.66-3.41,2.5-7.23,2.5-11.36,0-5.71-1.48-10.49-4.39-14.19-2.8-3.55-6.34-6.56-10.52-8.94M791.17,140.44c-4.08-2.31-8.57-4.29-13.34-5.86-4.6-1.52-8.93-3.14-12.85-4.82-3.79-1.64-6.99-3.52-9.51-5.63-2.23-1.86-3.3-4.29-3.3-7.41,0-1.76.38-3.41,1.14-4.94.76-1.52,1.91-2.88,3.43-4.03,1.57-1.19,3.57-2.17,5.93-2.92,2.37-.75,5.17-1.13,8.31-1.13,5.2,0,9.64,1.09,13.25,3.26,3.41,2.06,5.37,5.26,5.98,9.75l.23,1.62h12.59l-.36-2.18c-.57-3.44-1.84-6.58-3.8-9.33-1.93-2.71-4.4-5.04-7.33-6.91-2.91-1.86-6.21-3.26-9.87-4.22-3.6-.94-7.41-1.41-11.32-1.41s-8.07.55-11.78,1.61c-3.75,1.08-7.1,2.7-9.97,4.78-2.92,2.13-5.27,4.86-6.98,8.09-1.74,3.25-2.59,7-2.59,11.15,0,5.48,1.44,9.99,4.27,13.4,2.72,3.26,6.18,6.01,10.26,8.17,3.98,2.09,8.34,3.91,12.95,5.38,4.45,1.43,8.62,3.06,12.42,4.86,3.68,1.74,6.74,3.88,9.14,6.36,2.24,2.3,3.33,5.37,3.33,9.34,0,4.92-1.71,8.39-5.23,10.61-3.74,2.36-8.86,3.56-15.23,3.56-5.11,0-9.22-.67-12.22-1.97-2.97-1.29-5.27-2.83-6.78-4.58-1.52-1.75-2.55-3.56-3.07-5.38-.56-1.96-.89-3.61-.96-4.92l-.1-1.77h-12.47l.1,1.96c.17,3.98,1.23,7.64,3.16,10.88,1.88,3.22,4.49,5.99,7.75,8.24,3.2,2.2,7,3.93,11.3,5.14,4.27,1.2,8.97,1.8,14.02,1.8s9.82-.63,13.98-1.88c4.19-1.26,7.84-3.09,10.84-5.46,3.05-2.39,5.43-5.33,7.09-8.73,1.67-3.41,2.51-7.23,2.51-11.36,0-5.71-1.48-10.49-4.4-14.19-2.8-3.55-6.34-6.56-10.52-8.94M883.84,95.83l-26.61,45.9-25.38-45.9h-17.53l32.39,58.22v35.41h15.44v-36.56l32.96-57.07h-11.28ZM260.45,189.46h63.75v-10.82h-48.31v-33.86h41.77v-9.66h-41.77v-28.46h48.31v-10.82h-63.75v93.63ZM514.3,139.46c15.02-.74,20.68-9.33,21.98-11.97,1.32-2.69,1.99-5.59,1.99-8.59,0-2.63-.56-5.34-1.69-8.05-1.12-2.7-2.85-5.19-5.13-7.43-2.26-2.22-5.19-4.05-8.71-5.47-3.51-1.41-7.67-2.13-12.34-2.13h-35.5v93.63h35.67c5.97,0,11.09-.8,15.23-2.37,4.2-1.59,7.62-3.69,10.21-6.27,2.6-2.58,4.5-5.56,5.66-8.85,1.14-3.23,1.73-6.52,1.73-9.81,0-5.26-2.3-9.55-4.68-12.77-2.28-3.12-9.49-9.97-24.43-9.93M490.35,105.24h16.21c3.08,0,5.73.43,7.84,1.29,2.11.83,3.82,1.95,5.13,3.28,1.29,1.33,2.26,2.87,2.84,4.57.61,1.76.94,3.54.94,5.29,0,2.19-.45,4.27-1.31,6.15-.87,1.88-2.1,3.53-3.64,4.89-1.58,1.38-3.41,2.48-5.46,3.25-2.05.77-4.26,1.16-6.59,1.16h-15.97v-29.88ZM526.37,170.36c-.96,2.08-2.26,3.86-3.87,5.31s-3.52,2.55-5.71,3.27c-2.24.75-4.67,1.12-7.2,1.12h-19.23v-35.52h14.73c3.98,0,7.44.52,10.31,1.55,2.84,1.03,5.2,2.4,7.03,4.1,1.8,1.69,3.16,3.66,4.04,5.87.9,2.26,1.36,4.65,1.36,7.14,0,2.7-.49,5.13-1.44,7.17M398.8,157.6l-37.19-61.62-.07-.15h-11.74v93.63h9.41v-68.6l36.18,59.29,37.1-58.94v68.25h15.44v-93.63h-11.86l-37.27,61.77Z"/>
+  </symbol>
+</svg>
+
+<div id="stage-wrap">
+  <div id="stage" class="stage-inner">
+    <div class="stage-bg"></div>
+    <div class="tower-bg"></div>
+    <div class="tower-shine"></div>
+    <div class="stage-ground"></div>
+    <div class="stage-grain"></div>
+
+    <!-- ╔══ GOLD LEAF FLAKES (ambient drift) ══╗ -->
+    <div class="flake-stage" id="flakeStage" aria-hidden="true"></div>
+
+    <!-- ╔══ PARALLAX BG ══╗ -->
+    <div class="px-stack" id="pxStack">
+      <div class="px-layer px-l1"></div>
+      <div class="px-layer px-l2" id="pxL2"></div>
+      <div class="px-layer px-l3">
+        <div class="mark">
+          <svg viewBox="0 0 1000 500" aria-hidden="true"><use href="#ec-wordmark" /></svg>
+        </div>
+      </div>
+      <div class="px-layer px-l4" id="pxL4"></div>
+    </div>
+
+    <!-- ╔══ TOP BAR ══╗ -->
+    <header class="topbar">
+      <a class="brand" href="intro.html" id="brandLink" aria-label="Return to threshold">
+        <div class="brand-wordmark">
+          <svg viewBox="0 0 1000 500"><use href="#ec-wordmark" /></svg>
+        </div>
+      </a>
+      <div class="top-eyebrow">A&nbsp;&nbsp;World&nbsp;&nbsp;Unto&nbsp;&nbsp;Itself</div>
+      <div class="top-right"><button class="ec-360-btn" data-ec360 type="button" aria-label="Open 360 degree view"><span class="ec360-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="9.6" ry="4"/><path d="M12 3.1a8.9 8.9 0 0 1 0 17.8 8.9 8.9 0 0 1 0-17.8"/><path d="M9.6 2.3 12 3.1l-.8 2.4"/></svg></span><span>360&deg;</span></button>
+        <span>Worli&nbsp;·&nbsp;Mumbai</span>
+        <span class="live-dot"></span>
+        <span id="clock">00:00 IST</span>
+      </div>
+    </header>
+
+    <!-- ╔══ LEFT EDITORIAL PANEL ══╗ -->
+    <section class="editorial">
+      <div class="ed-eyebrow">Welcome&nbsp;to</div>
+      <h1 class="ed-headline">A&nbsp;World</h1>
+      <h2 class="ed-headline-italic">Unto&nbsp;Itself.</h2>
+      <div class="ed-divider"></div>
+      <p class="ed-para">Rising 312 meters above the city, Embassy Citadel is a rare union of stature and serenity.</p>
+      <p class="ed-para">Where considered design meets uncompromising views, life unfolds in eight curated chapters.</p>
+      <div class="ed-stats" style="padding:14px 16px; border-radius:8px;">
+        <div class="ed-stat"><div class="num">312<span class="u">M</span></div><div class="lbl">Elevation</div></div>
+        <div class="ed-stat"><div class="num">79</div><div class="lbl">Floors</div></div>
+        <div class="ed-stat"><div class="num">158</div><div class="lbl">Residences</div></div>
+        <div class="ed-stat"><div class="num">12</div><div class="lbl">Available</div></div>
+      </div>
+    </section>
+
+
+    <!-- ╔══ EDGE ORNAMENTS (rotated vertical text) ══╗ -->
+    <div class="edge left">EMBASSY&nbsp;CITADEL&nbsp;&nbsp;·&nbsp;&nbsp;<span class="em">EST. 2026</span>&nbsp;&nbsp;·&nbsp;&nbsp;THE&nbsp;SOVEREIGN&nbsp;TOWER</div>
+    <div class="edge right">MAHARERA&nbsp;&nbsp;·&nbsp;&nbsp;<span class="em">PR1170002501931</span>&nbsp;&nbsp;·&nbsp;&nbsp;A&nbsp;FRANK&nbsp;NOTE</div>
+
+    <!-- ╔══ CONSTELLATION STAGE ══╗ -->
+    <div class="const-stage" id="constStage">
+      <!-- Soft warm halo behind centerpiece -->
+      <div class="core-halo"></div>
+      <!-- Concentric rings (compass guide lines) -->
+      <div class="ring r3"></div>
+      <div class="ring r2"></div>
+      <div class="ring r1"></div>
+      <!-- Centerpiece -->
+      <div class="core">
+        <div class="core-inner">
+          <div class="core-wordmark" aria-label="Embassy Citadel">
+            <svg viewBox="0 0 1000 500"><use href="#ec-wordmark" /></svg>
+          </div>
+          <div class="core-tag">Worli&nbsp;·&nbsp;Mumbai</div>
+        </div>
+      </div>
+
+      <!-- Floating status line (separate text element under core) -->
+      <div class="status-line" id="statusLine">A world unto itself.</div>
+
+      <!-- 8 chapter tiles will be injected here -->
+    </div>
+
+    <!-- ╔══ BHK availability pills (CTA button removed) ══╗ -->
+    <div class="cta-wrap">
+      <div class="cta-pills">
+        <span class="pill">3&nbsp;BHK</span>
+        <span class="pip"></span>
+        <span class="pill">4&nbsp;BHK</span>
+        <span class="pip"></span>
+        <span>Selected&nbsp;Floors&nbsp;Open&nbsp;for&nbsp;Viewing</span>
+      </div>
+    </div>
+
+    <!-- ╔══ TINY BIRDS (ambient flock) ══╗ -->
+    <div class="bird-stage" aria-hidden="true">
+      <div class="bird b1" style="--flap: 0.30s"><svg viewBox="0 0 20 6"><path d="M0 5 Q4 1 8 4 Q10 5 12 4 Q16 1 20 5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="bird b2" style="--flap: 0.34s; width: 22px; height: 7px;"><svg viewBox="0 0 20 6"><path d="M0 5 Q4 1 8 4 Q10 5 12 4 Q16 1 20 5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="bird b3" style="--flap: 0.28s; width: 14px; height: 5px;"><svg viewBox="0 0 20 6"><path d="M0 5 Q4 1 8 4 Q10 5 12 4 Q16 1 20 5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="bird b4" style="--flap: 0.36s; width: 20px;"><svg viewBox="0 0 20 6"><path d="M0 5 Q4 1 8 4 Q10 5 12 4 Q16 1 20 5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="bird b5" style="--flap: 0.32s; width: 16px;"><svg viewBox="0 0 20 6"><path d="M0 5 Q4 1 8 4 Q10 5 12 4 Q16 1 20 5" fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+
+    <!-- Dust motes -->
+    <div class="motes" id="motes"></div>
+
+    <!-- ╔══ FLOATING TOOLS SHORTCUT (radial fan: Price / EMI / FSI) ══╗ -->
+    <div class="fab-tools" id="fabTools">
+      <!-- Option chips (rendered first so the trigger sits on top) -->
+      <a class="fab-opt" data-href="tools.html?tool=price" tabindex="-1" role="button" aria-label="Open Price Sheet">
+        <span class="fab-opt-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h9l5 5v13a1 1 0 01-1 1H5a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5"/><path d="M8 13h8M8 17h5"/></svg></span>
+        <span class="fab-opt-lbl">Price&nbsp;Sheet</span>
+      </a>
+      <a class="fab-opt" data-href="tools.html?tool=emi" tabindex="-1" role="button" aria-label="Open EMI Calculator">
+        <span class="fab-opt-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 7h8"/><path d="M8 12h2M11.5 12h2M15 12h2M8 16h2M11.5 16h2M15 16h2"/></svg></span>
+        <span class="fab-opt-lbl">EMI&nbsp;Calculator</span>
+      </a>
+      <a class="fab-opt" data-href="tools.html?tool=fsi" tabindex="-1" role="button" aria-label="Open FSI Calculator">
+        <span class="fab-opt-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 10h16M10 4v16"/><path d="M14 14l3 3"/></svg></span>
+        <span class="fab-opt-lbl">FSI&nbsp;Calculator</span>
+      </a>
+      <!-- Main trigger -->
+      <button class="fab-btn" id="fabBtn" type="button" role="button"
+              aria-haspopup="true" aria-expanded="false" aria-controls="fabTools"
+              aria-label="Tools — Price Sheet, EMI and FSI calculators">
+        <span class="fab-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5a3.8 3.8 0 00-5 4.9l-6 6a1.6 1.6 0 002.3 2.3l6-6a3.8 3.8 0 004.9-5l-2.3 2.3-2.1-.6-.6-2.1z"/></svg></span>
+      </button>
+    </div>
+
+    <!-- Veil flash -->
+    <div class="veil" id="veil"></div>
+
+    <!-- ╔══ FOOTER BAR ══╗ -->
+    <footer class="footer">
+      <div class="footer-left">
+        <span>Possession <span class="em">Q4&nbsp;2028</span></span>
+        <span class="pip"></span>
+        <span>Sales Pavilion <span class="em">·&nbsp;Worli&nbsp;Sea&nbsp;Face</span>&nbsp;·&nbsp;By Appointment</span>
+      </div>
+      <div class="footer-center">
+        <div class="footer-dots" id="footerDots"></div>
+        <a class="footer-back" href="intro.html">←&nbsp;Threshold</a>
+      </div>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+  // ── Icons (inline SVG, gold stroke, line style) ──────────────────
+  const ICONS = {
+    gallery:   '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="24" height="20" rx="1"/><circle cx="11" cy="13" r="1.6"/><path d="M4 22l7-7 6 6 4-4 7 7"/></svg>',
+    masterplan:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4 8-4v20l-8 4-8-4-8 4z"/><path d="M12 4v20M20 8v20"/></svg>',
+    inventory: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="20" height="24" rx="1"/><path d="M10 9h4M18 9h4M10 14h4M18 14h4M10 19h4M18 19h4M10 24h4M18 24h4"/></svg>',
+    floorplan: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="22" height="22"/><path d="M5 16h12M17 5v22M17 12h10"/></svg>',
+    amenities: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M16 26c-6-4-10-9-10-13a6 6 0 0110-4 6 6 0 0110 4c0 4-4 9-10 13z"/><path d="M16 10v14"/></svg>',
+    location:  '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M16 28s9-8 9-15a9 9 0 00-18 0c0 7 9 15 9 15z"/><circle cx="16" cy="13" r="3"/></svg>',
+    tools:     '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4l5 5-5 5-5-5z"/><path d="M14 9l14 14-4 4-14-14"/><path d="M22 4l6 6-4 4-6-6z"/></svg>',
+    embassy:   '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M6 28h20"/><path d="M9 28V12h14v16"/><path d="M16 4l7 8H9z"/><path d="M13 17h2M17 17h2M13 22h2M17 22h2"/></svg>',
+    about:     '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="11" r="5"/><path d="M5 28c2-5 6-8 11-8s9 3 11 8"/></svg>',
+  };
+
+  // ── Chapter data with clock positions around centerpiece ─────────
+  // Constellation shifted to right side (x=1050). Radius R = 240.
+  const R = 240;
+  const CENTER = { x: 1050, y: 450 };
+  function pos(deg) {
+    const a = (deg - 90) * Math.PI / 180; // start from 12 o'clock
+    return { x: CENTER.x + R * Math.cos(a), y: CENTER.y + R * Math.sin(a) };
+  }
+  const CHAPTERS = [
+    { n: '01', title: 'About Embassy', floor: 'F00',     icon: 'embassy',    angle: 0,
+      status: 'The name behind the tower. Three decades of considered building.',
+      href: 'about-embassy.html' },
+    { n: '02', title: 'Project Overview', floor: 'F01',  icon: 'about',      angle: 45,
+      status: 'A single tower in Worli. A world unto itself.',
+      href: 'about.html' },
+    { n: '03', title: 'Location',   floor: 'F00',        icon: 'location',   angle: 90,
+      status: 'Eight minutes to the sea. Sixteen to the airport.',
+      href: 'location.html' },
+    { n: '04', title: 'Gallery',    floor: 'F75 · F78',  icon: 'gallery',    angle: 135,
+      status: 'Plates curated from the upper residences. Light at every hour.',
+      href: 'gallery.html' },
+    { n: '05', title: 'Masterplan', floor: 'F00',        icon: 'masterplan', angle: 180,
+      status: 'Two and a half acres along Worli sea-face.',
+      href: 'masterplan.html' },
+    { n: '06', title: 'Amenities',  floor: 'F30 · F38',  icon: 'amenities',  angle: 225,
+      status: 'All the places to go. Without going anywhere.',
+      href: 'amenities.html' },
+    { n: '07', title: 'Floor Plans',floor: 'F40 · F55',  icon: 'floorplan',  angle: 270,
+      status: 'Three configurations. Compare up to three plans side-by-side.',
+      href: 'floor-plan.html' },
+    { n: '08', title: 'Inventory',  floor: 'F01 · F79',  icon: 'inventory',  angle: 315,
+      status: 'Twelve of one hundred fifty-eight residences open for selection.',
+      href: 'inventory.html' },
+  ];
+
+  // ── Render tiles ─────────────────────────────────────────────────
+  const constStage = document.getElementById('constStage');
+  const dotsEl     = document.getElementById('footerDots');
+  const statusEl   = document.getElementById('statusLine');
+  const veilEl     = document.getElementById('veil');
+
+  CHAPTERS.forEach((c, i) => {
+    const { x, y } = pos(c.angle);
+    const btn = document.createElement('button');
+    btn.className = 'tile bob';
+    btn.type = 'button';
+    btn.dataset.idx = i;
+    btn.style.left = x + 'px';
+    btn.style.top  = y + 'px';
+    // Stagger bob phase and entry
+    btn.style.setProperty('--bob-dur',   (6 + (i % 4) * 0.45) + 's');
+    btn.style.setProperty('--bob-delay', (1.4 + i * 0.18) + 's');
+    // Fly-in: each tile starts ~400px further out along its own clock-axis,
+    // then springs back inward to its final position.
+    const angleRad = (c.angle - 90) * Math.PI / 180; // 0deg = top of clock
+    const FLY_DIST = 400; // how far out the tile starts (px)
+    btn.style.setProperty('--fly-x', (Math.cos(angleRad) * FLY_DIST).toFixed(0) + 'px');
+    btn.style.setProperty('--fly-y', (Math.sin(angleRad) * FLY_DIST).toFixed(0) + 'px');
+    btn.style.setProperty('--entry-delay', (i * 80) + 'ms');
+    // Long titles (e.g. "Project Overview") wrap to two lines, scaled to fit
+    if (c.title.length > 11) btn.classList.add('tile--long');
+    btn.innerHTML =
+      '<span class="tile-num">' + c.n + '</span>' +
+      '<span class="tile-icon" aria-hidden="true">' + ICONS[c.icon] + '</span>' +
+      '<span class="tile-body">' +
+        '<span class="tile-title">' + c.title + '</span>' +
+      '</span>';
+
+    btn.addEventListener('pointerenter', () => setActive(i));
+    btn.addEventListener('focus',        () => setActive(i));
+    btn.addEventListener('pointerleave', () => setActive(null));
+    btn.addEventListener('blur',         () => setActive(null));
+    btn.addEventListener('click', () => fire(i, x, y));
+
+    constStage.appendChild(btn);
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.dataset.idx = i;
+    dotsEl.appendChild(dot);
+  });
+  const tileEls = constStage.querySelectorAll('.tile');
+  const dotEls  = dotsEl.querySelectorAll('.dot');
+
+  function setActive(i) {
+    if (i == null) {
+      statusEl.classList.remove('is-on');
+      // restore default line
+      setTimeout(() => { statusEl.textContent = 'A world unto itself.'; statusEl.classList.add('is-on'); }, 180);
+      dotEls.forEach(d => d.classList.remove('is-active'));
+      return;
+    }
+    const c = CHAPTERS[i];
+    statusEl.textContent = c.status;
+    statusEl.classList.add('is-on');
+    dotEls.forEach((d, j) => d.classList.toggle('is-active', j === i));
+  }
+  // Default line on load
+  setTimeout(() => { statusEl.classList.add('is-on'); }, 1400);
+
+  function fire(i, x, y) {
+    const tile = tileEls[i];
+    tile.classList.add('is-firing');
+    // Veil starts from the tile's position (stage coords)
+    const vx = ((x / 1440) * 100).toFixed(2) + '%';
+    const vy = ((y / 900)  * 100).toFixed(2) + '%';
+    veilEl.style.setProperty('--vx', vx);
+    veilEl.style.setProperty('--vy', vy);
+    document.body.classList.add('is-leaving');
+    setTimeout(() => { window.location.href = CHAPTERS[i].href; }, 220);
+  }
+
+  // Brand wordmark (top-left) → back to intro with veil from that corner
+  const brandLink = document.getElementById('brandLink');
+  if (brandLink) {
+    brandLink.addEventListener('click', e => {
+      e.preventDefault();
+      veilEl.style.setProperty('--vx', '5%');
+      veilEl.style.setProperty('--vy', '8%');
+      document.body.classList.add('is-leaving');
+      setTimeout(() => { window.location.href = 'intro.html'; }, 220);
+    });
+  }
+
+  // ── Parallax bg layers (lines + ticks) ───────────────────────────
+  const pxL2 = document.getElementById('pxL2');
+  [0.18, 0.34, 0.5, 0.66, 0.82].forEach(yp => {
+    const ln = document.createElement('span');
+    ln.className = 'line';
+    ln.style.top = (yp * 100) + '%';
+    pxL2.appendChild(ln);
+  });
+  const pxL4 = document.getElementById('pxL4');
+  const decor = [
+    { type: 'tick', l: '7%',  t: '14%' }, { type: 'ring', l: '10%', t: '78%' },
+    { type: 'dash', l: '92%', t: '24%' }, { type: 'tick', l: '78%', t: '88%' },
+    { type: 'ring', l: '5%',  t: '52%' }, { type: 'dash', l: '94%', t: '62%' },
+    { type: 'tick', l: '95%', t: '12%' }, { type: 'ring', l: '85%', t: '46%' },
+    { type: 'dash', l: '3%',  t: '88%' }, { type: 'tick', l: '68%', t: '6%'  },
+  ];
+  decor.forEach(d => {
+    const el = document.createElement('span');
+    el.className = d.type;
+    el.style.left = d.l; el.style.top = d.t;
+    pxL4.appendChild(el);
+  });
+
+  // ── Fast-entry mode (arrived from intro tap) ────────────────────
+  // When the URL is .../home.html?from=intro, the centerpiece is shown
+  // immediately (matching where intro's wordmark morphed to) and the
+  // rest of the home assembles around it via the .fast-entry CSS rules.
+  (function () {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('from') === 'intro') {
+        document.body.classList.add('fast-entry');
+      }
+    } catch (_) {}
+  })();
+
+  // ── Icon entrance (ONCE — then completely static) ───────────────────
+  // The 8 chapter icons rise in once, in a soft stagger, on load — and then
+  // NOTHING animates them again. No looping pulse of any kind. A repeating
+  // animation was causing flicker on tablet GPUs (Tab S7 / iPad Pro), so the
+  // button icons are now a single one-shot entrance and stay perfectly still
+  // afterwards. This removes every possible source of icon flicker.
+  (function () {
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const icons = Array.from(document.querySelectorAll('.tile-icon'));
+    if (!icons.length) return;
+    if (reduceMotion) { icons.forEach(icon => icon.classList.add('is-popped')); return; }
+
+    const POP_STAGGER = 110; // ms between each icon's pop-in
+    // One-time pop-in, then hold (the class is never removed and there is no
+    // further animation — the icons are static once settled).
+    setTimeout(() => {
+      icons.forEach((icon, i) => {
+        setTimeout(() => icon.classList.add('is-popped'), i * POP_STAGGER);
+      });
+    }, 1300);
+  })();
+
+  // ── Gold leaf flakes (drifting upward, catching light) ──────────
+  (function () {
+    const stage = document.getElementById('flakeStage');
+    if (!stage) return;
+    // Fewer drifting flakes on touch/kiosk GPUs (Tab S7 / iPad) to keep the
+    // compositor smooth; full count on desktop.
+    const COARSE = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const COUNT = COARSE ? 7 : 14;
+    const r = () => Math.round(10 + Math.random() * 30);
+    for (let i = 0; i < COUNT; i++) {
+      const outer = document.createElement('div');
+      outer.className = 'flake-outer';
+      outer.style.left = (3 + Math.random() * 94) + '%';
+      outer.style.setProperty('--dur', (22 + Math.random() * 18) + 's');
+      outer.style.setProperty('--drift', ((Math.random() - 0.5) * 90) + 'px');
+      outer.style.setProperty('--op', (0.48 + Math.random() * 0.32).toFixed(2));
+      outer.style.animationDelay = (-Math.random() * 30).toFixed(1) + 's';
+
+      const shape = document.createElement('div');
+      shape.className = 'flake-shape';
+      const size = 10 + Math.random() * 14;
+      shape.style.setProperty('--size', size.toFixed(1) + 'px');
+      shape.style.setProperty('--spin-dur', (3.6 + Math.random() * 3).toFixed(2) + 's');
+      shape.style.setProperty('--tilt', ((Math.random() - 0.5) * 30).toFixed(1) + 'deg');
+      // Irregular leaf-flake shape per piece
+      shape.style.borderRadius =
+        `${r()}% ${r()}% ${r()}% ${r()}% / ${r()}% ${r()}% ${r()}% ${r()}%`;
+      shape.style.animationDelay = (-Math.random() * 4).toFixed(1) + 's';
+
+      outer.appendChild(shape);
+      stage.appendChild(outer);
+    }
+  })();
+
+  // ── Dust motes (kept — finer atmospheric layer) ─────────────────
+  const motesEl = document.getElementById('motes');
+  for (let i = 0; i < 7; i++) {
+    const m = document.createElement('span');
+    m.className = 'mote';
+    m.style.left = (8 + Math.random() * 84) + '%';
+    m.style.animationDuration = (20 + Math.random() * 16) + 's';
+    m.style.animationDelay    = (-Math.random() * 32) + 's';
+    m.style.setProperty('--drift', ((Math.random() - 0.5) * 80) + 'px');
+    m.style.width = m.style.height = (2 + Math.random() * 3) + 'px';
+    m.style.opacity = (0.10 + Math.random() * 0.14);
+    motesEl.appendChild(m);
+  }
+
+  // ── Pointer parallax (depth-weighted lerp) ──────────────────────
+  const stageEl  = document.getElementById('stage');
+  const pxLayers = document.querySelectorAll('.px-layer');
+  let pmx = 0, pmy = 0, rmx = 0, rmy = 0, pmRAF;
+  function pmTick() {
+    rmx += (pmx - rmx) * 0.08;
+    rmy += (pmy - rmy) * 0.08;
+    pxLayers.forEach(l => {
+      l.style.setProperty('--mx', rmx.toFixed(3));
+      l.style.setProperty('--my', rmy.toFixed(3));
+    });
+    if (Math.abs(pmx - rmx) > 0.001 || Math.abs(pmy - rmy) > 0.001) pmRAF = requestAnimationFrame(pmTick);
+    else pmRAF = null;
+  }
+  window.addEventListener('pointermove', e => {
+    const rect = stageEl.getBoundingClientRect();
+    pmx = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;
+    pmy = ((e.clientY - rect.top)  / rect.height - 0.5) * 2;
+    if (!pmRAF) pmRAF = requestAnimationFrame(pmTick);
+  }, { passive: true });
+  window.addEventListener('deviceorientation', e => {
+    if (e.gamma == null || e.beta == null) return;
+    pmx = Math.max(-1, Math.min(1, e.gamma / 30));
+    pmy = Math.max(-1, Math.min(1, e.beta  / 30));
+    if (!pmRAF) pmRAF = requestAnimationFrame(pmTick);
+  });
+
+  // ── Floating Tools shortcut (radial fan: Price / EMI / FSI) ──────
+  (function () {
+    const fab  = document.getElementById('fabTools');
+    const btn  = document.getElementById('fabBtn');
+    if (!fab || !btn) return;
+    const opts = Array.from(fab.querySelectorAll('.fab-opt'));
+
+    // Radial slots — fan up + left from the bottom-right corner anchor.
+    // Angles measured from the +x axis, going counter-clockwise into the
+    // upper-left quadrant. Radius keeps every chip inside the 184px wrapper
+    // (and therefore inside the stage), so it never clips.
+    const RADIUS = 100;
+    // Arc stays in the upper-left quadrant (100°–168°) so every chip fans
+    // UP + LEFT — none drift down toward the footer.
+    const ANGLES = [104, 134, 164]; // Price (top), EMI (mid), FSI (lower-left)
+    opts.forEach((opt, i) => {
+      const a = ANGLES[i] * Math.PI / 180;
+      // x grows to the LEFT (negative), y grows UPWARD (negative)
+      const dx = Math.cos(a) * RADIUS;   // cos is negative for 90°–180° → leftward
+      const dy = -Math.sin(a) * RADIUS;  // sin positive in this range → upward
+      opt.style.setProperty('--tx', dx.toFixed(1) + 'px');
+      opt.style.setProperty('--ty', dy.toFixed(1) + 'px');
+      opt.style.setProperty('--d', (i * 55) + 'ms');
+    });
+
+    function setOpen(open) {
+      fab.classList.toggle('is-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      opts.forEach((o, i) => {
+        // Stagger tabindex enable so closed chips are unreachable
+        o.tabIndex = open ? 0 : -1;
+      });
+      if (open) {
+        // focus first option for keyboard users on explicit key-open
+        // (only when opened via keyboard — pointer opens leave focus on btn)
+      }
+    }
+    function isOpen() { return fab.classList.contains('is-open'); }
+    function toggle() { setOpen(!isOpen()); }
+    function close()  { setOpen(false); }
+
+    btn.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+    btn.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault(); e.stopPropagation();
+        const wasOpen = isOpen();
+        setOpen(!wasOpen);
+        if (!wasOpen && opts[0]) opts[0].focus();
+      } else if (e.key === 'Escape' && isOpen()) {
+        close();
+      }
+    });
+
+    // Each chip navigates with the app's cream-veil transition (veil sweeps
+    // from the FAB corner, matching the tile-fire behaviour).
+    function navigate(href) {
+      veilEl.style.setProperty('--vx', '92%');
+      veilEl.style.setProperty('--vy', '88%');
+      document.body.classList.add('is-leaving');
+      setTimeout(() => { window.location.href = href; }, 220);
+    }
+    opts.forEach(opt => {
+      const href = opt.dataset.href;
+      const go = e => { e.preventDefault(); e.stopPropagation(); navigate(href); };
+      opt.addEventListener('click', go);
+      opt.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { go(e); }
+        else if (e.key === 'Escape') { close(); btn.focus(); }
+      });
+    });
+
+    // Tap / click outside collapses the fan.
+    document.addEventListener('pointerdown', e => {
+      if (isOpen() && !fab.contains(e.target)) close();
+    });
+    // Escape anywhere closes.
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && isOpen()) { close(); btn.focus(); }
+    });
+  })();
+
+  // ── Clock ────────────────────────────────────────────────────────
+  function tickClock() {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    document.getElementById('clock').textContent = hh + ':' + mm + ' IST';
+  }
+  tickClock();
+  setInterval(tickClock, 30000);
+</script>
+<!-- PWA-JS-START -->
+<script>
+  // Service worker registration (PWA + offline cache)
+  if ('serviceWorker' in navigator && !window.__EC_LOCAL) {
+    window.addEventListener('load', function() {
+      var ecHadCtrl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+      var ecReloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function(){
+        if (ecReloaded || !ecHadCtrl) return;   // skip the first-ever claim
+        ecReloaded = true; window.location.reload();   // new version deployed -> refresh
+      });
+    });
+  }
+  // iOS double-tap zoom guard
+  (function() {
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      var now = Date.now();
+      if (now - lastTouchEnd <= 300) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block pinch-zoom gesture events (iOS Safari)
+    ['gesturestart','gesturechange','gestureend'].forEach(function(ev) {
+      document.addEventListener(ev, function(e) { e.preventDefault(); }, { passive: false });
+    });
+    // Cache --vh CSS var for iOS Safari URL-bar collapse handling
+    function setVh() {
+      var vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', function() { setTimeout(setVh, 120); });
+  })();
+</script>
+<!-- PWA-JS-END -->
+
+<script>
+  // ── Preload likely next screens + touch-start prefetch on tap targets ───
+  (function () {
+    function prefetch(url) {
+      if (!url || url.startsWith('http') || document.querySelector('link[rel="prefetch"][href="' + url + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+    function preloadNextScreens(urls) {
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 400); };
+      idle(function () { urls.forEach(prefetch); });
+    }
+    // home.html → preload all 8 chapter tiles
+    preloadNextScreens([
+      'gallery.html', 'inventory.html', 'floor-plan.html', 'about-embassy.html', 'tools.html',
+      'amenities.html', 'masterplan.html', 'about.html', 'location.html'
+    ]);
+
+    document.querySelectorAll('a[href], button[data-href]').forEach(function (el) {
+      var href = el.getAttribute('href') || el.dataset.href;
+      if (!href || href.startsWith('http')) return;
+      el.addEventListener('touchstart', function () { prefetch(href); }, { passive: true, once: true });
+    });
+  })();
+</script>
+<script>
+  /* ── BFCACHE / BACK-NAVIGATION GUARD ─────────────────────────────────
+     Tablets (iOS Safari, Samsung Internet, Chrome-Android) restore the
+     previous page from the back-forward cache with its DOM intact — including
+     the cream "is-leaving" veil that was set just before navigating away. That
+     left the restored screen BLANK on back. Clear the leaving/firing state
+     whenever the page is shown (including a bfcache restore) or on popstate. */
+  (function () {
+    function clearLeave() { document.body.classList.remove('is-leaving', 'is-firing'); }
+    window.addEventListener('pageshow', clearLeave);
+    window.addEventListener('popstate', clearLeave);
+  })();
+</script>
+  <script src="assets/tools-dock.js"></script>
+<script src="assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-citadel" data-token="rdk_0f13022ff1203c68ed3a97225e6cb02b42e221303b184fc0" data-label=""></script>
+<script src="assets/view360.js" defer></script>
+</body>
+</html>

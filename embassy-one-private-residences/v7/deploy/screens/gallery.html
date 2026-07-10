@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Gallery · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  GALLERY — rebuilt to match the approved reference
+  (ChatGPT Image Jun 15 2026, 05_23_59).
+  ──────────────────────────────────────────────────────────────────────
+  · Parchment bg (assets/bg-inner.webp) + leaf filigree (from the bg).
+  · Top bar: RETURN pill · centred "<CATEGORY> · GALLERY" · 360° View (brand mark removed per client note).
+  · Left column: "The visual world." + gold rule + intro copy.
+  · Hero: large gold-hairline framed image, caption overlay (icon + title +
+    italic sub), flanking circular prev/next, zoom-in/out + fullscreen cluster.
+  · Pan & zoom on the hero (wheel / pinch / drag / dbl-click / buttons).
+  · Fullscreen = immersive dark overlay with the same zoom engine.
+  · Thumbnail carousel: slide left/right (drag + end arrows), active thumb
+    gets a gold frame + caret; progress rule tracks position.
+-->
+<link href="../assets/fonts/fonts.css" rel="stylesheet"><!-- brand faces self-hosted (Tenor Sans + Poppins) -->
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  /* native buttons/inputs don't inherit font-family — force the brand face everywhere */
+  button,input,select,textarea{font-family:inherit}
+
+  /* iPad standalone PWA (installed): drop the top chrome below the status bar and let the
+     backdrop bleed under the bottom home-indicator band, so the app reads truly full-screen.
+     Inert in a normal browser tab (display-mode is not standalone there). */
+  @media (display-mode:standalone){
+    :where(.top,.topbar,.dtop,.loc>.bar){margin-top:env(safe-area-inset-top,0px)}
+    :where(body,#home,.wrap,.stage,main)>:where(.back,.float360,.nav360,.views,.corner-logo,.hour-dial){margin-top:env(safe-area-inset-top,0px)}
+    body,.bg,#map{min-height:100lvh}
+  }
+
+  :root{
+    /* Embassy ONE redesign — deck palette (ink-navy + bone) */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#efe8da; --bone-2:#e6dcc8; --paper:#faf7f0;
+    --taupe:#6e5c58; --champ:#c9a84c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#121621; --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette */
+    --parch:#efe8da; --muted:#7a7264; --faint:#8c919c;
+    --gold:#c9a84c; --gold-d:#b9a583; --gold-l:#c9a84c; --gold-lt:#c9a84c; --brass:#c9a84c;
+    --line:rgba(18,22,33,.12); --leather1:#1a2030; --leather2:#121621; --green:#121621; --card:#e6dcc8; --sage:#9da585; --water:#8aa0a8;
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a;
+    --on-navy:#ece8e0; --on-navy-dim:#9aa1ad;
+    --ease:cubic-bezier(.23,1,.32,1); --expo:cubic-bezier(.23,1,.32,1); --overshoot:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Poppins",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; background:#efe8da; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  /* dark ink-navy theme (matches Bespoke Services) */
+  .bg{position:fixed; inset:0; z-index:0; background:radial-gradient(125% 95% at 50% 0%, #efe8da, #e0d5c0 62%), #efe8da}
+  /* faint architectural line-drawing of the real ONE tower (bone lines on dark),
+     anchored bottom-left behind the lead column so it never fights the hero photography */
+  .bg::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-outline-bone.webp) no-repeat left -4% bottom;
+    background-size:auto 96%; opacity:.06; mix-blend-mode:multiply}
+  /* subtle grain, blended */
+  .bg::before{content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:radial-gradient(rgba(18,22,33,.05) .5px, transparent .6px); background-size:3px 3px}
+
+  .wrap{position:fixed; inset:0; z-index:2; display:flex; flex-direction:column;
+    padding:clamp(16px,2.2vh,30px) clamp(22px,3vw,60px) clamp(14px,2vh,26px)}
+
+  /* ── TOP BAR ──────────────────────────────────────────────────── */
+  .top{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; flex:0 0 auto; gap:12px}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:#121621; border:1px solid rgba(18,22,33,.25);
+    color:#faf7f0; font-weight:500; font-size:clamp(9px,1.15vh,13px); letter-spacing:.32em;
+    text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.08), 0 8px 18px -8px rgba(13,17,28,.4), 0 0 10px rgba(236,232,224,.3);
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  @media (hover:hover){ .back:hover{ background:#121621; border-color:var(--gold-lt);
+    color:#faf7f0;
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.12), 0 10px 22px -8px rgba(13,17,28,.5), 0 0 14px rgba(236,232,224,.42); } }
+  .back:active{ transform:scale(.97); }
+  .back svg{width:15px;height:15px;display:block; stroke:currentColor}
+  .eyebrow{justify-self:center; font-size:clamp(9px,1.2vh,13px); letter-spacing:.42em; text-transform:uppercase;
+    color:var(--champ); font-weight:400; white-space:nowrap; transition:opacity .3s}
+  .eyebrow.swap{opacity:0}
+  .brand{justify-self:end; font-size:clamp(9px,1.2vh,13px); letter-spacing:.42em; text-transform:uppercase; color:var(--on-light-dim)}
+
+  /* ── BODY: left column + hero ─────────────────────────────────── */
+  .stage{flex:1 1 auto; min-height:0; display:grid; grid-template-columns:clamp(220px,21vw,300px) 1fr;
+    gap:clamp(20px,2.6vw,52px); align-items:center; padding-top:clamp(10px,1.6vh,22px)}
+  .lead{align-self:center}
+  .lead h1{font-family:"Tenor Sans",sans-serif; font-weight:600; line-height:1.06; color:var(--ink); text-transform:uppercase; letter-spacing:.07em;
+    font-size:clamp(34px,6.2vh,76px); letter-spacing:.005em}
+  .lead .rule{width:54px; height:2px; background:linear-gradient(90deg,var(--gold),transparent); margin:clamp(14px,2.2vh,26px) 0 clamp(12px,1.8vh,22px)}
+  .lead p{font-weight:300; color:var(--on-light-dim); line-height:1.7; font-size:clamp(12px,1.55vh,17px); max-width:30ch}
+
+  /* hero */
+  .heroarea{position:relative; height:100%; min-height:0; display:flex; align-items:center}
+  .hero{position:relative; width:100%; height:min(100%, 58vw); max-height:100%;
+    border-radius:20px; overflow:hidden; background:var(--navy);
+    border:1px solid rgba(236,232,224,.55);
+    box-shadow:0 40px 80px -30px rgba(13,17,28,.6), 0 8px 22px -10px rgba(13,17,28,.45), inset 0 0 0 5px rgba(17,21,32,.6);
+    outline:1px solid rgba(236,232,224,.28); outline-offset:-1px}
+  .hero .frameln{position:absolute; inset:7px; border:1px solid rgba(236,232,224,.4); border-radius:14px; z-index:5; pointer-events:none}
+  .heroimg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transform-origin:center;
+    will-change:transform; cursor:grab}
+  .heroimg.dragging{cursor:grabbing}
+  .hero.zoomed{cursor:grab}
+  .heroimg.fade{opacity:0; transition:opacity .28s ease}
+  .heroimg{transition:opacity .4s ease}
+
+  /* caption overlay */
+  .cap{position:absolute; left:0; right:0; bottom:0; z-index:6; pointer-events:none;
+    padding:clamp(20px,4vh,52px) clamp(20px,3vw,44px) clamp(16px,2.6vh,34px);
+    background:
+      linear-gradient(0deg, rgba(18,30,68,.72) 0%, rgba(17,21,32,.40) 46%, transparent 100%),
+      linear-gradient(155deg, rgba(30,46,104,.24), rgba(18,30,68,.14));
+    -webkit-backdrop-filter:blur(12px) saturate(1.12); backdrop-filter:blur(12px) saturate(1.12);
+    -webkit-mask-image:linear-gradient(0deg, #000 0%, #000 52%, transparent 100%);
+    mask-image:linear-gradient(0deg, #000 0%, #000 52%, transparent 100%);
+    border-top:1px solid rgba(201,168,76,.16);
+    display:flex; align-items:center; gap:16px; transition:opacity .3s}
+  .cap.swap{opacity:0}
+  .cap .cic{flex:0 0 auto; width:clamp(34px,4.6vh,50px); height:clamp(34px,4.6vh,50px); border-radius:50%;
+    border:1px solid rgba(236,232,224,.7); display:grid; place-items:center}
+  .cap .cic svg{width:54%;height:54%;stroke:var(--gold-lt);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+  .cap .ctitle{font-size:clamp(13px,1.9vh,21px); letter-spacing:.2em; text-transform:uppercase; color:var(--gold-lt); font-weight:400}
+  .cap .csub{font-family:"Tenor Sans",sans-serif; font-style:italic; font-weight:500; color:var(--on-navy);
+    font-size:clamp(14px,2.1vh,24px); line-height:1.1; margin-top:2px}
+
+  /* flanking nav arrows */
+  .nav{position:absolute; top:50%; transform:translateY(-50%); z-index:14; width:clamp(44px,5.4vh,62px); height:clamp(44px,5.4vh,62px);
+    border-radius:50%; border:1px solid rgba(236,232,224,.22); cursor:pointer; display:grid; place-items:center;
+    background:#121621; color:#faf7f0;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); transition:transform .25s var(--expo), color .25s, border-color .25s, background .25s}
+  @media (hover:hover){ .nav:hover{color:#faf7f0; border-color:var(--gold-lt); background:#121621; transform:translateY(-50%) scale(1.07)} }
+  .nav:active{transform:translateY(-50%) scale(.96)}
+  .nav svg{width:42%;height:42%;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .nav.prev{left:clamp(12px,1.4vw,24px)} .nav.next{right:clamp(12px,1.4vw,24px)}
+
+  /* zoom + fullscreen control cluster (top-right of hero) */
+  .ctrls{position:absolute; top:clamp(12px,1.8vh,20px); right:clamp(12px,1.4vw,20px); z-index:8; display:flex; gap:8px}
+  .ctrl{width:clamp(34px,4.4vh,42px); height:clamp(34px,4.4vh,42px); border-radius:50%; cursor:pointer;
+    border:1px solid rgba(236,232,224,.22); color:#faf7f0; display:grid; place-items:center;
+    background:#121621;
+    backdrop-filter:blur(16px) saturate(1.12); -webkit-backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    transition:background .25s, color .25s, border-color .25s, transform .2s}
+  @media (hover:hover){ .ctrl:hover{background:#121621; color:#faf7f0; border-color:var(--gold-lt)} }
+  .ctrl:active{transform:scale(.94)} .ctrl:disabled{opacity:.34; cursor:default}
+  .ctrl svg{width:46%;height:46%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── THUMBNAIL CAROUSEL ───────────────────────────────────────── */
+  .rail{flex:0 0 auto; margin-top:clamp(12px,1.8vh,22px); display:flex; align-items:center; gap:clamp(10px,1.2vw,20px)}
+  .progress{position:relative; height:2px; background:rgba(18,22,33,.22); border-radius:2px; margin:0 auto clamp(10px,1.4vh,16px); width:min(620px,52vw)}
+  .progress .fill{position:absolute; left:0; top:0; height:100%; background:linear-gradient(90deg,var(--gold-lt),var(--gold)); border-radius:2px; transition:left .4s var(--expo), width .4s var(--expo)}
+  .progwrap{flex:0 0 auto}
+  .slidebtn{flex:0 0 auto; width:clamp(38px,4.6vh,48px); height:clamp(38px,4.6vh,48px); border-radius:50%; cursor:pointer;
+    border:1px solid rgba(236,232,224,.22); color:#faf7f0; display:grid; place-items:center;
+    background:#121621;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); transition:background .25s,color .25s,border-color .25s,transform .2s}
+  @media (hover:hover){ .slidebtn:hover{background:#121621; color:#faf7f0; border-color:var(--gold-lt)} }
+  .slidebtn:active{transform:scale(.94)} .slidebtn:disabled{opacity:.3; cursor:default}
+  .slidebtn svg{width:40%;height:40%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .viewport{flex:1 1 auto; min-width:0; overflow:hidden; padding:10px 4px}
+  .strip{display:flex; gap:clamp(10px,1.1vw,18px); transition:transform .5s var(--expo); will-change:transform; touch-action:pan-y}
+  .thumb{position:relative; flex:0 0 auto; width:clamp(108px,11.5vw,168px); height:clamp(74px,8.4vh,112px);
+    border-radius:11px; overflow:hidden; cursor:pointer; border:0; padding:0; background:var(--navy);
+    box-shadow:0 10px 22px -12px rgba(13,17,28,.5); transition:transform .3s var(--expo), box-shadow .3s; outline:1px solid rgba(236,232,224,.25); outline-offset:-1px}
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block; opacity:.92; transition:opacity .3s, transform .5s var(--expo)}
+  @media (hover:hover){ .thumb:hover{transform:translateY(-3px)} .thumb:hover img{opacity:1; transform:scale(1.05)} }
+  .thumb.sel{box-shadow:0 14px 28px -10px rgba(8,11,18,.6)}
+  .thumb.sel::after{content:""; position:absolute; inset:0; border-radius:11px; border:2px solid var(--gold-lt); z-index:3;
+    box-shadow:inset 0 0 0 3px rgba(17,21,32,.7)}
+  .thumb.sel::before{content:""; position:absolute; top:-9px; left:50%; transform:translateX(-50%); z-index:4;
+    border-left:7px solid transparent; border-right:7px solid transparent; border-bottom:8px solid var(--gold-lt)}
+  .thumb.sel img{opacity:1}
+
+  /* ── FULLSCREEN overlay ───────────────────────────────────────── */
+  .fs{position:fixed; inset:0; z-index:60; background:rgba(17,21,32,.97); display:none;
+    align-items:center; justify-content:center; opacity:0; transition:opacity .35s ease}
+  .fs.open{display:flex; opacity:1}
+  .fsimg{max-width:94vw; max-height:90vh; transform-origin:center; will-change:transform; cursor:grab; box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .fsimg.dragging{cursor:grabbing}
+  .fs .fsclose{position:fixed; top:24px; right:28px; z-index:62}
+  .fs .fsctrls{position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:62; display:flex; gap:10px; align-items:center;
+    background:#121621;
+    border:1px solid rgba(236,232,224,.22); border-radius:999px; padding:8px 12px;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12)}
+  .fs .fscap{position:fixed; bottom:26px; left:30px; z-index:62; color:var(--gold-lt); font-size:12px; letter-spacing:.2em; text-transform:uppercase}
+  .fs .nav{position:fixed}
+  .fs .nav.prev{left:24px} .fs .nav.next{right:24px}
+  .fsnum{color:var(--gold-lt); font-size:11px; letter-spacing:.2em; font-variant-numeric:tabular-nums; padding:0 6px}
+
+  .fadein{opacity:0; transform:translateY(12px); animation:fin .9s var(--expo) forwards}
+  @keyframes fin{to{opacity:1;transform:none}}
+
+  /* portrait / tablet stack */
+  @media (max-aspect-ratio:1/1){
+    .stage{grid-template-columns:1fr; gap:14px; padding-top:6px}
+    .lead{order:-1} .lead h1{font-size:clamp(30px,5vh,56px)} .lead p{max-width:none}
+    .lead .rule{margin:10px 0}
+    .hero{height:min(100%,70vh)}
+  }
+  /* ── PHONE PORTRAIT: tighten lead, give the hero room, balance the rail ── */
+  @media (max-aspect-ratio:1/1) and (max-width:520px){
+    .top{grid-template-columns:auto 1fr; align-items:center; gap:8px}
+    .eyebrow{display:none}             /* category shows in the hero caption — avoids a 3rd cramped row */
+    .brand{justify-self:end; font-size:11px}
+    .stage{gap:12px}
+    .lead h1{font-size:clamp(30px,9vw,40px)}
+    .lead p{font-size:14px}
+    .hero{height:min(58vh,420px)}
+    .cap{padding:clamp(18px,5vw,30px) clamp(16px,4vw,24px) clamp(14px,3.5vw,22px)}
+    .cap .ctitle{font-size:14px}
+    .cap .csub{font-size:clamp(15px,4.6vw,20px)}
+    .nav{width:46px; height:46px}
+    .ctrl{width:40px; height:40px}
+    .thumb{width:clamp(96px,30vw,128px); height:clamp(66px,20vw,86px)}
+    .progress{width:min(70vw,360px)}
+    .slidebtn{width:44px; height:44px}
+  }
+  /* landscape phone: shorter hero so the rail + caption stay on-screen */
+  @media (max-height:480px) and (min-aspect-ratio:1/1){
+    .lead h1{font-size:clamp(24px,8vh,38px)}
+    .hero{height:min(100%,72vh)}
+    .thumb{height:clamp(56px,16vh,80px)}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:#121621!important; border:1px solid rgba(18,22,33,.25)!important; color:#faf7f0!important; font-family:"Poppins",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(6px)!important; backdrop-filter:blur(6px)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  @media (hover:hover){ .back:hover{background:#121621!important; border-color:var(--gold-lt)!important; box-shadow:0 10px 24px -10px rgba(6,9,16,.6)!important} }
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:#faf7f0!important}
+  /* wave-2: 360° view button + full-screen viewer (navy-on-beige, top-right) */
+  .float360{display:inline-flex; align-items:center; gap:9px; cursor:pointer; padding:10px 16px; border-radius:999px;
+    border:1px solid rgba(18,22,33,.25); color:#faf7f0; background:#121621; font-family:"Poppins",sans-serif; font-weight:500;
+    letter-spacing:.2em; text-transform:uppercase; font-size:clamp(9px,1.15vh,13px); white-space:nowrap;
+    box-shadow:0 8px 20px -10px rgba(6,9,16,.5); transition:transform .16s var(--ease), background .2s, border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{background:#121621; border-color:rgba(201,168,76,.6); transform:translateY(-2px)} }
+  .float360 svg{width:clamp(16px,2vh,20px); height:auto; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:90; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s ease}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:calc(env(safe-area-inset-top,0px) + clamp(14px,2.4vh,26px)); left:calc(env(safe-area-inset-left,0px) + clamp(14px,2.4vw,26px)); z-index:91;
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:11px 18px; border-radius:999px; border:1px solid rgba(236,232,224,.24); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-family:"Poppins",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px)}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621} }
+
+  /* brand-font polish: Tenor has no italic — true italics use Poppins; heading accents go straight */
+  .csub{font-family:"Poppins",sans-serif;font-weight:300}
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <div class="wrap">
+    <!-- top bar -->
+    <div class="top">
+      <button class="back" id="back" aria-label="Return">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return
+      </button>
+      <div class="eyebrow" id="eyebrow">THE TOWER · GALLERY</div>
+      <button class="float360" id="btn360" aria-label="360 degree view" style="justify-self:end">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+        <span>360&deg; View</span>
+      </button>
+    </div>
+
+    <!-- stage -->
+    <div class="stage">
+      <div class="lead fadein">
+        <h1>The visual<br>world.</h1>
+        <div class="rule"></div>
+        <p>The tower at dusk, the gardens through the seasons, the lantern-lit grounds — rendered as they are meant to be lived.</p>
+      </div>
+
+      <div class="heroarea fadein" style="animation-delay:.1s">
+        <div class="hero" id="hero">
+          <img class="heroimg" id="heroimg" src="" alt="">
+          <div class="frameln"></div>
+          <div class="ctrls">
+            <button class="ctrl" id="zin"  aria-label="Zoom in"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg></button>
+            <button class="ctrl" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg></button>
+            <button class="ctrl" id="fs"   aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          </div>
+          <div class="cap" id="cap">
+            <span class="cic" id="cic"></span>
+            <span class="ctxt"><span class="ctitle" id="ctitle"></span><span class="csub" id="csub"></span></span>
+          </div>
+          <button class="nav prev" id="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="nav next" id="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- thumbnail carousel -->
+    <div>
+      <div class="progress progwrap"><span class="fill" id="pfill"></span></div>
+      <div class="rail">
+        <button class="slidebtn" id="sprev" aria-label="Slide left"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="viewport" id="viewport"><div class="strip" id="strip"></div></div>
+        <button class="slidebtn" id="snext" aria-label="Slide right"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- fullscreen -->
+  <div class="fs" id="fsov" aria-hidden="true">
+    <img class="fsimg" id="fsimg" src="" alt="">
+    <button class="nav prev" id="fsprev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="nav next" id="fsnext" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="ctrl fsclose" id="fsclose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="fscap" id="fscap"></div>
+    <div class="fsctrls">
+      <button class="ctrl" id="fszout" aria-label="Zoom out" style="border:0;background:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg></button>
+      <span class="fsnum" id="fsnum"></span>
+      <button class="ctrl" id="fszin" aria-label="Zoom in" style="border:0;background:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg></button>
+    </div>
+  </div>
+
+<script>
+  // category icons
+  var ICONS={
+    tower:'<svg viewBox="0 0 24 24"><path d="M9.5 21V8.2L12 4l2.5 4.2V21"/><path d="M8.8 21h6.4M9.8 12.5h4.4M9.8 16.2h4.4"/></svg>',
+    grounds:'<svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="M12 12C9 12 7 10 7 7c3 0 5 2 5 5ZM12 11c3 0 5-2 5-5-3 0-5 2-5 5Z"/></svg>',
+    gardens:'<svg viewBox="0 0 24 24"><path d="M12 21c4-6 7-8 7-12a7 7 0 1 0-14 0c0 4 3 6 7 12Z"/><path d="M12 9v6"/></svg>',
+    amenities:'<svg viewBox="0 0 24 24"><path d="M3 16c2 0 2-1.5 4.5-1.5S10 16 12 16s2-1.5 4.5-1.5S19 16 21 16"/><path d="M3 20c2 0 2-1.5 4.5-1.5S10 20 12 20s2-1.5 4.5-1.5S19 20 21 20"/><path d="M5 11l7-5 7 5"/></svg>',
+    arrival:'<svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/></svg>'
+  };
+
+  var SHOTS=[
+    {img:"../assets/renders/exterior/ext-1.webp",  cat:"THE TOWER",  ic:"tower",     title:"Approach & Arrival",      sub:"Arrival experience at dusk"},
+    {img:"../assets/renders/exterior/ext-2.webp",  cat:"THE TOWER",  ic:"tower",     title:"A Vertical Manor",        sub:"Thirty floors against the sky"},
+    {img:"../assets/renders/exterior/ext-3.webp",  cat:"THE TOWER",  ic:"tower",     title:"The Northern Skyline",    sub:"The tower at first light"},
+    {img:"../assets/renders/lanterns/center.webp", cat:"THE GROUNDS",ic:"grounds",   title:"Central Lantern",         sub:"The lantern at the pool’s edge"},
+    {img:"../assets/renders/lanterns/twin.webp",   cat:"THE GROUNDS",ic:"grounds",   title:"The Twin Lanterns",       sub:"Light, guidance, gathering"},
+    {img:"../assets/renders/lanterns/spring.webp", cat:"THE GARDENS",ic:"gardens",   title:"Miyawaki Forest",         sub:"The native garden in bloom"},
+    {img:"../assets/renders/lanterns/summer.webp", cat:"THE GARDENS",ic:"gardens",   title:"Rain Terrace",            sub:"Monsoon over the gardens"},
+    {img:"../assets/renders/amenities/lawn.webp",  cat:"AMENITIES",  ic:"amenities", title:"Lawn",                    sub:"Room to breathe, within the gate"},
+    {img:"../assets/renders/amenities/yoga.webp",  cat:"AMENITIES",  ic:"amenities", title:"Yoga and Meditation Deck",sub:"A quiet start to the day"},
+    {img:"../assets/renders/lanterns/lobby.webp",  cat:"ARRIVAL",    ic:"arrival",   title:"The Lobby, Lantern-lit",  sub:"The threshold home"}
+  ];
+
+  var heroimg=document.getElementById("heroimg"), cap=document.getElementById("cap"),
+      cic=document.getElementById("cic"), ctitle=document.getElementById("ctitle"), csub=document.getElementById("csub"),
+      eyebrow=document.getElementById("eyebrow"), strip=document.getElementById("strip"), cur=0;
+
+  // build thumbnails
+  SHOTS.forEach(function(s,i){
+    var t=document.createElement("button"); t.className="thumb"; t.setAttribute("data-i",i);
+    t.innerHTML='<img src="'+s.img+'" alt="'+s.title+'" loading="lazy">';
+    t.addEventListener("click", function(){ go(i); });
+    strip.appendChild(t);
+  });
+  var thumbs=Array.prototype.slice.call(strip.children);
+
+  function setHero(i, instant){
+    var s=SHOTS[i];
+    eyebrow.classList.add("swap"); cap.classList.add("swap"); heroimg.classList.add("fade");
+    setTimeout(function(){
+      heroimg.src=s.img; heroimg.alt=s.title;
+      cic.innerHTML=ICONS[s.ic]||""; ctitle.textContent=s.title; csub.textContent=s.sub;
+      eyebrow.textContent=s.cat+" · GALLERY";
+      eyebrow.classList.remove("swap"); cap.classList.remove("swap"); heroimg.classList.remove("fade");
+    }, instant?0:200);
+  }
+  function go(i){
+    cur=(i+SHOTS.length)%SHOTS.length;
+    try{window.RDA&&RDA.track('gallery_view', (SHOTS[cur]&&SHOTS[cur].title)||('image '+(cur+1)), 1, {cat:(SHOTS[cur]&&SHOTS[cur].cat)||''});}catch(_){}
+    thumbs.forEach(function(t,k){ t.classList.toggle("sel", k===cur); });
+    resetZoom(true);
+    setHero(cur,false);
+    ensureThumbVisible(cur);
+    if(fsov.classList.contains("open")) loadFs();
+  }
+
+  /* ── thumbnail carousel slide ── */
+  var viewport=document.getElementById("viewport"), pfill=document.getElementById("pfill"),
+      sprev=document.getElementById("sprev"), snext=document.getElementById("snext");
+  var offset=0; // px translateX (<=0)
+  function maxOffset(){ return Math.min(0, viewport.clientWidth - strip.scrollWidth); }
+  function applyStrip(){
+    offset=Math.max(maxOffset(), Math.min(0, offset));
+    strip.style.transform="translateX("+offset+"px)";
+    var total=Math.max(1, strip.scrollWidth - viewport.clientWidth);
+    var frac=total>0 ? (-offset/total) : 0;
+    var vis=viewport.clientWidth/Math.max(strip.scrollWidth,1);
+    pfill.style.width=(vis*100)+"%"; pfill.style.left=(frac*(100-vis*100))+"%";
+    sprev.disabled = offset>=-0.5;
+    snext.disabled = offset<=maxOffset()+0.5;
+  }
+  function page(dir){
+    var step=viewport.clientWidth*0.7;
+    offset += dir<0 ? step : -step;
+    applyStrip();
+  }
+  sprev.addEventListener("click", function(){ page(-1); });
+  snext.addEventListener("click", function(){ page(1); });
+  function ensureThumbVisible(i){
+    var t=thumbs[i]; if(!t) return;
+    var left=t.offsetLeft, right=left+t.offsetWidth;
+    var vl=-offset, vr=vl+viewport.clientWidth;
+    if(left<vl) offset=-left+12;
+    else if(right>vr) offset=-(right-viewport.clientWidth)-12;
+    applyStrip();
+  }
+  // drag / swipe the strip
+  (function(){
+    var down=false, moved=false, sx=0, so=0;
+    function start(x){ down=true; moved=false; sx=x; so=offset; strip.style.transition="none"; }
+    function move(x){ if(!down) return; var dx=x-sx; if(Math.abs(dx)>4) moved=true; offset=so+dx; strip.style.transform="translateX("+Math.max(maxOffset(),Math.min(0,offset))+"px)"; }
+    function end(){ if(!down) return; down=false; strip.style.transition="transform .5s var(--expo)"; applyStrip(); }
+    strip.addEventListener("mousedown", function(e){ start(e.clientX); });
+    window.addEventListener("mousemove", function(e){ move(e.clientX); });
+    window.addEventListener("mouseup", end);
+    strip.addEventListener("touchstart", function(e){ start(e.touches[0].clientX); }, {passive:true});
+    strip.addEventListener("touchmove", function(e){ move(e.touches[0].clientX); }, {passive:true});
+    strip.addEventListener("touchend", end);
+    // swallow click if it was a drag
+    strip.addEventListener("click", function(e){ if(moved){ e.stopPropagation(); e.preventDefault(); } }, true);
+  })();
+
+  /* ── pan & zoom engine (generalised over a target element) ── */
+  function makeZoom(getImg, getHost){
+    var MIN=1, MAX=4, scale=1, tx=0, ty=0, dragging=false, sx=0, sy=0, stx=0, sty=0, pd=0, ps=1;
+    function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+    function clampPan(){ var img=getImg(); var bw=img.offsetWidth, bh=img.offsetHeight;
+      var ex=Math.max(0,(bw*scale-bw)/2), ey=Math.max(0,(bh*scale-bh)/2); tx=clamp(tx,-ex,ex); ty=clamp(ty,-ey,ey); }
+    function apply(an){ var img=getImg(); img.style.transition=an?"transform .32s var(--ease)":"none";
+      img.style.transform="translate("+tx+"px,"+ty+"px) scale("+scale+")";
+      var host=getHost&&getHost(); if(host) host.classList.toggle("zoomed", scale>1.001); }
+    function reset(an){ scale=1; tx=0; ty=0; dragging=false; getImg().classList.remove("dragging"); apply(an); }
+    function zoomTo(n,cx,cy,an){ n=clamp(n,MIN,MAX); if(n===scale) return; var k=n/scale; tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=n; clampPan(); apply(an); }
+    function focal(e){ var img=getImg(); var r=img.getBoundingClientRect(); return {x:e.clientX-(r.left+r.width/2), y:e.clientY-(r.top+r.height/2)}; }
+    function bind(){
+      var host=getHost?getHost():getImg();
+      host.addEventListener("wheel", function(e){ e.preventDefault(); var f=focal(e); zoomTo(scale*(e.deltaY<0?1.12:1/1.12), f.x, f.y, false); }, {passive:false});
+      getImg().addEventListener("dblclick", function(e){ e.preventDefault(); if(scale>1.001) reset(true); else { var f=focal(e); zoomTo(2.2,f.x,f.y,true); } });
+      getImg().addEventListener("mousedown", function(e){ if(scale<=1.001) return; e.preventDefault(); dragging=true; getImg().classList.add("dragging"); sx=e.clientX; sy=e.clientY; stx=tx; sty=ty; });
+      window.addEventListener("mousemove", function(e){ if(!dragging) return; tx=stx+(e.clientX-sx); ty=sty+(e.clientY-sy); clampPan(); apply(false); });
+      window.addEventListener("mouseup", function(){ if(dragging){ dragging=false; getImg().classList.remove("dragging"); } });
+      host.addEventListener("touchstart", function(e){ if(e.touches.length===2){ pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); ps=scale; }
+        else if(e.touches.length===1 && scale>1.001){ dragging=true; sx=e.touches[0].clientX; sy=e.touches[0].clientY; stx=tx; sty=ty; } }, {passive:false});
+      host.addEventListener("touchmove", function(e){ if(e.touches.length===2){ e.preventDefault(); var img=getImg(); var r=img.getBoundingClientRect();
+          var f={x:(e.touches[0].clientX+e.touches[1].clientX)/2-(r.left+r.width/2), y:(e.touches[0].clientY+e.touches[1].clientY)/2-(r.top+r.height/2)};
+          zoomTo(ps*(Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)/pd), f.x, f.y, false); }
+        else if(dragging && e.touches.length===1){ e.preventDefault(); tx=stx+(e.touches[0].clientX-sx); ty=sty+(e.touches[0].clientY-sy); clampPan(); apply(false); } }, {passive:false});
+      host.addEventListener("touchend", function(e){ if(e.touches.length<2) pd=0; if(e.touches.length===0){ dragging=false; } });
+    }
+    return { bind:bind, reset:reset, zoomIn:function(){ zoomTo(scale+0.6,0,0,true); }, zoomOut:function(){ zoomTo(scale-0.6,0,0,true); }, get:function(){return scale;} };
+  }
+
+  var heroZoom=makeZoom(function(){return heroimg;}, function(){return document.getElementById("hero");});
+  heroZoom.bind();
+  function resetZoom(an){ heroZoom.reset(an); }
+  document.getElementById("zin").addEventListener("click", function(e){ e.stopPropagation(); heroZoom.zoomIn(); });
+  document.getElementById("zout").addEventListener("click", function(e){ e.stopPropagation(); heroZoom.zoomOut(); });
+
+  document.getElementById("prev").addEventListener("click", function(e){ e.stopPropagation(); go(cur-1); });
+  document.getElementById("next").addEventListener("click", function(e){ e.stopPropagation(); go(cur+1); });
+
+  /* ── swipe-to-navigate on the hero (touch + mouse drag) ──
+     Only fires when NOT zoomed (scale<=1.001) so it never steals
+     the pan gesture. Horizontal-dominant moves >45px navigate:
+     swipe left (dx<0) → next, swipe right (dx>0) → prev.            */
+  (function(){
+    var hero=document.getElementById("hero");
+    var SWIPE=45;                 // px threshold
+    var startX=0, startY=0, sw=false;
+    function notZoomed(){ return heroZoom.get() <= 1.001; }
+    function tryNav(dx,dy){
+      if(!notZoomed()) return;                              // zoomed → let pan work
+      if(Math.abs(dx) < SWIPE) return;                      // too small
+      if(Math.abs(dx) <= Math.abs(dy)) return;              // not mostly horizontal
+      if(dx < 0) go(cur+1); else go(cur-1);                 // left=next, right=prev
+    }
+    // touch
+    hero.addEventListener("touchstart", function(e){
+      if(e.touches.length!==1 || !notZoomed()){ sw=false; return; }
+      sw=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+    }, {passive:true});
+    hero.addEventListener("touchend", function(e){
+      if(!sw){ return; } sw=false;
+      var t=e.changedTouches[0]; if(!t) return;
+      tryNav(t.clientX-startX, t.clientY-startY);
+    }, {passive:true});
+    // mouse drag-swipe (non-touch)
+    var md=false;
+    hero.addEventListener("pointerdown", function(e){
+      if(e.pointerType==="touch") return;                  // touch handled above
+      if(!notZoomed()){ md=false; return; }
+      md=true; startX=e.clientX; startY=e.clientY;
+    });
+    window.addEventListener("pointerup", function(e){
+      if(!md || e.pointerType==="touch"){ md=false; return; } md=false;
+      tryNav(e.clientX-startX, e.clientY-startY);
+    });
+  })();
+
+  /* ── fullscreen ── */
+  var fsov=document.getElementById("fsov"), fsimg=document.getElementById("fsimg"),
+      fscap=document.getElementById("fscap"), fsnum=document.getElementById("fsnum");
+  var fsZoom=makeZoom(function(){return fsimg;}, function(){return fsov;});
+  fsZoom.bind();
+  function loadFs(){ var s=SHOTS[cur]; fsimg.src=s.img; fscap.textContent=s.cat+" · "+s.title; fsnum.textContent=(cur+1)+" / "+SHOTS.length; fsZoom.reset(false); }
+  function openFs(){ loadFs(); fsov.classList.add("open"); fsov.setAttribute("aria-hidden","false"); }
+  function closeFs(){ fsov.classList.remove("open"); fsov.setAttribute("aria-hidden","true"); }
+  document.getElementById("fs").addEventListener("click", openFs);
+  document.getElementById("fsclose").addEventListener("click", closeFs);
+  document.getElementById("fsprev").addEventListener("click", function(){ go(cur-1); });
+  document.getElementById("fsnext").addEventListener("click", function(){ go(cur+1); });
+  document.getElementById("fszin").addEventListener("click", function(){ fsZoom.zoomIn(); });
+  document.getElementById("fszout").addEventListener("click", function(){ fsZoom.zoomOut(); });
+  fsov.addEventListener("click", function(e){ if(e.target===fsov) closeFs(); });
+
+  /* ── close + keys ── */
+  document.getElementById("back").addEventListener("click", function(){ try{ parent.postMessage("eo-screen-close","*"); }catch(e){} });
+  document.addEventListener("keydown", function(e){
+    if(fsov.classList.contains("open")){
+      if(e.key==="Escape") closeFs();
+      else if(e.key==="ArrowLeft") go(cur-1);
+      else if(e.key==="ArrowRight") go(cur+1);
+      else if(e.key==="+"||e.key==="=") fsZoom.zoomIn();
+      else if(e.key==="-"||e.key==="_") fsZoom.zoomOut();
+      return;
+    }
+    if(e.key==="Escape"){ try{ parent.postMessage("eo-screen-close","*"); }catch(_){ } }
+    else if(e.key==="ArrowLeft") go(cur-1);
+    else if(e.key==="ArrowRight") go(cur+1);
+    else if(e.key==="f"||e.key==="F") openFs();
+  });
+
+  // init
+  window.addEventListener("resize", function(){ applyStrip(); ensureThumbVisible(cur); });
+  go(0);
+  setHero(0,true);
+  setTimeout(applyStrip, 50);
+</script>
+  <!-- wave-2: 360° full-screen viewer -->
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
+  </div>
+  <script>
+  (function(){ var b=document.getElementById("btn360"), v=document.getElementById("view360"), f=document.getElementById("frame360"), bk=document.getElementById("back360");
+    if(!b||!v||!f) return;
+    function close(){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },440); }
+    b.addEventListener("click", function(){ try{window.RDA&&RDA.track('360_view','gallery');}catch(_){} f.src="https://www.turiya.co/360/EmbassyOne/"; v.classList.add("show"); v.setAttribute("aria-hidden","false"); });
+    if(bk) bk.addEventListener("click", close);
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && v.classList.contains("show")){ e.stopImmediatePropagation(); close(); } }, true);
+  })();
+  </script>
+  <!-- leaf/foliage motif removed per redesign -->
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

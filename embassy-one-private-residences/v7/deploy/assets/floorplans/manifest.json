@@ -1,0 +1,65 @@
+[
+  {
+    "config": "2br-duplex",
+    "label": "2-Bedroom Duplex",
+    "sqft": "4,149.03 sq ft",
+    "file": "2br-duplex.png",
+    "sourcePage": 3
+  },
+  {
+    "config": "3br",
+    "label": "3-Bedroom",
+    "sqft": "5,423.83 sq ft",
+    "file": "3br.png",
+    "sourcePage": 5
+  },
+  {
+    "config": "3br-study",
+    "label": "3-Bedroom + Study",
+    "sqft": "5,856.56 sq ft",
+    "file": "3br-study.png",
+    "sourcePage": 8
+  },
+  {
+    "config": "3br-study-media",
+    "label": "3-Bedroom + Study + Media",
+    "sqft": "7,454.35 sq ft",
+    "file": "3br-study-media.png",
+    "sourcePage": 11
+  },
+  {
+    "config": "4br",
+    "label": "4-Bedroom",
+    "sqft": "6,272.46 sq ft",
+    "file": "4br.png",
+    "sourcePage": 13
+  },
+  {
+    "config": "4br-recessed",
+    "label": "4-Bedroom Recessed",
+    "sqft": "6,280.21 sq ft",
+    "file": "4br-recessed.png",
+    "sourcePage": 14
+  },
+  {
+    "config": "4br-study",
+    "label": "4-Bedroom + Study",
+    "sqft": "7,537.14 sq ft",
+    "file": "4br-study.png",
+    "sourcePage": 19
+  },
+  {
+    "config": "5br-penthouse",
+    "label": "5-Bedroom Penthouse Duplex",
+    "sqft": "6,326.81 sq ft (lower) + 6,649.80 sq ft (upper)",
+    "file": "5br-penthouse.png",
+    "sourcePage": 23
+  },
+  {
+    "config": "typical-floor",
+    "label": "Masterplan / Amenities Key Plan",
+    "sqft": null,
+    "file": "typical-floor.png",
+    "sourcePage": 28
+  }
+]

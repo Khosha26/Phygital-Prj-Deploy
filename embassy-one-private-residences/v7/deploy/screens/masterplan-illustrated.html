@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Grounds · Master Plan</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE GROUNDS · MASTER PLAN — Seasonal Landscape, interactive explorer
+  ──────────────────────────────────────────────────────────────────────
+  REBUILT (redesign): the plan is now drawn as crisp, vector SVG of the
+  real site (irregular wedge), so it is razor-sharp at 4K and
+  fully interactive — no rasterized cut-out.
+
+  Sourced verbatim from the landscape CD — section 01
+  (Master Plan p.11 numbered legend · Zoning Plan · Looping Route 262m /
+  Entrance Driveway 200m · Blow-up plans) and the Lantern Design Concept.
+
+  LEFT RAIL  : title · the seasonal-garden narrative · LEGEND (zones + markers)
+               · key facts · live "What's where" list (filterable).
+  CENTRE     : the vector site plan — zone fills, water, courts, forest,
+               jogging loop, 25 numbered features, 5 seasonal lanterns.
+  INTERACTION: tap a marker / list row / lantern → the rail switches to an
+               inline DETAIL panel (no jarring modal) with image, season,
+               location, materials, feature + narrative. Pan & zoom the plan.
+-->
+<link href="../assets/fonts/fonts.css" rel="stylesheet"><!-- brand faces self-hosted (Tenor Sans + Poppins) -->
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  /* native buttons/inputs don't inherit font-family — force the brand face everywhere */
+  button,input,select,textarea{font-family:inherit}
+
+  /* iPad standalone PWA (installed): drop the top chrome below the status bar and let the
+     backdrop bleed under the bottom home-indicator band, so the app reads truly full-screen.
+     Inert in a normal browser tab (display-mode is not standalone there). */
+  @media (display-mode:standalone){
+    :where(.top,.topbar,.dtop,.loc>.bar){margin-top:env(safe-area-inset-top,0px)}
+    :where(body,#home,.wrap,.stage,main)>:where(.back,.float360,.nav360,.views,.corner-logo,.hour-dial){margin-top:env(safe-area-inset-top,0px)}
+    body,.bg,#map{min-height:100lvh}
+  }
+
+  :root{
+    /* ── Embassy ONE deck palette — ink-navy + bone ── */
+    --deck-ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad; --on-light:#121621; --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette (reskin) */
+    --parch:#efe8da; --paper:#faf7f0; --ink:#121621; --muted:#7a7264; --faint:#9a9aa0;
+    --gold:#b3a184; --gold-d:#857a66; --gold-l:#c9a84c; --champ:#c9a84c; --line:#d8d0c2;
+    --glass:rgba(245,240,232,.84);
+    --ease:cubic-bezier(.2,.7,.2,1); --expo:cubic-bezier(.16,1,.3,1); --overshoot:cubic-bezier(.34,1.56,.64,1);
+    /* plan palette — base drawing recoloured to a light stone/paper ground for the beige theme; landscape stays coloured */
+    --c-ground:#e6dcc8; --c-paving:#d3c9b4; --c-grass:#8fa878; --c-grass-d:#7a9463;
+    --c-forest:#9fb47f; --c-forest-d:#86a064; --c-water:#a9cdd6; --c-water-d:#7fb0bd;
+    --c-court:#9fc2cc; --c-court2:#b6cdd2; --c-deck:#b3a892; --c-trellis:#bcae8e;
+    --c-path:#c8bea8; --c-edge:#b0a58e;
+    /* marker accents per category */
+    --m-lantern:#c2ad84; --m-amenity:#5f93a6; --m-garden:#7f9a5f; --m-arrival:#6e5c58;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); background:#efe8da; font-family:"Poppins",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  .bg{position:fixed; inset:0; z-index:0; background:radial-gradient(125% 95% at 50% 0%, #efe8da, #e0d5c0 62%), #efe8da}
+  /* faint architectural line-drawing of the real ONE tower — anchored bottom-right (darkened / multiply on the beige ground) */
+  .bg::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-outline.webp) no-repeat right -4% bottom;
+    background-size:auto 98%; opacity:.05; mix-blend-mode:multiply}
+  /* subtle grain, blended */
+  .bg::before{content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:radial-gradient(rgba(18,22,33,.05) .5px, transparent .6px); background-size:3px 3px}
+
+  /* ── STAGE (pan + zoom host) ────────────────────────────────── */
+  .stage{position:fixed; inset:0; z-index:1; overflow:hidden; cursor:grab}
+  .stage:active{cursor:grabbing}
+  .layerwrap{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    padding-left:clamp(280px,27vw,400px)}
+  .layer{position:relative; width:min(70vw,1180px); aspect-ratio:1180/940;
+    transform-origin:center center; will-change:transform; transition:transform .8s var(--expo)}
+  .layer.dragging{transition:none}
+  .planSvg{position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible}
+
+  /* ── markers (positioned in % of the plan box) ───────────────── */
+  .mk{position:absolute; transform:translate(-50%,-50%); z-index:6; cursor:pointer; pointer-events:auto}
+  .mk .pin{position:relative; display:grid; place-items:center; width:26px; height:26px; border-radius:50%;
+    background:rgba(251,248,241,.95); border:1.5px solid var(--gold-l);
+    box-shadow:0 3px 9px -2px rgba(12,16,24,.5), inset 0 0 0 3px rgba(251,248,241,.9);
+    font-family:"Poppins"; font-weight:500; font-size:11px; color:var(--ink); line-height:1;
+    transition:transform .3s var(--overshoot), box-shadow .3s, background .3s}
+  .mk .pin::after{content:""; position:absolute; inset:-3px; border-radius:50%; z-index:-1;
+    box-shadow:0 0 0 0 currentColor; animation:pp 3.4s ease-out infinite}
+  .mk.cat-lantern .pin{color:var(--m-lantern); border-color:var(--m-lantern)}
+  .mk.cat-amenity .pin{color:var(--m-amenity); border-color:var(--m-amenity)}
+  .mk.cat-garden  .pin{color:var(--m-garden);  border-color:var(--m-garden)}
+  .mk.cat-arrival .pin{color:var(--m-arrival); border-color:var(--m-arrival)}
+  /* lanterns get a distinct gem marker (not a number) */
+  .mk.is-lantern .pin{width:30px; height:30px; background:var(--m-lantern); border-color:#fff;
+    box-shadow:0 4px 12px -2px rgba(12,16,24,.55), inset 0 0 0 2px rgba(255,240,210,.4)}
+  .mk.is-lantern .pin svg{width:15px; height:15px; stroke:#fbf8f4; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
+  .mk .tag{position:absolute; left:50%; top:-7px; transform:translate(-50%,-100%); white-space:nowrap;
+    font-size:10.5px; letter-spacing:.04em; color:#fbf8f4;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,168,76,.20); padding:3px 9px; border-radius:9px;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); opacity:0; transition:opacity .25s, transform .25s; pointer-events:none}
+  .mk:hover .pin, .mk.sel .pin{transform:scale(1.22)}
+  .mk:hover .tag, .mk.sel .tag{opacity:1; transform:translate(-50%,-100%) translateY(-3px)}
+  .mk.sel .pin{box-shadow:0 0 0 4px rgba(201,168,76,.28), 0 4px 12px -2px rgba(12,16,24,.55)}
+  .mk.dim{opacity:.22; filter:grayscale(.5)}
+  .mk.hide{display:none}
+  @keyframes pp{0%{box-shadow:0 0 0 0 currentColor; opacity:.5}70%,100%{box-shadow:0 0 0 13px transparent; opacity:0}}
+
+  /* north arrow + scale, drawn onto the plan */
+  .northwrap{position:absolute; right:3%; top:5%; z-index:5; display:flex; flex-direction:column; align-items:center; gap:5px; pointer-events:none; opacity:.9}
+  .northwrap svg{width:34px; height:34px}
+  .northwrap b{font-size:10px; letter-spacing:.28em; color:var(--gold-d)}
+
+  /* ── TOP BAR (shared pattern) ───────────────────────────────── */
+  .top{position:fixed; top:0; left:0; right:0; z-index:40; display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    padding:clamp(16px,2.2vh,28px) clamp(22px,3vw,54px) 0; gap:12px; pointer-events:none}
+  .top>*{pointer-events:auto}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer;
+    background:#121621;
+    border:1px solid rgba(250,247,240,.14); color:#faf7f0; font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.32em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, border-color .3s}
+  .back:hover{ background:#121621; border-color:rgba(250,247,240,.28);
+    box-shadow:0 24px 54px -24px rgba(6,9,16,.7), inset 0 1px 0 rgba(236,232,224,.16); }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px; stroke:#faf7f0}
+  .eyebrow{justify-self:center; font-size:clamp(9px,1.2vh,13px); letter-spacing:.42em; text-transform:uppercase; color:var(--champ); white-space:nowrap; transition:opacity .4s}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.05vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--on-dark-dim)}
+
+  /* ── LEFT RAIL ───────────────────────────────────────────────── */
+  .rail{position:fixed; left:clamp(14px,1.9vw,26px); top:clamp(78px,11vh,118px); bottom:clamp(16px,2.4vh,30px); z-index:30;
+    width:clamp(262px,25vw,366px); display:flex; flex-direction:column; color:var(--on-dark);
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.16), transparent 60%),
+      linear-gradient(155deg, rgba(24,34,72,.95), rgba(15,21,42,.95));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,168,76,.20); border-radius:20px; overflow:hidden;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); outline:1px solid rgba(201,168,76,.24); outline-offset:-4px}
+
+  /* the two faces of the rail cross-fade */
+  .face{position:absolute; inset:0; display:flex; flex-direction:column; opacity:0; visibility:hidden;
+    transition:opacity .5s var(--expo), visibility .5s; pointer-events:none}
+  .face.on{opacity:1; visibility:visible; pointer-events:auto}
+
+  /* — overview face — */
+  .rhead{padding:clamp(16px,2.1vh,24px) clamp(16px,1.6vw,23px) clamp(11px,1.5vh,15px); flex:0 0 auto}
+  .rhead .rk{font-size:9.5px; letter-spacing:.4em; text-transform:uppercase; color:var(--champ)}
+  .rhead h1{font-family:"Tenor Sans",sans-serif; font-weight:600; font-size:clamp(26px,4vh,42px); line-height:.98; margin:6px 0 4px; color:var(--on-dark)}
+  .rhead h1 em{font-style:italic; font-weight:500; color:var(--champ)}
+  .rhead p{font-weight:300; color:var(--on-dark-dim); font-size:clamp(11px,1.35vh,14px); line-height:1.6; margin-top:7px}
+
+  .rscroll{flex:1 1 auto; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--gold-l) transparent}
+  .rscroll::-webkit-scrollbar{width:5px}.rscroll::-webkit-scrollbar-thumb{background:var(--gold-l);border-radius:3px}
+
+  .sect{padding:clamp(12px,1.7vh,17px) clamp(16px,1.6vw,23px); border-top:1px solid rgba(201,168,76,.18)}
+  .sect .sk{font-size:9px; letter-spacing:.36em; text-transform:uppercase; color:var(--champ); margin-bottom:clamp(9px,1.3vh,13px)}
+
+  /* key facts grid */
+  .facts{display:grid; grid-template-columns:1fr 1fr; gap:clamp(9px,1.3vh,14px) 12px}
+  .fact .fv{font-family:"Tenor Sans",sans-serif; font-weight:600; font-size:clamp(21px,3vh,31px); line-height:.95; color:var(--on-dark)}
+  .fact .fl{font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--champ); margin-top:3px}
+
+  /* legend — zones (swatch) then markers (dot) */
+  .leg{display:flex; flex-direction:column; gap:clamp(6px,.9vh,9px)}
+  .leg .lg{display:flex; align-items:center; gap:10px; font-size:clamp(10px,1.2vh,12.5px); color:var(--on-dark-dim); font-weight:300}
+  .leg .sw{flex:0 0 auto; width:15px; height:11px; border-radius:3px; border:1px solid rgba(236,232,224,.18)}
+  .leg .dt{flex:0 0 auto; width:11px; height:11px; border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+
+  /* filters */
+  .filters{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .filt{display:inline-flex; align-items:center; gap:8px; cursor:pointer; border:1px solid rgba(250,247,240,.14);
+    border-radius:11px; padding:8px 11px; font-size:10px; font-weight:500; letter-spacing:.1em; text-transform:uppercase;
+    color:#faf7f0; background:#121621; -webkit-backdrop-filter:none; backdrop-filter:none;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); transition:border-color .2s,color .2s,transform .12s}
+  .filt .fd{width:11px;height:11px;border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 2px rgba(236,232,224,.5)}
+  .filt.f-lantern .fd{background:var(--m-lantern)}.filt.f-amenity .fd{background:var(--m-amenity)}
+  .filt.f-garden .fd{background:var(--m-garden)}.filt.f-arrival .fd{background:var(--m-arrival)}
+  .filt:hover{border-color:rgba(250,247,240,.28); background:#121621; transform:translateY(-1px)} .filt:active{transform:scale(.97)}
+  .filt.off{background:#121621; border-color:rgba(250,247,240,.08); color:rgba(250,247,240,.4)} .filt.off .fd{opacity:.32; box-shadow:none}
+
+  /* list */
+  .list{display:flex; flex-direction:column; gap:2px}
+  .lrow{display:flex; align-items:center; gap:11px; width:100%; border:0; background:none; cursor:pointer; text-align:left; font:inherit; color:inherit;
+    padding:8px 9px; border-radius:9px; transition:background .2s, transform .2s}
+  .lrow:hover{background:rgba(201,168,76,.1); transform:translateX(2px)}
+  .lrow.sel{background:rgba(201,168,76,.18); box-shadow:inset 3px 0 0 var(--gold)}
+  .lrow .ln{flex:0 0 auto; width:21px; height:21px; border-radius:50%; display:grid; place-items:center;
+    font-size:10px; font-weight:500; color:var(--on-dark); background:rgba(236,232,224,.06); border:1.4px solid var(--line-dark)}
+  .lrow.c-lantern .ln{color:var(--m-lantern); border-color:var(--m-lantern)}
+  .lrow.c-amenity .ln{color:var(--m-amenity); border-color:var(--m-amenity)}
+  .lrow.c-garden  .ln{color:var(--m-garden);  border-color:var(--m-garden)}
+  .lrow.c-arrival .ln{color:var(--m-arrival); border-color:var(--m-arrival)}
+  .lrow b{font-weight:400; font-size:clamp(11.5px,1.3vh,14px); color:var(--on-dark)} .lrow.hide{display:none}
+
+  /* — detail face — */
+  .det{display:flex; flex-direction:column; height:100%}
+  .det .dtop{flex:0 0 auto; position:relative}
+  /* client-20: photo-less entries (e.g. Drop-off) — collapse the image box cleanly, keep the All Points button */
+  .det .dtop.noimg{height:58px}
+  .det .dtop.noimg .dimg, .det .dtop.noimg .dexp, .det .dtop.noimg .dcap{display:none}
+  .det .dimg{position:relative; height:clamp(150px,21vh,228px); background:#0e1118; overflow:hidden; cursor:zoom-in}
+  .det .dimg img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .6s var(--expo)}
+  .det .dimg:hover img{transform:scale(1.05)}
+  .det .dimg::after{content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(to top, rgba(8,11,18,.55), rgba(8,11,18,0) 52%)}
+  .det .dback{position:absolute; top:13px; left:13px; z-index:3; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    background:#121621;
+    border:1px solid rgba(250,247,240,.14); color:#faf7f0; -webkit-backdrop-filter:none; backdrop-filter:none;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);
+    border-radius:999px; padding:7px 14px 7px 10px; font-size:9.5px; letter-spacing:.22em; text-transform:uppercase; transition:border-color .25s}
+  .det .dback:hover{background:#121621; border-color:rgba(250,247,240,.28)} .det .dback svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .det .dexp{position:absolute; top:13px; right:13px; z-index:3; width:30px; height:30px; border-radius:9px; display:grid; place-items:center;
+    background:#121621;
+    border:1px solid rgba(250,247,240,.14); color:#faf7f0; -webkit-backdrop-filter:none; backdrop-filter:none;
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+  .det .dexp svg{width:48%;height:48%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .det .dcap{position:absolute; left:16px; bottom:13px; z-index:3; color:#fbf8f4}
+  .det .dcap .num{font-family:"Tenor Sans",sans-serif; font-weight:600; font-size:13px; color:#c9a84c; opacity:.9}
+  .det .dcap .k{font-size:9px; letter-spacing:.3em; text-transform:uppercase; color:#c9a84c; margin-top:1px}
+
+  .det .dscroll{flex:1 1 auto; min-height:0; overflow-y:auto; padding:clamp(16px,2.1vh,22px) clamp(16px,1.6vw,23px) clamp(18px,2.4vh,26px);
+    scrollbar-width:thin; scrollbar-color:var(--gold-l) transparent}
+  .det .dscroll::-webkit-scrollbar{width:5px}.det .dscroll::-webkit-scrollbar-thumb{background:var(--gold-l);border-radius:3px}
+  .det h2{font-family:"Tenor Sans",sans-serif; font-weight:600; font-size:clamp(24px,3.5vh,36px); line-height:1.02; color:var(--on-dark)}
+  .det .dtag{font-family:"Tenor Sans",sans-serif; font-style:italic; font-weight:500; color:var(--champ); font-size:clamp(15px,2.1vh,22px); line-height:1.1; margin-top:2px}
+  .det .drule{width:42px; height:1px; background:var(--champ); opacity:.7; margin:clamp(13px,1.9vh,18px) 0}
+  .det .dnarr{font-weight:300; color:var(--on-dark); line-height:1.78; font-size:clamp(12.5px,1.5vh,15.5px)}
+  .det .drows{margin-top:clamp(15px,2vh,21px); display:flex; flex-direction:column}
+  .det .drow{display:flex; align-items:flex-start; gap:11px; padding:clamp(9px,1.2vh,12px) 0}
+  .det .drow+.drow{border-top:1px solid rgba(236,232,224,.12)}
+  .det .drow .ic{flex:0 0 auto; width:18px; height:18px; margin-top:1px; stroke:var(--champ); fill:none; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round}
+  .det .drow .tx .k{font-size:9px; letter-spacing:.22em; text-transform:uppercase; color:var(--on-dark-dim)}
+  .det .drow .tx .v{font-weight:300; color:var(--on-dark); font-size:clamp(11.5px,1.4vh,14.5px); line-height:1.4; margin-top:2px}
+  .det .dchips{display:flex; flex-wrap:wrap; gap:7px; margin-top:clamp(14px,1.9vh,19px)}
+  .det .chip{font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--champ);
+    border:1px solid rgba(201,168,76,.20); border-radius:999px; padding:5px 12px; background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+
+  /* ── zoom controls + hint ───────────────────────────────────── */
+  .zctrl{position:fixed; right:clamp(14px,1.9vw,26px); top:50%; transform:translateY(-50%); z-index:30; display:flex; flex-direction:column; gap:9px}
+  .zb{width:44px;height:44px;border-radius:12px;cursor:pointer;border:1px solid rgba(250,247,240,.14);background:#121621;-webkit-backdrop-filter:none;backdrop-filter:none;color:#faf7f0;display:grid;place-items:center;box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12);transition:transform .15s,border-color .2s}
+  .zb:hover{border-color:rgba(250,247,240,.28);background:#121621;color:#faf7f0} .zb:active{transform:scale(.93)} .zb svg{width:42%;height:42%;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .hint{position:fixed; right:clamp(16px,2vw,30px); bottom:clamp(14px,2vh,20px); z-index:30; display:flex; align-items:center; gap:9px;
+    font-size:9px; letter-spacing:.24em; text-transform:uppercase; color:var(--on-dark-dim); opacity:.85}
+  .hint svg{width:15px; height:15px; stroke:var(--on-dark-dim); fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round}
+
+  /* ── fullscreen image ───────────────────────────────────────── */
+  .fs{position:fixed; inset:0; z-index:60; background:rgba(10,12,18,.96); display:none; align-items:center; justify-content:center; flex-direction:column; gap:18px; opacity:0; transition:opacity .35s}
+  .fs.open{display:flex; opacity:1}
+  .fs img{max-width:90vw; max-height:80vh; border-radius:10px; box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .fs .fscap{color:#c9a84c; font-size:13px; letter-spacing:.24em; text-transform:uppercase}
+  .fsx{position:fixed; top:24px; right:28px; z-index:62; width:46px;height:46px;border-radius:50%; cursor:pointer; border:1px solid rgba(250,247,240,.14);
+    background:#121621; color:#faf7f0; display:grid; place-items:center}
+  .fsx svg{width:42%;height:42%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .85s var(--expo) forwards} @keyframes fin{to{opacity:1;transform:none}}
+  .reveal{opacity:0; transform:translateY(14px)}
+
+  /* ── PORTRAIT / narrow fallback ─────────────────────────────── */
+  @media (max-aspect-ratio:1/1){
+    .layerwrap{padding-left:0; align-items:flex-start; padding-top:clamp(70px,10vh,100px)}
+    .layer{width:94vw}
+    .rail{top:auto; left:0; right:0; bottom:0; width:auto; max-height:46vh; border-radius:20px 20px 0 0}
+    .zctrl{top:auto; bottom:calc(46vh + 14px); transform:none; flex-direction:row}
+    .hint{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} .reveal{opacity:1; transform:none} }
+
+  /* ── 360° VIEW (shared pattern from index.html) ─────────── */
+  .float360{position:fixed; top:max(clamp(14px,2.4vh,26px),env(safe-area-inset-top)); right:max(clamp(16px,3vw,54px),env(safe-area-inset-right)); z-index:45;
+    display:inline-flex; align-items:center; gap:10px; cursor:pointer; pointer-events:auto;
+    padding:clamp(10px,1.4vh,14px) clamp(16px,1.8vw,22px); border-radius:999px; border:1px solid rgba(250,247,240,.14); color:#faf7f0;
+    background:#121621; font-family:"Poppins",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px);
+    box-shadow:0 14px 34px -16px rgba(0,0,0,.35); transition:transform .16s var(--expo), box-shadow .3s, border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{background:#121621; border-color:rgba(250,247,240,.28); transform:translateY(-2px)} }
+  .float360 svg{width:clamp(16px,2vh,20px); height:auto; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:80; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s var(--expo)}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:max(clamp(14px,2.4vh,26px),env(safe-area-inset-top)); left:clamp(14px,2.4vw,26px); z-index:81; display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+    padding:clamp(10px,1.4vh,14px) clamp(16px,1.6vw,22px); border-radius:999px; border:1px solid rgba(250,247,240,.14); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:none; backdrop-filter:none; font-family:"Poppins",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px); box-shadow:0 10px 26px -12px rgba(0,0,0,.7); transition:transform .16s, border-color .2s}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621; border-color:rgba(250,247,240,.28)} }
+
+  /* brand-font polish: Tenor has no italic — true italics use Poppins; heading accents go straight */
+  h1 em{font-style:normal}
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <!-- ── STAGE: the vector site plan ── -->
+  <div class="stage" id="stage">
+    <div class="layerwrap">
+      <div class="layer" id="layer">
+        <!-- SVG plan: 1180 x 940 viewBox. All geometry traced from the landscape master plan. -->
+        <svg class="planSvg" id="planSvg" viewBox="0 0 1180 940" preserveAspectRatio="xMidYMid meet" aria-label="Embassy ONE — landscape master plan">
+          <defs>
+            <filter id="soft" x="-8%" y="-8%" width="116%" height="116%">
+              <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#3c2a10" flood-opacity="0.16"/>
+            </filter>
+            <pattern id="forestTex" width="13" height="13" patternUnits="userSpaceOnUse" patternTransform="rotate(12)">
+              <rect width="13" height="13" fill="#9fb47f"/>
+              <circle cx="3" cy="3" r="2.1" fill="#86a064" opacity=".7"/>
+              <circle cx="9" cy="9" r="2.1" fill="#86a064" opacity=".7"/>
+            </pattern>
+            <linearGradient id="poolGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#bfe0e8"/><stop offset="1" stop-color="var(--c-water-d)"/>
+            </linearGradient>
+            <radialGradient id="vign" cx="42%" cy="46%" r="72%">
+              <stop offset="60%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#3c2a10" stop-opacity=".10"/>
+            </radialGradient>
+          </defs>
+
+          <!-- 1 · SITE GROUND (irregular wedge: pointed tail top-left → wide right → point bottom-right) -->
+          <g filter="url(#soft)">
+            <path id="siteGround" d="M132 232 L150 96 L300 150 L560 150 L1040 392 L1058 470 L760 690 L470 818 L300 700 L186 470 Z"
+                  fill="var(--c-ground)" stroke="var(--c-edge)" stroke-width="2.4" stroke-dasharray="9 7" stroke-opacity=".85"/>
+          </g>
+
+          <!-- 2 · ZONES (soft fills, from the Zoning Plan) — drawn under everything else -->
+          <g id="zones" opacity=".0" style="transition:opacity .6s var(--expo)">
+            <!-- sports zone (NW) -->
+            <path class="zoneShape" data-zone="sports" d="M150 96 L300 150 L420 215 L350 360 L210 300 L186 470 L150 240 Z" fill="#c8917f" fill-opacity=".30"/>
+            <!-- lawn & rain terrace -->
+            <path class="zoneShape" data-zone="lawn"   d="M420 215 L560 150 L720 230 L640 360 L470 380 L350 360 Z" fill="#b8c79c" fill-opacity=".32"/>
+            <!-- forest zone -->
+            <path class="zoneShape" data-zone="forest" d="M720 230 L900 320 L840 430 L700 430 L640 360 Z" fill="#9fb47f" fill-opacity=".34"/>
+            <!-- bridge & rear entrance -->
+            <path class="zoneShape" data-zone="bridge" d="M900 320 L1040 392 L980 470 L840 430 Z" fill="#d6c08a" fill-opacity=".34"/>
+            <!-- herbs garden -->
+            <path class="zoneShape" data-zone="herbs"  d="M980 470 L1058 470 L920 560 L860 510 Z" fill="#aac4cb" fill-opacity=".34"/>
+            <!-- pool area -->
+            <path class="zoneShape" data-zone="pool"   d="M470 380 L700 430 L760 520 L520 540 L430 470 Z" fill="#8fb3c4" fill-opacity=".30"/>
+            <!-- banquet spill-out (SE) -->
+            <path class="zoneShape" data-zone="banquet" d="M760 520 L920 560 L760 690 L640 620 Z" fill="#e0cbb1" fill-opacity=".40"/>
+            <!-- drop-off & vehicular -->
+            <path class="zoneShape" data-zone="drop"   d="M300 700 L470 818 L760 690 L640 620 L430 640 L360 560 Z" fill="#dd9a78" fill-opacity=".34"/>
+            <!-- pet-friendly (SW point) -->
+            <path class="zoneShape" data-zone="pet"    d="M210 300 L350 360 L360 560 L300 700 L186 470 Z" fill="#bb9166" fill-opacity=".30"/>
+          </g>
+
+          <!-- 3 · PERIMETER PLANTING (a soft tree border just inside the boundary) -->
+          <path d="M132 232 L150 96 L300 150 L560 150 L1040 392 L1058 470 L760 690 L470 818 L300 700 L186 470 Z"
+                fill="none" stroke="var(--c-forest)" stroke-width="14" stroke-opacity=".5" stroke-linejoin="round"
+                stroke-dasharray="2 10" stroke-linecap="round" transform="scale(.985)" transform-origin="center"/>
+
+          <!-- 4 · HSD YARD (top-left tail) -->
+          <rect x="168" y="120" width="78" height="40" rx="3" fill="none" stroke="var(--c-edge)" stroke-width="1.4" stroke-dasharray="5 4" stroke-opacity=".7"/>
+          <text x="207" y="144" text-anchor="middle" font-family="Poppins" font-size="11" fill="#8a8170" letter-spacing="1">HSD Yard</text>
+
+          <!-- 5 · SPORTS COURTS (NW) -->
+          <g>
+            <!-- padel court -->
+            <rect x="262" y="172" width="118" height="70" rx="6" fill="var(--c-court)" stroke="#fff" stroke-width="2" transform="rotate(-9 321 207)"/>
+            <!-- half muga / pickleball -->
+            <rect x="208" y="232" width="112" height="88" rx="6" fill="var(--c-court2)" stroke="#fff" stroke-width="2" transform="rotate(-9 264 276)"/>
+            <line x1="214" y1="276" x2="320" y2="276" stroke="#fff" stroke-width="1.4" opacity=".8" transform="rotate(-9 264 276)"/>
+            <circle cx="264" cy="276" r="20" fill="none" stroke="#fff" stroke-width="1.4" opacity=".8" transform="rotate(-9 264 276)"/>
+          </g>
+
+          <!-- 6 · RAIN TERRACE (dark deck) -->
+          <rect x="470" y="248" width="150" height="74" rx="5" fill="var(--c-deck)" opacity=".82" transform="rotate(-3 545 285)"/>
+          <!-- open lawn -->
+          <ellipse cx="498" cy="206" rx="78" ry="42" fill="var(--c-grass)" opacity=".75"/>
+
+          <!-- 7 · MIYAWAKI FOREST (textured grove, E) -->
+          <path d="M700 250 Q790 250 830 320 Q840 410 760 420 Q690 410 680 340 Q680 270 700 250 Z" fill="url(#forestTex)" opacity=".92"/>
+
+          <!-- 8 · GRAND TRELLIS + banquet (SE) -->
+          <rect x="812" y="404" width="96" height="58" rx="5" fill="var(--c-trellis)" opacity=".7" transform="rotate(20 860 433)"/>
+          <g opacity=".8" transform="rotate(20 860 433)">
+            <line x1="816" y1="410" x2="904" y2="410" stroke="#fff" stroke-width="1.2"/>
+            <line x1="816" y1="424" x2="904" y2="424" stroke="#fff" stroke-width="1.2"/>
+            <line x1="816" y1="438" x2="904" y2="438" stroke="#fff" stroke-width="1.2"/>
+            <line x1="816" y1="452" x2="904" y2="452" stroke="#fff" stroke-width="1.2"/>
+          </g>
+
+          <!-- 9 · POOL DECK + SWIMMING POOL (centre) -->
+          <rect x="404" y="430" width="372" height="120" rx="10" fill="var(--c-paving)" opacity=".9"/>
+          <rect x="486" y="448" width="244" height="62" rx="8" fill="url(#poolGrad)" stroke="#eaf6f8" stroke-width="2"/>
+          <rect x="600" y="452" width="18" height="18" rx="3" fill="#fbf8f1" opacity=".95"/> <!-- centre lantern plinth on water -->
+
+          <!-- 10 · THE RESIDENCE (building footprint, centre — kept abstract/elegant, not raw CAD) -->
+          <g filter="url(#soft)">
+            <rect x="438" y="560" width="300" height="150" rx="6" fill="#22345f" stroke="var(--gold-l)" stroke-width="1.6" stroke-opacity=".7"/>
+          </g>
+          <g stroke="#cdbf9f" stroke-width="1" opacity=".8" fill="none">
+            <line x1="588" y1="560" x2="588" y2="710"/>
+            <line x1="438" y1="635" x2="738" y2="635"/>
+            <rect x="455" y="578" width="50" height="44" rx="2"/><rect x="515" y="578" width="58" height="44" rx="2"/>
+            <rect x="603" y="578" width="58" height="44" rx="2"/><rect x="671" y="578" width="52" height="44" rx="2"/>
+            <rect x="455" y="650" width="50" height="44" rx="2"/><rect x="515" y="650" width="58" height="44" rx="2"/>
+            <rect x="603" y="650" width="58" height="44" rx="2"/><rect x="671" y="650" width="52" height="44" rx="2"/>
+          </g>
+          <text x="588" y="640" text-anchor="middle" font-family="Tenor Sans" font-size="13" fill="#9a907a" letter-spacing="0.6">The Residences</text>
+
+          <!-- 11 · CIRCULATION — main jogging loop (262m) + entrance driveway (200m) -->
+          <path id="loopPath" d="M360 470 Q420 430 500 430 L700 440 Q770 470 760 540 Q730 620 640 630 L430 650 Q360 620 350 540 Q348 500 360 470 Z"
+                fill="none" stroke="var(--m-amenity)" stroke-width="2.4" stroke-dasharray="9 8" stroke-opacity=".0" stroke-linecap="round"/>
+          <path id="drivePath" d="M540 818 Q560 740 640 716 L880 600"
+                fill="none" stroke="var(--m-arrival)" stroke-width="2.4" stroke-dasharray="9 8" stroke-opacity=".0" stroke-linecap="round"/>
+
+          <!-- soft inner vignette to seat the plan on the parchment -->
+          <path d="M132 232 L150 96 L300 150 L560 150 L1040 392 L1058 470 L760 690 L470 818 L300 700 L186 470 Z" fill="url(#vign)" pointer-events="none"/>
+        </svg>
+
+        <!-- north arrow + scale -->
+        <div class="northwrap">
+          <svg viewBox="0 0 40 40"><path d="M20 4 L26 26 L20 21 L14 26 Z" fill="#c9a84c"/><path d="M20 21 L26 26 L20 36 L14 26 Z" fill="#fff" stroke="#c9a84c" stroke-width="1"/></svg>
+          <b>N</b>
+        </div>
+
+        <!-- markers injected here by JS (positioned in % of .layer) -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOP BAR ── -->
+  <div class="top">
+    <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+    <div class="eyebrow" id="eyebrow"></div>
+  </div>
+
+  <!-- ── LEFT RAIL (two faces) ── -->
+  <aside class="rail fadein">
+    <!-- FACE A : overview -->
+    <div class="face on" id="faceOverview">
+      <div class="rhead">
+        <div class="rk">Seasonal Gardens · One Garden</div>
+        <h1><em>The</em> Grounds</h1>
+        <p>Five seasonal lanterns set within one living garden — arrival unfolds slowly, the gardens reveal themselves in turn.</p>
+      </div>
+      <div class="rscroll">
+        <div class="sect">
+          <div class="sk">Key Facts</div>
+          <div class="facts">
+            <div class="fact"><div class="fv">5</div><div class="fl">Seasonal Lanterns</div></div>
+            <div class="fact"><div class="fv">9</div><div class="fl">Landscape Zones</div></div>
+            <div class="fact"><div class="fv">262<span style="font-size:.55em"> m</span></div><div class="fl">Jogging Loop</div></div>
+            <div class="fact"><div class="fv">200<span style="font-size:.55em"> m</span></div><div class="fl">Entrance Drive</div></div>
+            <div class="fact"><div class="fv">25<span style="font-size:.55em"> m</span></div><div class="fl">Lap Pool</div></div>
+            <div class="fact"><div class="fv">91</div><div class="fl">Trees Retained</div></div>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="sk">Explore</div>
+          <div class="filters" id="filters">
+            <button class="filt f-lantern" data-cat="lantern"><span class="fd"></span>Lanterns</button>
+            <button class="filt f-amenity" data-cat="amenity"><span class="fd"></span>Amenities</button>
+            <button class="filt f-garden" data-cat="garden"><span class="fd"></span>Gardens</button>
+            <button class="filt f-arrival" data-cat="arrival"><span class="fd"></span>Arrival</button>
+          </div>
+        </div>
+
+        <div class="sect">
+          <div class="sk">What's Where</div>
+          <div class="list" id="list"></div>
+        </div>
+
+        <div class="sect">
+          <div class="sk">Landscape Zones</div>
+          <div class="leg" id="legZones"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FACE B : feature detail -->
+    <div class="face" id="faceDetail">
+      <div class="det">
+        <div class="dtop">
+          <div class="dimg" id="detImgBox"><img id="detImg" src="" alt=""></div>
+          <button class="dback" id="detBack"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>All Points</button>
+          <button class="dexp" id="detExp" aria-label="View image full screen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+          <div class="dcap"><span class="num" id="detNum"></span><div class="k" id="detCat"></div></div>
+        </div>
+        <div class="dscroll">
+          <h2 id="detName"></h2>
+          <div class="dtag" id="detTag"></div>
+          <div class="drule"></div>
+          <p class="dnarr" id="detNarr"></p>
+          <div class="drows" id="detRows"></div>
+          <div class="dchips" id="detChips"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── zoom controls ── -->
+  <div class="zctrl">
+    <button class="zb" id="zin" aria-label="Zoom in"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/></svg></button>
+    <button class="zb" id="zout" aria-label="Zoom out"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-3.5-3.5"/></svg></button>
+    <button class="zb" id="zrst" aria-label="Reset view"><svg viewBox="0 0 24 24"><path d="M3 11a8 8 0 1 1 2.3 5.6M3 21v-5h5"/></svg></button>
+  </div>
+  <div class="hint"><svg viewBox="0 0 24 24"><path d="M5 9l-2 3 2 3M19 9l2 3-2 3M9 5l3-2 3 2M9 19l3 2 3-2"/></svg>Drag to pan · Scroll to zoom</div>
+
+  <!-- floating 360° view button + full-screen viewer (shared pattern) -->
+  <button class="float360" id="btn360" aria-label="360 degree view">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+    <span>360° View</span>
+  </button>
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
+  </div>
+
+  <!-- ── fullscreen image ── -->
+  <div class="fs" id="fs"><img id="fsImg" src="" alt=""><div class="fscap" id="fsCap"></div><button class="fsx" id="fsx" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+
+<script>
+  var R='../assets/renders/';
+  var LANTERN_GLYPH='<svg viewBox="0 0 24 24"><rect x="7" y="5" width="10" height="14" rx="1.5"/><path d="M7 9h10M7 15h10M9 5V3.5M15 5V3.5M9 19v1.5M15 19v1.5"/></svg>';
+
+  /* ── FEATURE DATA — the 25 numbered master-plan points (verbatim legend, p.11) ──
+     x/y are % of the .layer box (which holds the 1180x940 SVG).
+     Lantern entries carry full season / location / materials / feature / narrative
+     from the Lantern Design Concept; others carry a short landscape note. */
+  var POINTS=[
+    {n:1,  cat:'lantern', name:'Twin Lantern',            x:64, y:69, season:'Arrival',     loc:'South entry threshold',  mat:'Paired jali columns', feat:'Gateway marker',
+      img:R+'lanterns/twin.webp', tag:'The Gateway', chips:['Jali','Threshold'],
+      narr:'A pair of jali columns standing sentinel at the southern threshold — the garden’s first quiet gesture of welcome.'},
+    {n:2,  cat:'arrival', name:'Drop-off',                x:48, y:76, loc:'Main porte-cochère',
+      img:null /* client-20: no fitting drop-off render exists — labeled point with a text-only detail panel */, tag:'The Arrival Court', chips:['Porte-cochère'],
+      narr:'The arrival court, where the address first announces itself beneath the Winter Lantern.'},
+    {n:3,  cat:'lantern', name:'Winter Lantern',          x:44, y:80, season:'Winter · Makara Sankranti (Jan 14–15)', loc:'Main Drop-off', mat:'Clay jali brick', feat:'Entrance icon · Winter blossom tree',
+      img:R+'lanterns/twin.webp', tag:'Festival of the Sun', chips:['Clay Jali','Winter Bloom'],
+      narr:'Marking the winter solstice and the harvest, the Winter Lantern is the garden’s entrance icon — a clay-jali beacon glowing beside a winter-blossoming tree, casting the shadow of a sculptural canopy.'},
+    {n:4,  cat:'garden',  name:"Pet's Park",              x:25, y:62, loc:'South-west green',
+      img:R+'amenities/pets.webp', tag:'For the Smallest Members', chips:['Pet-Friendly'],
+      narr:'A green run set aside for the household’s smallest members, along the quiet south-western edge.'},
+    {n:5,  cat:'amenity', name:'Linear Playground',       x:27, y:42, loc:'Western garden trail',
+      img:R+'amenities/pets.webp', tag:'A Trail of Play', chips:['Children'],
+      narr:'A play trail woven through the western gardens, reached over the bridge to the playground.'},
+    {n:6,  cat:'amenity', name:'Yoga Deck',               x:31, y:34, loc:'4.7 × 4.7 m timber deck', mat:'Timber',
+      img:R+'amenities/yoga.webp', tag:'A Quiet Start', chips:['Wellness'],
+      narr:'A deck set apart for a quiet start to the day — sized 4.7 × 4.7 m, framed by planting.'},
+    {n:7,  cat:'amenity', name:'Half Muga / Pickleball Court', x:24, y:30, loc:'19.0 × 17.4 m court',
+      img:R+'amenities/muga.webp', tag:'In the Gardens', chips:['Sport'],
+      narr:'A half-muga and pickleball court within the gardens at the cool northern corner.'},
+    {n:8,  cat:'garden',  name:'Orchard Garden',          x:19, y:31, loc:'Western edge',
+      img:R+'amenities/lawn.webp', tag:'A Fruiting Edge', chips:['Orchard'],
+      narr:'A fruiting orchard running along the western boundary of the grounds.'},
+    {n:9,  cat:'amenity', name:'Padel Court',             x:28, y:21, loc:'20.1 × 9.8 m court',
+      img:R+'amenities/muga.webp', tag:'The Northern Corner', chips:['Sport'],
+      narr:'A full padel court at the northern corner — 20.1 × 9.8 m, edged by perimeter trees.'},
+    {n:10, cat:'lantern', name:'Summer Lantern',          x:44, y:30, season:'Summer · Karka Sankranti (Jul–Aug)', loc:'Rain Terrace', mat:'Black glass · water', feat:'Monsoon cabana · Reflection on water',
+      img:R+'lanterns/summer.webp', tag:'The Solstice', chips:['Monsoon Cabana','Stillness'],
+      narr:'At the summer solstice, the Summer Lantern is a monsoon cabana mirrored on still water — shelter and reflection held as one, beside the Rain Terrace.'},
+    {n:11, cat:'amenity', name:'Rain Terrace',            x:47, y:31, loc:'21.3 × 9.8 m deck',
+      img:R+'amenities/lawn.webp', tag:'Framing the Monsoon', chips:['Sunken Terrace'],
+      narr:'A sheltered, sunken terrace 21.3 × 9.8 m that frames the monsoon — the dark deck at the lawn’s edge.'},
+    {n:12, cat:'garden',  name:'Open Lawn',               x:42, y:22, loc:'Central green',
+      img:R+'amenities/lawn.webp', tag:'The Gathering Green', chips:['Lawn'],
+      narr:'A broad open lawn for gathering and play, the soft green heart of the northern gardens.'},
+    {n:13, cat:'amenity', name:'Seating Area',            x:50, y:18, loc:'Among the northern trees',
+      img:R+'lanterns/lobby.webp', tag:'A Shaded Pause', chips:['Seating'],
+      narr:'Shaded seating set quietly among the retained trees at the northern edge.'},
+    {n:14, cat:'lantern', name:'The Central Lantern',     x:52, y:49, season:'All Year · Brahma', loc:'Cascade Edge · Pool', mat:'Pilkington frosted glass', feat:'Reacts to the weather · Floats on water · Feature tree on axis',
+      img:R+'lanterns/center.webp', tag:'The Heart of the Garden', chips:['Frosted Glass','Floats on Water'],
+      narr:'At the very centre of gravity rises the Central Lantern — a quiet axis of light. Frosted glass floating at the pool’s cascade edge, it reacts to the weather and gathers every season into one eternal glow.'},
+    {n:15, cat:'amenity', name:'Swimming Pool',           x:51, y:51, loc:'25 × 9 m lap pool',
+      img:R+'lanterns/center.webp', tag:'The Lap Pool', chips:['25 m'],
+      narr:'A 25 × 9 m lap pool at the centre of the grounds, the Central Lantern floating at its edge.'},
+    {n:16, cat:'amenity', name:'Children Pool Cabana',    x:42, y:50, loc:'Pool deck, west',
+      img:R+'lanterns/center.webp', tag:'For the Little Ones', chips:['Cabana'],
+      narr:'A cabana beside the children’s pool, on the western reach of the pool deck.'},
+    {n:17, cat:'amenity', name:'Pool Deck Cabana',        x:38, y:54, loc:'Pool deck',
+      img:R+'lanterns/center.webp', tag:'A Private Shade', chips:['Cabana'],
+      narr:'A private cabana on the pool deck, sheltered for an afternoon out of the sun.'},
+    {n:18, cat:'amenity', name:'Jacuzzi Cabana',          x:60, y:50, loc:'Pool deck, east',
+      img:R+'lanterns/center.webp', tag:'The Warm Water', chips:['Jacuzzi'],
+      narr:'A jacuzzi cabana at the eastern end of the pool, warm water framed by greenery.'},
+    {n:19, cat:'amenity', name:'Pool Deck',               x:50, y:58, loc:'Sun terracing',
+      img:R+'lanterns/center.webp', tag:'The Sun Terrace', chips:['Deck'],
+      narr:'Generous sun-deck terracing along the pool, the social heart of the grounds.'},
+    {n:20, cat:'lantern', name:'Spring Lantern',          x:64, y:35, season:'Spring · Ugadi (Mar–Apr)', loc:'Miyawaki Forest', mat:'Expanded metal · timber', feat:'A folly in the forest · Spring blossom · Creeper',
+      img:R+'lanterns/spring.webp', tag:'The Lunar New Year', chips:['Forest Folly','First Bloom'],
+      narr:'Celebrated across Karnataka as the start of the lunar calendar, the Spring Lantern is a folly hidden within the Miyawaki forest, wrapped in creeper and marking the year’s first bloom.'},
+    {n:21, cat:'amenity', name:'Grand Trellis',           x:73, y:46, loc:'14.5 × 7.8 m trellis', mat:'Timber',
+      img:R+'amenities/lawn.webp', tag:'The Eastern Walk', chips:['Trellis'],
+      narr:'A shaded trellis walk 14.5 × 7.8 m on the eastern edge, leading toward the banquet garden.'},
+    {n:22, cat:'lantern', name:'Autumn Lantern',          x:70, y:49, season:'Autumn · Diwali (Oct–Nov)', loc:'The Bridge', mat:'SUS wire mesh', feat:'Moon lantern · Night-blooming fragrance',
+      img:R+'lanterns/autumn.webp', tag:'Festival of Lights', chips:['Moon Lantern','Night Bloom'],
+      narr:'For Diwali — the most natural connection of all — the Autumn Lantern rises as a moon among night-blooming flowers, its SUS-wire form fragrant long after dark, set on the bridge.'},
+    {n:23, cat:'garden',  name:'Banquet Garden',          x:78, y:47, loc:'South-east',
+      img:R+'amenities/lawn.webp', tag:'The Banquet Setting', chips:['Garden'],
+      narr:'A garden setting for the banquet pavilion, on the south-eastern reach of the grounds.'},
+    {n:24, cat:'amenity', name:'Banquet Cabana',          x:72, y:60, loc:'Banquet lawn',
+      img:R+'lanterns/lobby.webp', tag:'Beside the Lawn', chips:['Cabana'],
+      narr:'A cabana serving the banquet lawn, for gatherings spilling out into the garden.'},
+    {n:25, cat:'amenity', name:'Banquet Spill-out Deck',  x:62, y:60, loc:'East of the residence',
+      img:R+'lanterns/lobby.webp', tag:'The Open Deck', chips:['Deck'],
+      narr:'An open deck spilling out from the banquet hall, east of the residences.'}
+  ];
+
+  /* zones legend (from the Zoning Plan) */
+  var ZONES=[
+    {key:'sports',  name:'Sports Zone',           col:'#c8917f'},
+    {key:'lawn',    name:'Lawn & Rain Terrace',   col:'#b8c79c'},
+    {key:'forest',  name:'Forest Zone',           col:'#9fb47f'},
+    {key:'bridge',  name:'Bridge & Rear Entrance',col:'#d6c08a'},
+    {key:'herbs',   name:'Herbs Garden',          col:'#aac4cb'},
+    {key:'pool',    name:'Pool Area',             col:'#8fb3c4'},
+    {key:'banquet', name:'Banquet Spill-out',     col:'#e0cbb1'},
+    {key:'drop',    name:'Drop-off & Access',     col:'#dd9a78'},
+    {key:'pet',     name:'Pet-Friendly Area',     col:'#bb9166'}
+  ];
+
+  /* gold line-icon set */
+  var ICON={
+    season:'<circle cx="12" cy="12" r="3.6"/><path d="M12 4.5v-1M12 20.5v1M4.5 12h-1M20.5 12h1M6.7 6.7l-.7-.7M18 18l-.7-.7M17.3 6.7l.7-.7M6 18l.7-.7"/>',
+    location:'<path d="M12 21s-6.5-5.7-6.5-10.3A6.5 6.5 0 0 1 18.5 10.7C18.5 15.3 12 21 12 21z"/><circle cx="12" cy="10.6" r="2.3"/>',
+    materials:'<path d="M3.5 8.5l8.5-4.5 8.5 4.5-8.5 4.5z"/><path d="M3.5 12.5l8.5 4.5 8.5-4.5"/><path d="M3.5 16l8.5 4.5L20.5 16"/>',
+    feature:'<path d="M12 3.5l2.3 5.6 6 .5-4.6 3.9 1.5 5.8L12 16.6 6.3 19.3l1.5-5.8L3.2 9.6l6-.5z"/>'
+  };
+  function svg(name){ return '<svg class="ic" viewBox="0 0 24 24">'+ICON[name]+'</svg>'; }
+  function catLabel(c){ return c==='lantern'?'Lantern':c==='amenity'?'Amenity':c==='garden'?'Garden':'Arrival'; }
+
+  /* ── element refs ── */
+  var layer=document.getElementById('layer'), stage=document.getElementById('stage'), list=document.getElementById('list');
+  var faceOv=document.getElementById('faceOverview'), faceDt=document.getElementById('faceDetail');
+  var eyebrow=document.getElementById('eyebrow'), back=document.getElementById('back');
+  var zonesG=document.getElementById('zones'), loopP=document.getElementById('loopPath'), driveP=document.getElementById('drivePath');
+  var markers={}, sel=null, view='overview';
+
+  /* ── build markers + list rows ── */
+  POINTS.forEach(function(pt){
+    pt.id='p'+pt.n;
+    var m=document.createElement('div'); m.className='mk cat-'+pt.cat+(pt.cat==='lantern'?' is-lantern':'');
+    m.style.left=pt.x+'%'; m.style.top=pt.y+'%';
+    m.innerHTML='<span class="pin">'+(pt.cat==='lantern'?LANTERN_GLYPH:pt.n)+'</span><span class="tag">'+pt.name+'</span>';
+    m.addEventListener('click', function(e){ e.stopPropagation(); openDetail(pt.id, true); });
+    layer.appendChild(m); markers[pt.id]={pt:pt, el:m};
+
+    var r=document.createElement('button'); r.className='lrow c-'+pt.cat; r.setAttribute('data-id',pt.id); r.setAttribute('data-cat',pt.cat);
+    r.innerHTML='<span class="ln">'+(pt.cat==='lantern'?'✦':pt.n)+'</span><b>'+pt.name+'</b>';
+    r.addEventListener('click', function(){ openDetail(pt.id, true); });
+    list.appendChild(r);
+  });
+
+  /* ── build zones legend ── */
+  var legZones=document.getElementById('legZones');
+  ZONES.forEach(function(z){
+    var d=document.createElement('div'); d.className='lg';
+    d.innerHTML='<span class="sw" style="background:'+z.col+'"></span>'+z.name;
+    d.addEventListener('mouseenter', function(){ highlightZone(z.key, true); });
+    d.addEventListener('mouseleave', function(){ highlightZone(z.key, false); });
+    legZones.appendChild(d);
+  });
+  function highlightZone(key, on){
+    var shp=zonesG.querySelector('.zoneShape[data-zone="'+key+'"]'); if(!shp) return;
+    shp.style.fillOpacity = on ? '0.7' : '';
+  }
+
+  /* ── pan & zoom ── */
+  var scale=1, tx=0, ty=0, MIN=1, MAXZ=4.2, drag=false, sx=0, sy=0, stx=0, sty=0, pd=0, ps=1;
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+  function apply(an){ layer.classList.toggle('dragging', !an); layer.style.transform='translate('+tx+'px,'+ty+'px) scale('+scale+')'; }
+  function reset(){ scale=1; tx=0; ty=0; apply(true); }
+  function focal(e){ var r=stage.getBoundingClientRect(); return {x:e.clientX-(r.left+r.width/2), y:e.clientY-(r.top+r.height/2)}; }
+  function zoomTo(n,cx,cy,an){ n=clamp(n,MIN,MAXZ); var k=n/scale; tx=cx-(cx-tx)*k; ty=cy-(cy-ty)*k; scale=n; apply(an); }
+  stage.addEventListener('wheel', function(e){ e.preventDefault(); var f=focal(e); zoomTo(scale*(e.deltaY<0?1.12:1/1.12), f.x, f.y, false); }, {passive:false});
+  stage.addEventListener('mousedown', function(e){ drag=true; sx=e.clientX; sy=e.clientY; stx=tx; sty=ty; });
+  window.addEventListener('mousemove', function(e){ if(!drag) return; tx=stx+(e.clientX-sx); ty=sty+(e.clientY-sy); apply(false); });
+  window.addEventListener('mouseup', function(){ drag=false; });
+  stage.addEventListener('touchstart', function(e){ if(e.touches.length===2){ pd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); ps=scale; } else if(e.touches.length===1){ drag=true; sx=e.touches[0].clientX; sy=e.touches[0].clientY; stx=tx; sty=ty; } }, {passive:false});
+  stage.addEventListener('touchmove', function(e){ if(e.touches.length===2){ e.preventDefault(); var f=focal({clientX:(e.touches[0].clientX+e.touches[1].clientX)/2, clientY:(e.touches[0].clientY+e.touches[1].clientY)/2}); zoomTo(ps*(Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)/pd), f.x, f.y, false); } else if(drag&&e.touches.length===1){ e.preventDefault(); tx=stx+(e.touches[0].clientX-sx); ty=sty+(e.touches[0].clientY-sy); apply(false); } }, {passive:false});
+  stage.addEventListener('touchend', function(e){ if(e.touches.length<2) pd=0; if(e.touches.length===0) drag=false; });
+  document.getElementById('zin').addEventListener('click', function(){ zoomTo(scale+0.5,0,0,true); });
+  document.getElementById('zout').addEventListener('click', function(){ zoomTo(scale-0.5,0,0,true); });
+  document.getElementById('zrst').addEventListener('click', function(){ closeDetail(); reset(); });
+
+  function flyTo(pt){
+    var lr=layer.getBoundingClientRect(); var w=lr.width/scale, h=lr.height/scale; var target=2.0;
+    var ox=(pt.x/100 - 0.5)*w, oy=(pt.y/100 - 0.5)*h;
+    // nudge right so the focused point isn't hidden under the left rail
+    tx=-ox*target + 130; ty=-oy*target; scale=target; apply(true);
+  }
+
+  /* ── detail panel ── */
+  function openDetail(id, fly){
+    sel=id; view='detail'; var pt=markers[id].pt;
+    for(var k in markers){ markers[k].el.classList.toggle('sel', k===id); markers[k].el.classList.toggle('dim', k!==id); }
+    document.querySelectorAll('.lrow').forEach(function(r){ r.classList.toggle('sel', r.getAttribute('data-id')===id); });
+
+    var _dtop=document.querySelector('.det .dtop'), _dimg=document.getElementById('detImg');
+    _dtop.classList.toggle('noimg', !pt.img);                       // client-20: photo-less entries get a text-only panel (no broken frame)
+    if(pt.img){ _dimg.src=pt.img; _dimg.alt=pt.name; } else { _dimg.removeAttribute('src'); _dimg.alt=''; }
+    document.getElementById('detNum').textContent=(pt.cat==='lantern'?'':'No. '+pt.n);
+    document.getElementById('detCat').textContent=catLabel(pt.cat);
+    document.getElementById('detName').textContent=pt.name;
+    document.getElementById('detTag').textContent=pt.tag||'';
+    document.getElementById('detNarr').textContent=pt.narr;
+
+    var rows='';
+    if(pt.season) rows+=drow('season','Season',pt.season);
+    if(pt.loc)    rows+=drow('location','Location',pt.loc);
+    if(pt.mat)    rows+=drow('materials','Materials',pt.mat);
+    if(pt.feat)   rows+=drow('feature','Feature',pt.feat);
+    document.getElementById('detRows').innerHTML=rows;
+    document.getElementById('detChips').innerHTML=(pt.chips||[]).map(function(c){ return '<span class="chip">'+c+'</span>'; }).join('');
+
+    eyebrow.textContent=catLabel(pt.cat)+' · '+pt.name;
+    faceOv.classList.remove('on'); faceDt.classList.add('on');
+    document.querySelector('.det .dscroll').scrollTop=0;
+    if(fly) flyTo(pt);
+  }
+  function drow(ic,k,v){ return '<div class="drow">'+svg(ic)+'<div class="tx"><div class="k">'+k+'</div><div class="v">'+v+'</div></div></div>'; }
+
+  function closeDetail(){
+    sel=null; view='overview';
+    for(var k in markers){ markers[k].el.classList.remove('sel','dim'); }
+    document.querySelectorAll('.lrow').forEach(function(r){ r.classList.remove('sel'); });
+    eyebrow.textContent='';                       // label-sweep: no screen-name strip; eyebrow is a breadcrumb only while a feature is open
+    faceDt.classList.remove('on'); faceOv.classList.add('on');
+  }
+  document.getElementById('detBack').addEventListener('click', function(){ closeDetail(); reset(); });
+
+  stage.addEventListener('click', function(e){
+    if(e.target===stage || e.target.classList.contains('layerwrap') || e.target.tagName==='svg' || e.target.id==='siteGround'){
+      if(view==='detail'){ closeDetail(); }
+    }
+  });
+
+  /* ── filters ── */
+  document.querySelectorAll('.filt').forEach(function(b){
+    b.addEventListener('click', function(){
+      b.classList.toggle('off'); var cat=b.getAttribute('data-cat'), off=b.classList.contains('off');
+      for(var k in markers){ if(markers[k].pt.cat===cat) markers[k].el.classList.toggle('hide', off); }
+      document.querySelectorAll('.lrow[data-cat="'+cat+'"]').forEach(function(r){ r.classList.toggle('hide', off); });
+      if(off && sel && markers[sel] && markers[sel].pt.cat===cat){ closeDetail(); reset(); }
+    });
+  });
+
+  /* ── fullscreen image ── */
+  var fs=document.getElementById('fs');
+  function openFs(){ if(!sel) return; var pt=markers[sel].pt; if(!pt.img) return; document.getElementById('fsImg').src=pt.img; document.getElementById('fsCap').textContent=catLabel(pt.cat)+' · '+pt.name; fs.classList.add('open'); }
+  document.getElementById('detImgBox').addEventListener('click', openFs);
+  document.getElementById('detExp').addEventListener('click', function(e){ e.stopPropagation(); openFs(); });
+  document.getElementById('fsx').addEventListener('click', function(){ fs.classList.remove('open'); });
+  fs.addEventListener('click', function(e){ if(e.target===fs) fs.classList.remove('open'); });
+
+  /* ── return / keyboard ── */
+  back.addEventListener('click', function(){
+    if(view==='detail'){ closeDetail(); reset(); }
+    else { try{ parent.postMessage('eo-screen-close','*'); }catch(e){} }
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){
+      if(fs.classList.contains('open')){ fs.classList.remove('open'); return; }
+      if(view==='detail'){ closeDetail(); reset(); }
+      else { try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } }
+    }
+  });
+
+  /* ── entrance reveal: zones fade in, circulation routes draw, markers stagger ── */
+  function animateIn(){
+    setTimeout(function(){ zonesG.style.opacity='1'; }, 250);
+    setTimeout(function(){ loopP.style.strokeOpacity='.75'; driveP.style.strokeOpacity='.7'; }, 500);
+    var mks=Object.keys(markers);
+    mks.forEach(function(k,i){
+      var el=markers[k].el; el.style.opacity='0'; el.style.transform='translate(-50%,-50%) scale(.6)';
+      el.style.transition='opacity .5s var(--expo), transform .5s var(--overshoot)';
+      setTimeout(function(){ el.style.opacity=''; el.style.transform='translate(-50%,-50%)';
+        setTimeout(function(){ el.style.transition=''; }, 600); }, 650 + i*32);
+    });
+  }
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    zonesG.style.opacity='1'; loopP.style.strokeOpacity='.75'; driveP.style.strokeOpacity='.7';
+  } else { animateIn(); }
+
+  apply(false);
+  /* dev deep-link: ?sel=p14 opens that feature */
+  (function(){ try{ var s=new URLSearchParams(location.search).get('sel'); if(s && markers[s]) setTimeout(function(){ openDetail(s,true); }, 700); }catch(e){} })();
+
+  /* ── 360° view overlay (src set only on tap; blanked after close) ── */
+  (function(){ var b=document.getElementById("btn360"), v=document.getElementById("view360"), f=document.getElementById("frame360"), bk=document.getElementById("back360");
+    if(!b||!v||!f) return;
+    b.addEventListener("click", function(){ f.src="https://www.turiya.co/360/EmbassyOne/"; v.classList.add("show"); v.setAttribute("aria-hidden","false"); });
+    function close360(){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },420); }
+    if(bk) bk.addEventListener("click", close360);
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && v.classList.contains("show")) close360(); });
+  })();
+  window.__ready=true;
+</script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

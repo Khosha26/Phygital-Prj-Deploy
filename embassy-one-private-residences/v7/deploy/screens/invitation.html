@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Invitation · Embassy ONE</title>
+
+<!--
+  ──────────────────────────────────────────────────────────────────────
+  THE INVITATION (Enquire / EOI) — rebuilt to match the approved reference.
+  ──────────────────────────────────────────────────────────────────────
+  · Parchment bg + leaf filigree. Top: RETURN (green pill) · "THE INVITATION" · 360° View (duplicate strip removed per client note).
+  · "Arrive." heading + intro. Split card: approach image (left) + Expression
+    of Interest form (right): name/phone/email/preferred-time → "Request a
+    Private Viewing" → graceful confirmation.
+  · image: ../assets/renders/lanterns/center.webp
+-->
+<link href="../assets/fonts/fonts.css" rel="stylesheet"><!-- brand faces self-hosted (Tenor Sans + Poppins) -->
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  /* native buttons/inputs don't inherit font-family — force the brand face everywhere */
+  button,input,select,textarea{font-family:inherit}
+
+  /* iPad standalone PWA (installed): drop the top chrome below the status bar and let the
+     backdrop bleed under the bottom home-indicator band, so the app reads truly full-screen.
+     Inert in a normal browser tab (display-mode is not standalone there). */
+  @media (display-mode:standalone){
+    :where(.top,.topbar,.dtop,.loc>.bar){margin-top:env(safe-area-inset-top,0px)}
+    :where(body,#home,.wrap,.stage,main)>:where(.back,.float360,.nav360,.views,.corner-logo,.hour-dial){margin-top:env(safe-area-inset-top,0px)}
+    body,.bg,#map{min-height:100lvh}
+  }
+
+  :root{
+    /* Embassy ONE redesign — deck palette (ink-navy + bone) */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#efe8da; --bone-2:#e6dcc8; --paper:#faf7f0;
+    --taupe:#6e5c58; --champ:#c9a84c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#121621; --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette */
+    --parch:#efe8da; --muted:#7a7264; --faint:#8c919c;
+    --gold:#c9a84c; --gold-d:#b9a583; --gold-l:#c9a84c; --gold-lt:#c9a84c; --brass:#c9a84c;
+    --line:rgba(18,22,33,.12); --leather1:#1a2030; --leather2:#121621; --green:#121621; --card:#e6dcc8; --sage:#9da585; --water:#8aa0a8;
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a;
+    --on-navy:#ece8e0; --on-navy-dim:#9aa1ad;
+    --ease:cubic-bezier(.23,1,.32,1); --expo:cubic-bezier(.23,1,.32,1); --overshoot:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; width:100%; color:var(--ink); font-family:"Poppins",sans-serif;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow:hidden;
+    position:fixed; inset:0; background:#efe8da; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent}
+  img,svg{-webkit-user-drag:none}
+  /* beige theme (theme-flipped: was dark ink-navy) */
+  .bg{position:fixed; inset:0; z-index:0; background:radial-gradient(125% 95% at 50% 0%, #efe8da, #e0d5c0 62%), #efe8da}
+  /* faint architectural line-drawing of the real ONE tower (dark lines on beige) — quiet closing screen */
+  .bg::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-outline-bone.webp) no-repeat right -4% bottom;
+    background-size:auto 98%; opacity:.08; mix-blend-mode:multiply}
+  /* subtle grain, blended */
+  .bg::before{content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:radial-gradient(rgba(18,22,33,.05) .5px, transparent .6px); background-size:3px 3px}
+  .wrap{position:fixed; inset:0; z-index:2; display:flex; flex-direction:column; padding:clamp(16px,2.2vh,28px) clamp(26px,3.4vw,62px) clamp(16px,2.4vh,30px)}
+
+  /* top bar */
+  .top{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; flex:0 0 auto; gap:12px}
+  .back{justify-self:start; display:inline-flex; align-items:center; gap:11px; cursor:pointer; min-height:44px;
+    background:#121621; border:1px solid rgba(18,22,33,.25); color:#faf7f0; font-weight:500; font-size:clamp(9px,1.15vh,13px);
+    letter-spacing:.32em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.32), 0 8px 18px -8px rgba(15,18,28,.4);
+    backdrop-filter:none; -webkit-backdrop-filter:none; transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  @media (hover:hover){ .back:hover{ background:#121621; border-color:var(--gold-lt);
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.4), 0 10px 22px -8px rgba(15,18,28,.46); } }
+  .back:active{ transform:scale(.97); } .back svg{width:15px;height:15px;display:block; stroke:#faf7f0}
+  .title{justify-self:center; text-align:center}
+  .title .tt{font-size:clamp(11px,1.4vh,16px); letter-spacing:.5em; text-indent:.5em; text-transform:uppercase; color:var(--ink); font-weight:500}
+  .title .tr{display:flex; align-items:center; justify-content:center; gap:7px; margin-top:7px}
+  .title .tr i{height:1px; width:clamp(36px,4.6vw,80px); background:linear-gradient(90deg,transparent,var(--gold))} .title .tr i:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+  .title .tr b{width:5px;height:5px;background:var(--gold);transform:rotate(45deg)}
+  .corner{justify-self:end; font-size:clamp(8.5px,1.1vh,13px); letter-spacing:.32em; text-transform:uppercase; color:var(--champ)}
+
+  /* heading */
+  .head{flex:0 0 auto; margin-top:clamp(10px,2vh,26px)}
+  .head h1{font-family:"Tenor Sans",sans-serif; font-weight:600; line-height:1.06; color:var(--ink); font-size:clamp(34px,5.4vh,62px); text-transform:uppercase; letter-spacing:.16em; font-variant:small-caps; max-width:24ch}
+  .head h1 .dot{color:var(--champ)}
+  .head h1 em{font-style:italic; font-variant:normal; text-transform:none; letter-spacing:.04em; color:var(--champ)}
+  .head p{font-weight:300; color:var(--on-light-dim); line-height:1.65; font-size:clamp(12px,1.6vh,17px); max-width:46ch; margin-top:clamp(8px,1.4vh,16px)}
+
+  /* split card */
+  .card{flex:1 1 auto; min-height:0; margin-top:clamp(14px,2.4vh,30px); display:grid; grid-template-columns:1fr 1.04fr;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(18px) saturate(1.18); backdrop-filter:blur(18px) saturate(1.18);
+    border:1px solid rgba(201,168,76,.20); border-radius:22px; overflow:hidden; color:var(--on-dark);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); outline:1px solid rgba(201,168,76,.28); outline-offset:-4px}
+  .photo{position:relative; overflow:hidden}
+  .photo img{width:100%; height:100%; object-fit:cover; display:block}
+  .photo figcaption{position:absolute; left:clamp(18px,2vw,30px); bottom:clamp(16px,2.2vh,28px); z-index:2;
+    font-size:clamp(9px,1.1vh,13px); letter-spacing:.3em; text-transform:uppercase; color:#ece8e0; text-shadow:0 1px 10px rgba(0,0,0,.7)}
+  .photo::after{content:""; position:absolute; inset:0; background:linear-gradient(0deg, rgba(8,11,18,.45), transparent 35%); pointer-events:none}
+
+  /* form panel */
+  .form{padding:clamp(20px,3vh,44px) clamp(22px,2.6vw,52px); display:flex; flex-direction:column; min-height:0; overflow-y:auto;
+    scrollbar-width:thin; scrollbar-color:var(--gold-l) transparent}
+  .form::-webkit-scrollbar{width:5px}.form::-webkit-scrollbar-thumb{background:var(--gold-l);border-radius:3px}
+  .form .fk{font-size:clamp(9px,1.15vh,13px); letter-spacing:.34em; text-transform:uppercase; color:var(--gold-d)}
+  .form h2{font-family:"Tenor Sans",sans-serif; font-weight:600; font-size:clamp(24px,3.8vh,42px); line-height:1.02; color:var(--on-dark); margin:9px 0 0}
+  .form .lede{font-weight:300; color:var(--on-dark-dim); line-height:1.6; font-size:clamp(12px,1.5vh,16px); margin-top:clamp(8px,1.3vh,14px)}
+  .fields{margin-top:clamp(16px,2.6vh,30px); display:flex; flex-direction:column; gap:clamp(14px,2.2vh,24px)}
+  .frow{display:flex; gap:clamp(18px,2.4vw,44px)} .frow .field{flex:1}
+  .field label{display:block; font-size:clamp(9px,1.1vh,12px); letter-spacing:.24em; text-transform:uppercase; color:var(--gold-d); margin-bottom:9px}
+  .field input{width:100%; background:rgba(236,232,224,.04); -webkit-backdrop-filter:blur(10px) saturate(1.1); backdrop-filter:blur(10px) saturate(1.1);
+    border:1px solid rgba(201,168,76,.18); border-radius:10px; padding:11px 13px; font:inherit;
+    font-size:clamp(13px,1.6vh,16px); color:var(--on-dark); box-shadow:inset 0 1px 0 rgba(236,232,224,.06); transition:border-color .25s, background .25s, box-shadow .25s}
+  .field input::placeholder{color:var(--on-dark-dim); font-weight:300} .field input:focus{outline:none; border-color:var(--champ); background:rgba(236,232,224,.07); box-shadow:inset 0 1px 0 rgba(236,232,224,.1)}
+  .reqbtn{margin-top:clamp(18px,2.8vh,30px); width:100%; min-height:44px; cursor:pointer; color:#faf7f0;
+    background:#121621;
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(236,232,224,.24); border-radius:14px; padding:clamp(15px,2.2vh,22px); font-family:"Poppins"; font-weight:500;
+    font-size:clamp(11px,1.4vh,15px); letter-spacing:.28em; text-transform:uppercase; box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); transition:transform .2s, filter .3s, box-shadow .3s, border-color .3s}
+  @media (hover:hover){ .reqbtn:hover{transform:translateY(-2px); filter:brightness(1.14); border-color:var(--gold-lt)} } .reqbtn:active{transform:translateY(0)}
+  .note{font-size:clamp(9.5px,1.2vh,13px); color:var(--faint); margin-top:clamp(12px,1.8vh,18px); padding-bottom:clamp(12px,1.8vh,18px); border-bottom:1px solid rgba(236,232,224,.3)}
+  .sign{margin-top:clamp(12px,1.8vh,18px)}
+  .brandmark{height:clamp(20px,3vh,34px); width:auto; display:block; opacity:.92; margin-bottom:clamp(8px,1.2vh,12px)}
+  .sign .si{font-family:"Tenor Sans",sans-serif; font-style:italic; font-weight:500; color:var(--on-dark); font-size:clamp(13px,1.7vh,19px)}
+  .sign .sc{margin-top:7px; font-size:clamp(9px,1.1vh,12.5px); letter-spacing:.22em; text-transform:uppercase; color:var(--gold-d)}
+
+  /* confirmation */
+  .done{display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; flex:1 1 auto; gap:10px; padding:clamp(20px,4vh,50px)}
+  .done.on{display:flex} .form.sent .fk,.form.sent h2,.form.sent .lede,.form.sent .fields,.form.sent .reqbtn,.form.sent .note,.form.sent .sign{display:none}
+  .done .dchk{width:64px;height:64px;border-radius:50%;border:1.5px solid var(--gold);display:grid;place-items:center;margin-bottom:8px}
+  .done .dchk svg{width:42%;height:42%;stroke:var(--gold-d);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .done h2{font-family:"Tenor Sans",sans-serif;font-weight:600;font-size:clamp(28px,4.4vh,46px);color:var(--on-dark)}
+  .done p{font-weight:300;color:var(--on-dark-dim);font-size:clamp(13px,1.6vh,16px);line-height:1.65;max-width:34ch}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .8s var(--expo) forwards} @keyframes fin{to{opacity:1;transform:none}}
+
+  /* ── PORTRAIT / narrow: stack the split card, let the whole screen scroll ── */
+  @media (max-aspect-ratio:1/1){
+    .wrap{overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain}
+    .card{grid-template-columns:1fr; flex:0 0 auto; overflow:visible}
+    .photo{min-height:30vh; aspect-ratio:16/10}
+    .form{overflow:visible}
+    .frow{flex-direction:column}
+  }
+  /* ── PHONE PORTRAIT: keep the big serif heading from clipping ── */
+  @media (max-aspect-ratio:1/1) and (max-width:520px){
+    .top{grid-template-columns:1fr; justify-items:start; gap:8px}
+    .title{justify-self:start; text-align:left}
+    .title .tr{justify-content:flex-start}
+    .corner{justify-self:start}
+    .head h1{font-size:clamp(28px,8.4vw,40px); letter-spacing:.06em; max-width:none; overflow-wrap:break-word}
+    .head p{font-size:14px; max-width:none}
+    .form{padding:clamp(20px,5vw,30px)}
+    .form h2{font-size:clamp(24px,7vw,32px)}
+    .form .lede{font-size:14px}
+    .field input{font-size:16px}   /* >=16px stops iOS zoom-on-focus */
+  }
+  /* landscape phone: shrink heading, let it scroll */
+  @media (max-height:480px) and (min-aspect-ratio:1/1){
+    .wrap{overflow-y:auto; -webkit-overflow-scrolling:touch}
+    .head h1{font-size:clamp(22px,6.5vh,34px)}
+    .field input{font-size:16px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:#121621!important; border:1px solid rgba(18,22,33,.25)!important; color:#faf7f0!important; font-family:"Poppins",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(16px) saturate(1.12)!important; backdrop-filter:blur(16px) saturate(1.12)!important; box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  @media (hover:hover){ .back:hover{background:#121621!important; border-color:rgba(201,168,76,.5)!important; box-shadow:0 26px 54px -26px rgba(6,9,16,.7), inset 0 1px 0 rgba(236,232,224,.16)!important} }
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:#faf7f0!important}
+  /* wave-2: 360° view button + full-screen viewer (navy-on-beige, top-right) */
+  .float360{display:inline-flex; align-items:center; gap:9px; cursor:pointer; padding:10px 16px; border-radius:999px;
+    border:1px solid rgba(18,22,33,.25); color:#faf7f0; background:#121621; font-family:"Poppins",sans-serif; font-weight:500;
+    letter-spacing:.2em; text-transform:uppercase; font-size:clamp(9px,1.15vh,13px); white-space:nowrap;
+    box-shadow:0 8px 20px -10px rgba(6,9,16,.5); transition:transform .16s var(--ease), background .2s, border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{background:#121621; border-color:rgba(201,168,76,.6); transform:translateY(-2px)} }
+  .float360 svg{width:clamp(16px,2vh,20px); height:auto; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:90; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s ease}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:calc(env(safe-area-inset-top,0px) + clamp(14px,2.4vh,26px)); left:calc(env(safe-area-inset-left,0px) + clamp(14px,2.4vw,26px)); z-index:91;
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:11px 18px; border-radius:999px; border:1px solid rgba(236,232,224,.24); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-family:"Poppins",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px)}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621} }
+
+  /* brand-font polish: Tenor has no italic — true italics use Poppins; heading accents go straight */
+  .si{font-family:"Poppins",sans-serif;font-weight:300}
+  h1 em{font-style:normal}
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="wrap">
+    <div class="top">
+      <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+      <div class="title"><div class="tt">The Invitation</div><div class="tr"><i></i><b></b><i></i></div></div>
+      <button class="float360" id="btn360" aria-label="360 degree view" style="justify-self:end">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+        <span>360&deg; View</span>
+      </button>
+    </div>
+
+    <div class="head fadein">
+      <h1>Viewings are <em>private</em> and by appointment<span class="dot">.</span></h1>
+      <p>We welcome you to walk through the residence with us, in person.</p>
+    </div>
+
+    <div class="card fadein" style="animation-delay:.1s">
+      <figure class="photo">
+        <img src="../assets/renders/lanterns/center.webp" alt="Embassy ONE — the approach">
+        <figcaption>The Approach</figcaption>
+      </figure>
+      <div class="form" id="form">
+        <div class="fk">Expression of Interest</div>
+        <h2>A conversation, at your convenience.</h2>
+        <p class="lede">Leave a few details and a relationship lead will reach out to arrange a private viewing, in person and unhurried.</p>
+        <div class="fields">
+          <div class="frow">
+            <div class="field"><label>Name</label><input id="iName" type="text" placeholder="Your name"></div>
+            <div class="field"><label>Phone</label><input id="iPhone" type="tel" placeholder="Your number"></div>
+          </div>
+          <div class="field"><label>Email</label><input id="iEmail" type="email" placeholder="Your email"></div>
+          <div class="field"><label>How may we reach you</label><input id="iWhen" type="text" placeholder="A preferred time, if any — optional"></div>
+        </div>
+        <button class="reqbtn" id="reqBtn">Request a Private Viewing</button>
+        <div class="note">Private. We will only reach out to arrange your viewing.</div>
+        <div class="sign"><img class="brandmark" src="../assets/brand/one-pr-bone.webp" alt="Embassy ONE Private Residences"><div class="si">A private invitation.</div><div class="sc">[ Relationship Lead · Direct Line · Email ]</div></div>
+        <div class="done" id="done">
+          <div class="dchk"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+          <h2>With pleasure.</h2>
+          <p>Your interest is received. A relationship lead will reach out personally to arrange your private viewing.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  document.getElementById('back').addEventListener('click', function(){ try{ parent.postMessage('eo-screen-close','*'); }catch(e){} });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ try{ parent.postMessage('eo-screen-close','*'); }catch(_){ } } });
+  document.getElementById('reqBtn').addEventListener('click', function(){
+    try{window.RDA&&RDA.track('booking_request', 'invitation');}catch(_){}
+    document.getElementById('form').classList.add('sent');
+    document.getElementById('done').classList.add('on');
+  });
+</script>
+  <!-- wave-2: 360° full-screen viewer -->
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
+  </div>
+  <script>
+  (function(){ var b=document.getElementById("btn360"), v=document.getElementById("view360"), f=document.getElementById("frame360"), bk=document.getElementById("back360");
+    if(!b||!v||!f) return;
+    function close(){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },440); }
+    b.addEventListener("click", function(){ try{window.RDA&&RDA.track('360_view','invitation');}catch(_){} f.src="https://www.turiya.co/360/EmbassyOne/"; v.classList.add("show"); v.setAttribute("aria-hidden","false"); });
+    if(bk) bk.addEventListener("click", close);
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && v.classList.contains("show")){ e.stopImmediatePropagation(); close(); } }, true);
+  })();
+  </script>
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>

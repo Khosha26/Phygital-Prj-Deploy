@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Grounds · Amenities</title>
+<link href="../assets/fonts/fonts.css" rel="stylesheet"><!-- brand faces self-hosted (Tenor Sans + Poppins) -->
+<style>
+  /* iPad strip fix: the root paints app-beige so viewport shifts (safe-area / overscroll) never expose white */
+  html{background:#efe8da}
+  /* native buttons/inputs don't inherit font-family — force the brand face everywhere */
+  button,input,select,textarea{font-family:inherit}
+
+  /* iPad standalone PWA (installed): drop the top chrome below the status bar and let the
+     backdrop bleed under the bottom home-indicator band, so the app reads truly full-screen.
+     Inert in a normal browser tab (display-mode is not standalone there). */
+  @media (display-mode:standalone){
+    :where(.top,.topbar,.dtop,.loc>.bar){margin-top:env(safe-area-inset-top,0px)}
+    :where(body,#home,.wrap,.stage,main)>:where(.back,.float360,.nav360,.views,.corner-logo,.hour-dial){margin-top:env(safe-area-inset-top,0px)}
+    body,.bg,#map{min-height:100lvh}
+  }
+
+  :root{
+    /* Embassy ONE redesign — deck palette (ink-navy + bone) */
+    --ink:#121621; --ink-2:#1a2030; --ink-3:#222a3a;
+    --bone:#efe8da; --bone-2:#e6dcc8; --paper:#faf7f0;
+    --taupe:#6e5c58; --champ:#c9a84c;
+    --on-dark:#ece8e0; --on-dark-dim:#9aa1ad;
+    --on-light:#121621; --on-light-dim:#7a7264;
+    --line-dark:rgba(236,232,224,.14); --line-light:rgba(18,22,33,.12);
+    --ease-out:cubic-bezier(.23,1,.32,1); --ease-io:cubic-bezier(.77,0,.175,1);
+    /* legacy aliases remapped to the deck palette */
+    --parch:#efe8da; --muted:#7a7264; --faint:#8c919c;
+    --gold:#c9a84c; --gold-d:#b9a583; --gold-l:#c9a84c; --gold-lt:#c9a84c; --brass:#c9a84c;
+    --line:rgba(18,22,33,.12); --leather1:#1a2030; --leather2:#121621; --green:#121621; --card:#e6dcc8; --sage:#9da585; --water:#8aa0a8;
+    --navy:#121621; --navy-2:#1a2030; --navy-3:#222a3a;
+    --on-navy:#ece8e0; --on-navy-dim:#9aa1ad;
+    --ease:cubic-bezier(.23,1,.32,1); --expo:cubic-bezier(.23,1,.32,1); --overshoot:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%; color:var(--ink); background:#efe8da; font-family:"Poppins",sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden}
+  body{background:#efe8da; }
+  /* beige ground (theme-flipped: was dark ink-navy) */
+  .tint{position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:radial-gradient(125% 95% at 50% 0%, #efe8da, #e0d5c0 62%), #efe8da}
+  /* faint architectural line-drawing of the real ONE tower (dark lines on beige) */
+  .tint::after{content:""; position:absolute; inset:0; pointer-events:none; z-index:0;
+    background:url(../assets/renders/exterior/tower-outline-bone.webp) no-repeat right -4% bottom;
+    background-size:auto 98%; opacity:.06; mix-blend-mode:multiply}
+  /* subtle grain, blended */
+  .tint::before{content:""; position:absolute; inset:0; pointer-events:none; z-index:0; opacity:.5;
+    background-image:radial-gradient(rgba(18,22,33,.05) .5px, transparent .6px); background-size:3px 3px}
+  .loc{position:relative; height:100%; display:flex; flex-direction:column; padding:clamp(15px,2.3vh,30px) clamp(20px,3vw,52px) clamp(14px,2vh,28px)}
+
+  .bar{display:flex; align-items:center; justify-content:space-between; flex:0 0 auto}
+  .back{display:inline-flex; align-items:center; gap:10px; cursor:pointer;
+    background:#121621; border:1px solid rgba(18,22,33,.25); color:#faf7f0; font-weight:500;
+    font-size:clamp(10px,1.2vh,15px); letter-spacing:.26em; text-transform:uppercase; padding:11px 22px 11px 16px; border-radius:999px;
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.18), 0 8px 18px -8px rgba(10,14,22,.5);
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    transition:transform .16s cubic-bezier(.16,1,.3,1), box-shadow .3s, background .3s}
+  @media (hover:hover){ .back:hover{ background:#121621; border-color:var(--gold-lt);
+    box-shadow:inset 0 0 0 1px rgba(236,232,224,.3), 0 10px 22px -8px rgba(10,14,22,.55); } }
+  .back:active{ transform:scale(.97); }
+  .back svg{width:15px;height:15px;display:block; stroke:#faf7f0}
+  .bar .eyebrow{font-size:clamp(9px,1.1vh,13px); letter-spacing:.42em; text-indent:.42em; color:var(--champ)}
+  .bar .coord{font-size:clamp(9px,1.05vh,13px); letter-spacing:.2em; color:var(--on-light-dim)}
+
+  .head{flex:0 0 auto; margin:clamp(5px,1vh,12px) 0 clamp(7px,1.1vh,13px); border-radius:10px; padding:clamp(8px,1.2vh,13px) clamp(15px,1.8vw,26px);
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,168,76,.20);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12)}
+  .head h1{font-family:"Tenor Sans",sans-serif; font-weight:600; line-height:1.06; font-size:clamp(19px,2.9vh,33px); letter-spacing:.1em; text-transform:uppercase; color:var(--on-navy)}
+  .head p{font-weight:300; color:var(--on-navy-dim); line-height:1.62; font-size:clamp(12px,1.5vh,17px); max-width:62ch; margin-top:clamp(5px,.9vh,11px)}
+
+  .stage{flex:1 1 auto; min-height:0; display:flex; gap:clamp(16px,2.2vw,38px)}
+
+  /* leather + gold frame holding the feature render */
+  .heroframe{position:relative; flex:1 1 auto; min-width:0; padding:clamp(12px,1.4vw,18px); border-radius:7px;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.62), rgba(18,30,68,.54));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    box-shadow:0 26px 54px rgba(8,11,18,.4), 0 2px 0 rgba(255,235,190,.06) inset, inset 0 1px 0 rgba(236,232,224,.12)}
+  .heroframe::before{content:""; position:absolute; inset:7px; border:1px solid var(--gold); border-radius:5px; pointer-events:none; z-index:6; opacity:.92}
+  .heroframe::after{content:""; position:absolute; inset:12px; border:1px solid rgba(236,232,224,.45); border-radius:3px; pointer-events:none; z-index:6}
+  .tick{position:absolute; width:13px; height:13px; z-index:7; pointer-events:none; border:0}
+  .tick i{position:absolute; background:var(--gold-l)} .tick i.h{height:1px; width:13px} .tick i.v{width:1px; height:13px}
+  .tick.tl{top:3px;left:3px} .tick.tr{top:3px;right:3px} .tick.bl{bottom:3px;left:3px} .tick.br{bottom:3px;right:3px}
+  .tick.tr i.v,.tick.br i.v{right:0} .tick.bl i.h,.tick.br i.h{bottom:0}
+
+  /* feature image area inside the frame */
+  .feature{position:absolute; inset:clamp(15px,1.6vw,21px); border-radius:3px; overflow:hidden; background:#161d29; z-index:1}
+  .feature .shot{position:absolute; inset:0; background-size:cover; background-position:center; opacity:0; transition:opacity .85s var(--ease); transform:scale(1.02)}
+  .feature .shot.on{opacity:1; transform:scale(1)}
+  /* bone placeholder panel for amenities with no render yet (e.g. Pool & Pool Pavilion) */
+  .feature .shot.ph{background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    display:flex; align-items:center; justify-content:center; padding:clamp(18px,3vw,40px); transform:none}
+  .feature .shot.ph .phinner{text-align:center; display:flex; flex-direction:column; gap:clamp(6px,1vh,10px); max-width:34ch}
+  .feature .shot.ph .phk{font-size:clamp(9px,1.1vh,12px); letter-spacing:.34em; text-transform:uppercase; color:var(--champ)}
+  .feature .shot.ph .phn{font-family:"Tenor Sans",sans-serif; font-weight:600; color:var(--on-dark); font-size:clamp(22px,3.4vh,36px); line-height:1.05}
+  .feature .shot.ph .phc{font-weight:300; font-size:clamp(11px,1.4vh,14px); letter-spacing:.04em; color:var(--on-dark-dim)}
+  .feature.isph .grad,.feature.isph .cap{opacity:0}
+  .feature .grad{position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:linear-gradient(0deg, rgba(8,11,18,.78) 0%, rgba(8,11,18,.32) 30%, rgba(8,11,18,0) 56%)}
+  .feature .cap{position:absolute; left:clamp(18px,2vw,34px); right:clamp(18px,2vw,34px); bottom:clamp(16px,2.4vh,30px); z-index:3; transition:opacity .45s}
+  .feature .cap .ck{font-size:9.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--gold-l)}
+  .feature .cap h2{font-family:"Tenor Sans",sans-serif; font-weight:600; color:#f5f1ea; font-size:clamp(20px,3.2vh,34px); line-height:1.05; margin-top:6px}
+  .feature .cap p{font-weight:300; color:#e6ddcb; line-height:1.6; font-size:clamp(12px,1.5vh,16px); margin-top:8px; max-width:52ch}
+  .feature.swap .cap{opacity:0}
+
+  /* side panel — amenity list */
+  .panel{flex:0 0 clamp(244px,24vw,330px); display:flex; flex-direction:column; gap:clamp(12px,1.7vh,18px); min-height:0;
+    padding:clamp(14px,1.9vh,20px) clamp(14px,1.4vw,20px); border-radius:12px;
+    background:
+      radial-gradient(130% 100% at 78% 8%, rgba(90,120,210,.18), transparent 60%),
+      linear-gradient(155deg, rgba(30,46,104,.60), rgba(18,30,68,.52));
+    -webkit-backdrop-filter:blur(16px) saturate(1.12); backdrop-filter:blur(16px) saturate(1.12);
+    border:1px solid rgba(201,168,76,.20);
+    box-shadow:0 22px 50px -26px rgba(6,9,16,.62), inset 0 1px 0 rgba(236,232,224,.12); color:var(--on-dark)}
+  .lh{font-size:9.5px; letter-spacing:.34em; text-transform:uppercase; color:var(--on-dark-dim); margin-bottom:4px}
+  .list{display:flex; flex-direction:column; overflow:auto; padding-right:2px}
+  .am{display:flex; align-items:baseline; gap:12px; padding:clamp(8px,1.2vh,12px) 8px; margin:0 -8px; border:0; background:none; width:calc(100% + 16px);
+    cursor:pointer; border-radius:4px; text-align:left; border-bottom:1px solid var(--line-dark); transition:background .25s}
+  @media (hover:hover){ .am:hover{background:rgba(236,232,224,.09)} }
+  .am.sel{background:rgba(236,232,224,.12)}
+  .am .n{font-size:9px; letter-spacing:.18em; color:var(--gold-d); flex:0 0 auto; width:18px; padding-top:3px}
+  .am .nm{font-family:"Tenor Sans",sans-serif; font-weight:600; font-size:clamp(15px,2vh,21px); line-height:1.1; color:var(--on-dark)}
+  .am.sel .nm{color:var(--gold-d)}
+  .more{border-top:1px solid var(--line-dark); padding-top:clamp(12px,1.7vh,18px); flex:0 0 auto}
+  .more .lh{margin-bottom:10px}
+  .more ul{list-style:none; display:flex; flex-direction:column; gap:7px}
+  .more li{font-weight:300; color:var(--on-dark-dim); font-size:clamp(11px,1.35vh,14px); letter-spacing:.01em; display:flex; align-items:center; gap:9px}
+  .more li::before{content:""; width:4px; height:4px; border-radius:50%; background:var(--gold-l); flex:0 0 auto}
+
+  .fadein{opacity:0; transform:translateY(10px); animation:fin .9s var(--ease) forwards}
+  @keyframes fin{to{opacity:1;transform:none}}
+
+  /* ── PORTRAIT / narrow: stack hero over panel, scroll list horizontally ── */
+  @media (max-aspect-ratio:1/1){
+    .loc{overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain}
+    .stage{flex-direction:column; flex:0 0 auto}
+    .heroframe{min-height:38vh; flex:0 0 auto}
+    .panel{flex:0 0 auto}
+    .list{flex-direction:row; gap:6px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; padding-bottom:6px}
+    .am{border-bottom:0; white-space:nowrap; flex:0 0 auto; min-height:44px; align-items:center}
+    .am .n{display:none}
+  }
+  /* ── PHONE PORTRAIT: stack the top bar, legible copy ── */
+  @media (max-aspect-ratio:1/1) and (max-width:520px){
+    .bar{flex-direction:column; align-items:flex-start; gap:8px}
+    .bar .eyebrow,.bar .coord{font-size:12px}
+    .head{padding:clamp(10px,3vw,16px)}
+    .head h1{font-size:clamp(18px,5.4vw,24px)}
+    .head p{font-size:14px; max-width:none}
+    .heroframe{min-height:34vh}
+    .feature .cap h2{font-size:clamp(20px,6vw,26px)}
+    .feature .cap p{font-size:14px}
+    .am .nm{font-size:16px}
+    .more li{font-size:13px}
+  }
+  /* landscape phone: let it scroll, trim heading block */
+  @media (max-height:480px) and (min-aspect-ratio:1/1){
+    .loc{overflow-y:auto; -webkit-overflow-scrolling:touch}
+    .head h1{font-size:clamp(16px,4.4vh,22px)}
+    .head p{font-size:clamp(11px,2.6vh,13px)}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+  /* v2-unify: consistent back button across all screens */
+  .back{justify-self:start!important; align-self:flex-start!important; display:inline-flex!important; align-items:center!important; gap:10px!important; min-height:44px!important; padding:9px 20px 9px 16px!important; border-radius:999px!important; cursor:pointer!important; background:#121621!important; border:1px solid rgba(18,22,33,.25)!important; color:#faf7f0!important; font-family:"Poppins",sans-serif!important; font-size:clamp(10px,1.15vh,13px)!important; font-weight:500!important; letter-spacing:.22em!important; text-transform:uppercase!important; -webkit-backdrop-filter:blur(6px)!important; backdrop-filter:blur(6px)!important; box-shadow:0 8px 20px -10px rgba(6,9,16,.55)!important; transition:background .3s,border-color .3s,transform .15s!important}
+  @media (hover:hover){ .back:hover{background:#121621!important; border-color:var(--gold-lt)!important; box-shadow:0 10px 24px -10px rgba(6,9,16,.6)!important} }
+  .back:active{transform:scale(.97)!important}
+  .back svg{width:15px!important; height:15px!important; display:block!important; stroke:#faf7f0!important}
+  /* wave-2: 360° view button + full-screen viewer (navy-on-beige, top-right) */
+  .float360{display:inline-flex; align-items:center; gap:9px; cursor:pointer; padding:10px 16px; border-radius:999px;
+    border:1px solid rgba(18,22,33,.25); color:#faf7f0; background:#121621; font-family:"Poppins",sans-serif; font-weight:500;
+    letter-spacing:.2em; text-transform:uppercase; font-size:clamp(9px,1.15vh,13px); white-space:nowrap;
+    box-shadow:0 8px 20px -10px rgba(6,9,16,.5); transition:transform .16s var(--ease), background .2s, border-color .2s}
+  .float360:active{transform:scale(.97)}
+  @media(hover:hover){ .float360:hover{background:#121621; border-color:rgba(201,168,76,.6); transform:translateY(-2px)} }
+  .float360 svg{width:clamp(16px,2vh,20px); height:auto; stroke:#faf7f0; fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round}
+  #view360{position:fixed; inset:0; z-index:90; background:#0a0d14; opacity:0; visibility:hidden; transition:opacity .4s ease}
+  #view360.show{opacity:1; visibility:visible}
+  #view360 iframe{width:100%; height:100%; border:0; display:block}
+  #back360{position:fixed; top:calc(env(safe-area-inset-top,0px) + clamp(14px,2.4vh,26px)); left:calc(env(safe-area-inset-left,0px) + clamp(14px,2.4vw,26px)); z-index:91;
+    display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:11px 18px; border-radius:999px; border:1px solid rgba(236,232,224,.24); color:#faf7f0;
+    background:#121621; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); font-family:"Poppins",sans-serif; font-weight:500; letter-spacing:.2em; text-transform:uppercase; font-size:clamp(10px,1.3vh,13px)}
+  #back360:active{transform:scale(.97)}
+  @media(hover:hover){ #back360:hover{background:#121621} }
+</style>
+</head>
+<body>
+  <div class="tint"></div>
+  <div class="loc">
+    <div class="bar">
+      <button class="back" id="back" aria-label="Return"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 5l-7 7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>Return</button>
+      <button class="float360" id="btn360" aria-label="360 degree view">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="9" ry="4.2"/><path d="M7.6 8.4 4.4 9.2l1.9 2.7"/></svg>
+        <span>360&deg; View</span>
+      </button>
+    </div>
+    <div class="head">
+      <h1 class="fadein">Rituals of the high life.</h1>
+      <p class="fadein" style="animation-delay:.1s">Unlike the fleeting comfort of a hotel garden, this one belongs to those who dwell here. A Miyawaki forest. An herb garden. A pet park. An evening garden of night-blooming fragrance. Quiet paths and shaded niches, designed for the rituals of the high life.</p>
+    </div>
+    <div class="stage">
+      <div class="heroframe fadein" style="animation-delay:.2s">
+        <span class="tick tl"><i class="h"></i><i class="v"></i></span><span class="tick tr"><i class="h"></i><i class="v"></i></span>
+        <span class="tick bl"><i class="h"></i><i class="v"></i></span><span class="tick br"><i class="h"></i><i class="v"></i></span>
+        <div class="feature" id="feature">
+          <div class="grad"></div>
+          <div class="cap">
+            <div class="ck" id="ck">THE GROUNDS</div>
+            <h2 id="ch">Pool &amp; Pool Pavilion</h2>
+            <p id="cp">Water held quiet against the green — a pavilion to gather, and a lawn that opens to the sky.</p>
+          </div>
+        </div>
+      </div>
+      <aside class="panel">
+        <div class="fadein" style="animation-delay:.35s">
+          <div class="lh">Select to explore</div>
+        </div>
+        <div class="list fadein" id="list" style="animation-delay:.4s"></div>
+        <div class="more fadein" style="animation-delay:.5s">
+          <div class="lh">And, in good measure</div>
+          <ul>
+            <li>Lap Pool — 25 &times; 9m</li>
+            <li>Children&rsquo;s Pool &amp; Jacuzzi</li>
+            <li>252m Jogging Loop</li>
+            <li>Children&rsquo;s Play Area</li>
+            <li>Garden Cabanas</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+  var AMEN=[
+    // PLACEHOLDER: pool render pending client — no Pool & Pool Pavilion render yet, show bone placeholder panel
+    {id:"pool",  nm:"Pool & Pool Pavilion", ck:"THE GROUNDS", placeholder:true, img:"",
+      line:"Water held quiet against the green — a pavilion to gather, and a lawn that opens to the sky."},
+    {id:"padel", nm:"Padel Half-Court", ck:"SPORT",
+      img:"../assets/renders/amenities/muga.webp",
+      line:"A measured court for the evening game — close enough to come down to, set apart enough to leave the day behind."},
+    {id:"yoga",  nm:"Yoga and Meditation Deck", ck:"STILLNESS",
+      img:"../assets/renders/amenities/yoga.webp",
+      line:"A deck given over to breath and balance, framed by planting and the early light."},
+    {id:"pets",  nm:"Pet Park", ck:"THE GARDENS",
+      img:"../assets/renders/amenities/pets.webp",
+      line:"Beds of herb and a run for companions — small domestic pleasures, kept close."},
+    {id:"forest",nm:"Miyawaki Forest", ck:"THE GREEN",
+      img:"../assets/renders/lanterns/spring.webp",
+      line:"A dense native grove, planted to grow into shade and birdsong over the years."},
+    {id:"banq",  nm:"Banquet & Gathering", ck:"COMING TOGETHER",
+      img:"../assets/renders/lanterns/lobby.webp",
+      line:"A room held in reserve for the occasions that ask for one — warm, considered, and entirely your own."}
+  ];
+
+  var feature=document.getElementById("feature"),
+      ck=document.getElementById("ck"), ch=document.getElementById("ch"), cp=document.getElementById("cp"),
+      list=document.getElementById("list");
+
+  // build image layers + list
+  var layers={};
+  AMEN.forEach(function(a,i){
+    var d=document.createElement("div"); d.className="shot"; d.id="shot-"+a.id;
+    if(a.placeholder){
+      // PLACEHOLDER: pool render pending client
+      d.className="shot ph";
+      d.innerHTML='<div class="phinner"><span class="phk">Render Pending</span><span class="phn">'+a.nm+'</span><span class="phc">Visual to follow from the client</span></div>';
+    } else {
+      d.style.backgroundImage="url('"+a.img+"')";
+    }
+    if(i===0) d.classList.add("on");
+    feature.insertBefore(d, feature.firstChild);
+    layers[a.id]=d;
+
+    var b=document.createElement("button"); b.className="am"+(i===0?" sel":""); b.setAttribute("data-id",a.id);
+    b.innerHTML='<span class="n">0'+(i+1)+'</span><span class="nm">'+a.nm+'</span>';
+    b.addEventListener("click", function(){ select(a.id); });
+    list.appendChild(b);
+  });
+
+  function select(id){
+    var a=null; for(var i=0;i<AMEN.length;i++){ if(AMEN[i].id===id){ a=AMEN[i]; break; } }
+    if(!a) return;
+    try{window.RDA&&RDA.track('amenity_view', a.nm);}catch(_){}
+    document.querySelectorAll(".am").forEach(function(x){ x.classList.toggle("sel", x.getAttribute("data-id")===id); });
+    for(var k in layers){ layers[k].classList.toggle("on", k===id); }
+    feature.classList.toggle("isph", !!a.placeholder);   // hide caption/scrim when showing a bone placeholder
+    feature.classList.add("swap");
+    setTimeout(function(){ ck.textContent=a.ck; ch.textContent=a.nm; cp.textContent=a.line; feature.classList.remove("swap"); },220);
+  }
+  // pool is the default (index 0) and has no render yet — start in placeholder state
+  if(AMEN[0] && AMEN[0].placeholder){ feature.classList.add("isph"); }
+
+  document.getElementById("back").addEventListener("click", function(){ try{ parent.postMessage("eo-screen-close","*"); }catch(e){} });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"){ try{ parent.postMessage("eo-screen-close","*"); }catch(_){}}});
+</script>
+  <!-- wave-2: 360° full-screen viewer -->
+  <div id="view360" aria-hidden="true">
+    <iframe id="frame360" title="Embassy ONE — 360° View" allow="fullscreen; accelerometer; gyroscope; magnetometer; xr-spatial-tracking" allowfullscreen></iframe>
+    <button id="back360" aria-label="Back"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></button>
+  </div>
+  <script>
+  (function(){ var b=document.getElementById("btn360"), v=document.getElementById("view360"), f=document.getElementById("frame360"), bk=document.getElementById("back360");
+    if(!b||!v||!f) return;
+    function close(){ v.classList.remove("show"); v.setAttribute("aria-hidden","true"); setTimeout(function(){ if(!v.classList.contains("show")) f.src="about:blank"; },440); }
+    b.addEventListener("click", function(){ try{window.RDA&&RDA.track('360_view','amenities');}catch(_){} f.src="https://www.turiya.co/360/EmbassyOne/"; v.classList.add("show"); v.setAttribute("aria-hidden","false"); });
+    if(bk) bk.addEventListener("click", close);
+    document.addEventListener("keydown", function(e){ if(e.key==="Escape" && v.classList.contains("show")){ e.stopImmediatePropagation(); close(); } }, true);
+  })();
+  </script>
+  <!-- leaf/foliage motif removed per redesign -->
+  <script src="../assets/rda.js" data-base="https://analytics.khosha.tech" data-slug="embassy-one-residences" data-token="rdk_a7bc739ff1dd4431077788492791e27b7ecce882aadc9e15" data-label=""></script>
+</body>
+</html>
